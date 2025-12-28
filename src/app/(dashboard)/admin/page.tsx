@@ -154,7 +154,7 @@ export default function AdminDashboard() {
                 <Activity className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-display font-bold text-clinic-navy dark:text-white">
-                MediFlow<span className="text-clinic-teal">AI</span>
+                MediFlow
               </span>
             </div>
 

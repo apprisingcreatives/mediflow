@@ -15,7 +15,7 @@ const practitioners = [
     specialty: "Family Medicine",
     clinic: "Bay Area Medical Group",
     image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&q=80",
-    quote: "MediFlow AI reduced our administrative burden by 50%. My staff can now focus on patient care.",
+    quote: "MediFlow reduced our administrative burden by 50%. My staff can now focus on patient care.",
   },
   {
     name: "Dr. Michael Rodriguez",
@@ -120,7 +120,7 @@ export function PractitionersSection() {
           </h2>
           <p className="text-lg text-clinic-text/70 dark:text-white/70">
             Join hundreds of healthcare professionals who have transformed their
-            practice with MediFlow AI.
+            practice with MediFlow.
           </p>
         </div>
 

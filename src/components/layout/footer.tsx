@@ -48,7 +48,9 @@ export function Footer() {
               <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-clinic-teal to-clinic-ai">
                 <Activity className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-display font-bold">MediFlow</span>
+              <span className="text-xl font-display font-bold">
+                MediFlow
+              </span>
             </Link>
             <p className="text-white/60 text-sm leading-relaxed mb-6 max-w-xs">
               Transforming healthcare management with intelligent AI-powered

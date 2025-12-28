@@ -45,7 +45,7 @@ export function Header() {
               <Activity className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-display font-bold text-clinic-navy dark:text-white tracking-tight">
-              MediFlow<span className="text-clinic-teal"></span>
+              MediFlow
             </span>
           </Link>
 
@@ -66,17 +66,10 @@ export function Header() {
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-4">
             <Button
-              variant="ghost"
-              className="text-clinic-navy dark:text-white hover:bg-clinic-navy/5 dark:hover:bg-white/10"
-              asChild
-            >
-              <Link href="/login">Sign In</Link>
-            </Button>
-            <Button
               className="bg-clinic-teal hover:bg-clinic-teal/90 text-white shadow-glow hover:shadow-glow transition-all duration-300"
               asChild
             >
-              <Link href="/book">Book Demo</Link>
+              <Link href="/demo">Book a Demo</Link>
             </Button>
           </div>
 
@@ -87,17 +80,14 @@ export function Header() {
                 <Menu className="w-5 h-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent
-              side="right"
-              className="w-80 bg-white dark:bg-slate-900"
-            >
+            <SheetContent side="right" className="w-80 bg-white dark:bg-slate-900">
               <div className="flex flex-col h-full pt-8">
                 <div className="flex items-center gap-2 mb-8">
                   <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-clinic-navy to-clinic-teal">
                     <Activity className="w-5 h-5 text-white" />
                   </div>
                   <span className="text-xl font-display font-bold text-clinic-navy dark:text-white">
-                    MediFlow<span className="text-clinic-teal">AI</span>
+                    MediFlow
                   </span>
                 </div>
 
@@ -117,17 +107,10 @@ export function Header() {
 
                 <div className="mt-auto pt-8 flex flex-col gap-3">
                   <Button
-                    variant="outline"
-                    className="w-full border-clinic-navy/20 text-clinic-navy dark:border-white/20 dark:text-white"
-                    asChild
-                  >
-                    <Link href="/login">Sign In</Link>
-                  </Button>
-                  <Button
                     className="w-full bg-clinic-teal hover:bg-clinic-teal/90 text-white"
                     asChild
                   >
-                    <Link href="/book">Book Demo</Link>
+                    <Link href="/demo">Book a Demo</Link>
                   </Button>
                 </div>
               </div>

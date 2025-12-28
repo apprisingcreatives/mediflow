@@ -15,9 +15,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    "https://a0f02019-16a7-41a9-82aa-ae5d66692014.canvases.tempo.build"
-  ),
+  metadataBase: new URL("https://a0f02019-16a7-41a9-82aa-ae5d66692014.canvases.tempo.build"),
   title: "MediFlow | Intelligent Healthcare Management Platform",
   description:
     "Transform your clinic with AI-powered patient intake, intelligent scheduling, and streamlined operations. HIPAA-compliant, secure, and designed for modern healthcare practices.",
@@ -30,7 +28,7 @@ export const metadata: Metadata = {
     "telehealth",
     "appointment scheduling",
   ],
-  authors: [{ name: "MediFlow AI" }],
+  authors: [{ name: "MediFlow" }],
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -44,7 +42,7 @@ export const metadata: Metadata = {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "MediFlow AI Platform",
+        alt: "MediFlow Platform",
       },
     ],
   },

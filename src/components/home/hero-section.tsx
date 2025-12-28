@@ -131,7 +131,7 @@ export function HeroSection() {
                 className="bg-clinic-teal hover:bg-clinic-teal/90 text-white px-8 h-12 text-base shadow-glow hover:shadow-lg transition-all duration-300 group"
                 asChild
               >
-                <Link href="/book">
+                <Link href="/demo">
                   Get Started Free
                   <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -173,7 +173,7 @@ export function HeroSection() {
                     500+ Clinics
                   </p>
                   <p className="text-xs text-clinic-text/60 dark:text-white/60">
-                    Trust MediFlow AI
+                    Trust MediFlow
                   </p>
                 </div>
               </div>

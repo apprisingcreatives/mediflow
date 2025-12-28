@@ -12,7 +12,7 @@ if (typeof window !== "undefined") {
 const testimonials = [
   {
     quote:
-      "MediFlow AI has completely transformed how we operate. What used to take hours now takes minutes. Our patients notice the difference, and so does our bottom line.",
+      "MediFlow has completely transformed how we operate. What used to take hours now takes minutes. Our patients notice the difference, and so does our bottom line.",
     author: "Dr. Amanda Foster",
     role: "Medical Director",
     organization: "Pacific Northwest Health Network",
@@ -32,7 +32,7 @@ const testimonials = [
   },
   {
     quote:
-      "As a multi-location practice, we needed a solution that could scale. MediFlow AI gives us unified visibility across all our clinics with enterprise-grade security.",
+      "As a multi-location practice, we needed a solution that could scale. MediFlow gives us unified visibility across all our clinics with enterprise-grade security.",
     author: "Dr. Richard Chang",
     role: "CEO & Founder",
     organization: "Integrated Care Partners",

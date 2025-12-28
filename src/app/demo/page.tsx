@@ -1,10 +1,37 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Activity, Play, ArrowRight, Shield, Clock, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Activity, Send, CheckCircle, ArrowLeft } from "lucide-react";
 
 export default function DemoPage() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    // Send email via mailto link
+    const subject = encodeURIComponent("Demo Request from MediFlow Website");
+    const body = encodeURIComponent(
+      `Name: ${name}\nEmail: ${email}\n\nThis person has requested a demo of MediFlow.`
+    );
+    
+    window.location.href = `mailto:info@apprisingcreatives.com?subject=${subject}&body=${body}`;
+    
+    // Simulate submission delay
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsSubmitted(true);
+    }, 1000);
+  };
+
   return (
     <div className="min-h-screen bg-clinic-bg dark:bg-slate-900">
       {/* Header */}
@@ -16,15 +43,19 @@ export default function DemoPage() {
                 <Activity className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-display font-bold text-clinic-navy dark:text-white">
-                MediFlow<span className="text-clinic-teal">AI</span>
+                MediFlow
               </span>
             </Link>
 
             <Button
-              className="bg-clinic-teal hover:bg-clinic-teal/90 text-white"
+              variant="ghost"
+              className="text-clinic-navy dark:text-white"
               asChild
             >
-              <Link href="/register">Start Free Trial</Link>
+              <Link href="/">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Link>
             </Button>
           </div>
         </div>
@@ -32,103 +63,94 @@ export default function DemoPage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="font-display text-4xl sm:text-5xl font-bold text-clinic-navy dark:text-white mb-4">
-              See MediFlow AI in Action
-            </h1>
-            <p className="text-lg text-clinic-text/70 dark:text-white/70 max-w-2xl mx-auto">
-              Watch how our AI-powered platform transforms clinic operations,
-              from patient intake to analytics.
-            </p>
-          </div>
-
-          {/* Video Player */}
-          <div className="relative aspect-video rounded-2xl overflow-hidden bg-clinic-navy shadow-glass-lg mb-12">
-            <img
-              src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&q=80"
-              alt="MediFlow AI Demo"
-              className="w-full h-full object-cover opacity-50"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <button className="w-20 h-20 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-glass-lg transition-all hover:scale-105 group">
-                <Play className="w-8 h-8 text-clinic-navy ml-1 group-hover:scale-110 transition-transform" />
-              </button>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/60 to-transparent">
-              <p className="text-white font-medium">
-                Product Demo • 5 min watch
-              </p>
-            </div>
-          </div>
-
-          {/* Feature Highlights */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
-            <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
-              <div className="w-12 h-12 rounded-xl bg-clinic-teal/10 flex items-center justify-center mb-4">
-                <Clock className="w-6 h-6 text-clinic-teal" />
+        <div className="max-w-md mx-auto">
+          {!isSubmitted ? (
+            <>
+              {/* Header */}
+              <div className="text-center mb-8">
+                <h1 className="font-display text-3xl sm:text-4xl font-bold text-clinic-navy dark:text-white mb-4">
+                  Book a Demo
+                </h1>
+                <p className="text-clinic-text/70 dark:text-white/70">
+                  Fill in your details and we'll get in touch to schedule a
+                  personalized demo of MediFlow.
+                </p>
               </div>
-              <h3 className="font-display font-semibold text-clinic-navy dark:text-white mb-2">
-                60% Faster Intake
-              </h3>
-              <p className="text-sm text-clinic-text/60 dark:text-white/60">
-                AI-powered forms that adapt to patient responses in real-time.
-              </p>
-            </div>
-            <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
-              <div className="w-12 h-12 rounded-xl bg-clinic-ai/10 flex items-center justify-center mb-4">
-                <Users className="w-6 h-6 text-clinic-ai" />
-              </div>
-              <h3 className="font-display font-semibold text-clinic-navy dark:text-white mb-2">
-                Smart Scheduling
-              </h3>
-              <p className="text-sm text-clinic-text/60 dark:text-white/60">
-                Reduce no-shows by 40% with intelligent appointment management.
-              </p>
-            </div>
-            <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
-              <div className="w-12 h-12 rounded-xl bg-clinic-navy/10 flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-clinic-navy dark:text-white" />
-              </div>
-              <h3 className="font-display font-semibold text-clinic-navy dark:text-white mb-2">
-                HIPAA Compliant
-              </h3>
-              <p className="text-sm text-clinic-text/60 dark:text-white/60">
-                Enterprise-grade security with end-to-end encryption.
-              </p>
-            </div>
-          </div>
 
-          {/* CTA */}
-          <div className="text-center p-8 bg-gradient-to-br from-clinic-navy to-clinic-navy/90 rounded-2xl text-white">
-            <h2 className="font-display text-2xl font-bold mb-4">
-              Ready to Transform Your Clinic?
-            </h2>
-            <p className="text-white/70 mb-6">
-              Start your 14-day free trial today. No credit card required.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              {/* Form */}
+              <form
+                onSubmit={handleSubmit}
+                className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-8"
+              >
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-clinic-navy dark:text-white">
+                      Full Name
+                    </Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Dr. John Smith"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      className="h-12 border-clinic-navy/20 dark:border-white/20 focus:border-clinic-teal"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-clinic-navy dark:text-white">
+                      Email Address
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john@clinic.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="h-12 border-clinic-navy/20 dark:border-white/20 focus:border-clinic-teal"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full h-12 bg-clinic-teal hover:bg-clinic-teal/90 text-white shadow-glow"
+                  >
+                    {isSubmitting ? (
+                      "Sending..."
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Request Demo
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </>
+          ) : (
+            /* Success State */
+            <div className="text-center bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-12">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-clinic-teal/10 flex items-center justify-center">
+                <CheckCircle className="w-10 h-10 text-clinic-teal" />
+              </div>
+              <h2 className="font-display text-2xl font-bold text-clinic-navy dark:text-white mb-4">
+                Thank You!
+              </h2>
+              <p className="text-clinic-text/70 dark:text-white/70 mb-8">
+                Your demo request has been sent. We'll get back to you within 24
+                hours to schedule your personalized demo.
+              </p>
               <Button
-                size="lg"
-                className="bg-clinic-teal hover:bg-clinic-teal/90 text-white group"
+                className="bg-clinic-teal hover:bg-clinic-teal/90 text-white"
                 asChild
               >
-                <Link href="/register">
-                  Start Free Trial
-                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10"
-                asChild
-              >
-                <Link href="/book">Book a Demo Call</Link>
+                <Link href="/">Return to Home</Link>
               </Button>
             </div>
-          </div>
+          )}
         </div>
       </main>
     </div>

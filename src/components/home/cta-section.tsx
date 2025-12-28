@@ -17,7 +17,7 @@ export function CTASection() {
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
+      "(prefers-reduced-motion: reduce)",
     ).matches;
 
     if (prefersReducedMotion) return;
@@ -35,7 +35,7 @@ export function CTASection() {
             trigger: sectionRef.current,
             start: "top 80%",
           },
-        }
+        },
       );
     }, sectionRef);
 
@@ -63,7 +63,7 @@ export function CTASection() {
             Ready to Transform Your Practice?
           </h2>
           <p className="text-xl text-white/70 mb-10 max-w-2xl mx-auto">
-            Join 500+ clinics already using MediFlow AI to deliver better
+            Join 500+ clinics already using MediFlow to deliver better
             patient care while growing their practice.
           </p>
 
@@ -74,7 +74,7 @@ export function CTASection() {
               className="bg-clinic-teal hover:bg-clinic-teal/90 text-white px-8 h-14 text-lg shadow-glow hover:shadow-lg transition-all duration-300 group"
               asChild
             >
-              <Link href="/book">
+              <Link href="/demo">
                 <Calendar className="w-5 h-5 mr-2" />
                 Book a Demo
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -86,10 +86,10 @@ export function CTASection() {
               className="border-white/20 text-white bg-white/10 px-8 h-14 text-lg transition-all duration-300"
               asChild
             >
-              <Link href="/contact">
+              <a href="tel:+639204786075">
                 <Phone className="w-5 h-5 mr-2" />
                 Talk to Sales
-              </Link>
+              </a>
             </Button>
           </div>
 

@@ -132,7 +132,7 @@ export function HowItWorksSection() {
             Simple Process
           </div>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-clinic-navy dark:text-white tracking-tight mb-4">
-            How MediFlow AI Works
+            How MediFlow Works
           </h2>
           <p className="text-lg text-clinic-text/70 dark:text-white/70">
             From patient registration to actionable insights, our streamlined

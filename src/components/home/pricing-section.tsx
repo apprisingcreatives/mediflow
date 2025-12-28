@@ -28,7 +28,7 @@ const plans = [
       "Email support",
       "HIPAA compliant",
     ],
-    cta: "Start Free Trial",
+    cta: "Get Started",
     highlighted: false,
   },
   {
@@ -47,7 +47,7 @@ const plans = [
       "EHR integration",
       "Custom branding",
     ],
-    cta: "Start Free Trial",
+    cta: "Get Started",
     highlighted: true,
     badge: "Most Popular",
   },
@@ -234,9 +234,7 @@ export function PricingSection() {
                     <Check
                       className={cn(
                         "w-5 h-5 flex-shrink-0 mt-0.5",
-                        plan.highlighted
-                          ? "text-clinic-teal"
-                          : "text-clinic-teal"
+                        plan.highlighted ? "text-clinic-teal" : "text-clinic-teal"
                       )}
                     />
                     <span
@@ -263,7 +261,11 @@ export function PricingSection() {
                 )}
                 asChild
               >
-                <Link href="/book">{plan.cta}</Link>
+                {plan.name === "Enterprise" ? (
+                  <a href="tel:+639204786075">{plan.cta}</a>
+                ) : (
+                  <Link href="/demo">{plan.cta}</Link>
+                )}
               </Button>
             </div>
           ))}
