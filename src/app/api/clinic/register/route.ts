@@ -53,7 +53,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create clinic
+    // Calculate trial dates (14 days from now)
+    const trialStartDate = new Date();
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 14);
+
+    // Create clinic with trial
     const { data: newClinic, error: clinicError } = await supabase
       .from("clinics")
       .insert({
@@ -64,6 +69,11 @@ export async function POST(request: Request) {
         city: clinic.city || null,
         description: clinic.description || null,
         subscription_plan: clinic.subscription_plan || "starter",
+        trial_start_date: trialStartDate.toISOString(),
+        trial_end_date: trialEndDate.toISOString(),
+        is_trial_active: true,
+        is_subscription_active: true,
+        payment_status: "trial",
       })
       .select()
       .single();
@@ -122,10 +132,32 @@ export async function POST(request: Request) {
       await supabase.from("clinic_ai_features").insert(clinicFeatures);
     }
 
+    // Queue welcome email notification
+    await supabase.from("email_notifications").insert({
+      recipient_email: admin.email,
+      recipient_name: admin.name,
+      recipient_type: "clinic",
+      subject: `Welcome to MediFlow - Your 14 Day Trial Has Started`,
+      body: `Dear ${admin.name}, Welcome to MediFlow! Your clinic ${clinic.name} has been registered. Your 14-day free trial starts today and ends on ${trialEndDate.toLocaleDateString()}.`,
+      html_body: `<h1>Welcome to MediFlow!</h1><p>Dear ${admin.name},</p><p>Your clinic <strong>${clinic.name}</strong> has been registered successfully.</p><p>Your 14-day free trial starts today and will end on <strong>${trialEndDate.toLocaleDateString()}</strong>.</p><p>Enjoy all premium features during your trial period!</p>`,
+      notification_type: "clinic_welcome",
+      related_entity_type: "clinic",
+      related_entity_id: newClinic.id,
+      status: "pending",
+      metadata: {
+        clinic_name: clinic.name,
+        admin_name: admin.name,
+        trial_end_date: trialEndDate.toISOString(),
+      },
+    });
+
     return NextResponse.json(
       {
         message: "Clinic registered successfully",
-        clinic: newClinic,
+        clinic: {
+          ...newClinic,
+          trial_end_date: trialEndDate.toISOString(),
+        },
       },
       { status: 201 }
     );

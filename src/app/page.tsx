@@ -4,10 +4,11 @@ import { HeroSection } from "@/components/home/hero-section";
 import { TrustBar } from "@/components/home/trust-bar";
 import { FeaturesSection } from "@/components/home/features-section";
 import { HowItWorksSection } from "@/components/home/how-it-works";
-import { PractitionersSection } from "@/components/home/practitioners-section";
+import { PartnerClinicsSection } from "@/components/home/partner-clinics-section";
 import { TestimonialsSection } from "@/components/home/testimonials-section";
 import { PricingSection } from "@/components/home/pricing-section";
 import { CTASection } from "@/components/home/cta-section";
+import { PatientChatbot } from "@/components/chatbot/patient-chatbot";
 
 export default function HomePage() {
   return (
@@ -17,11 +18,12 @@ export default function HomePage() {
       <TrustBar />
       <FeaturesSection />
       <HowItWorksSection />
-      <PractitionersSection />
+      <PartnerClinicsSection />
       <TestimonialsSection />
       <PricingSection />
       <CTASection />
       <Footer />
+      <PatientChatbot />
     </main>
   );
 }

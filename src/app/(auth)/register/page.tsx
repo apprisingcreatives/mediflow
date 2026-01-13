@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,17 +14,48 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Activity, Eye, EyeOff, Shield, Sparkles, Users } from "lucide-react";
+import { Activity, Eye, EyeOff, Shield, Sparkles, Users, AlertCircle, CheckCircle } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
-export default function RegisterPage() {
+function RegisterContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { signUp, user, isLoading: authLoading } = useAuth();
+  
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const redirectUrl = searchParams.get("redirect") || "/patient/onboarding";
+
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.push(redirectUrl);
+    }
+  }, [user, authLoading, router, redirectUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsLoading(false);
+    
+    const { error } = await signUp(email, password, firstName, lastName);
+    
+    if (error) {
+      setError(error.message);
+      setIsLoading(false);
+    } else {
+      setSuccess(true);
+      // For email confirmation flow
+      setTimeout(() => {
+        router.push(redirectUrl);
+      }, 2000);
+    }
   };
 
   return (
@@ -103,7 +135,24 @@ export default function RegisterPage() {
             </p>
           </div>
 
+          {success && (
+            <div className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex items-center gap-3 text-green-700 dark:text-green-400">
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Account created successfully!</p>
+                <p className="text-sm opacity-80">Redirecting to complete your profile...</p>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center gap-2 text-red-700 dark:text-red-400 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First name</Label>
@@ -111,6 +160,8 @@ export default function RegisterPage() {
                   id="firstName"
                   placeholder="John"
                   className="h-12"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
                   required
                 />
               </div>
@@ -120,46 +171,24 @@ export default function RegisterPage() {
                   id="lastName"
                   placeholder="Doe"
                   className="h-12"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Work email</Label>
+              <Label htmlFor="email">Email address</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@clinic.com"
+                placeholder="you@example.com"
                 className="h-12"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="clinicName">Clinic name</Label>
-              <Input
-                id="clinicName"
-                placeholder="Your Clinic Name"
-                className="h-12"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="role">Your role</Label>
-              <Select>
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="owner">Clinic Owner</SelectItem>
-                  <SelectItem value="manager">Practice Manager</SelectItem>
-                  <SelectItem value="physician">Physician</SelectItem>
-                  <SelectItem value="admin">Administrator</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-2">
@@ -170,6 +199,8 @@ export default function RegisterPage() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Create a strong password"
                   className="h-12 pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
                 <button
@@ -269,5 +300,17 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
+        <div className="animate-pulse text-clinic-navy dark:text-white">Loading...</div>
+      </div>
+    }>
+      <RegisterContent />
+    </Suspense>
   );
 }

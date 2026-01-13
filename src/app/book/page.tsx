@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,8 +29,15 @@ import {
   Sparkles,
   User,
   MapPin,
+  Building2,
+  LogIn,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PatientChatbot } from "@/components/chatbot/patient-chatbot";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
 
 const steps = [
   { id: 1, title: "Personal Info", icon: User },
@@ -78,8 +86,21 @@ const timeSlots = [
   "4:00 PM",
 ];
 
-export default function BookingPage() {
+function BookingContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, patient, isLoading: authLoading } = useAuth();
+  
+  const clinicId = searchParams.get("clinic");
+  const clinicName = searchParams.get("clinicName");
+  const serviceId = searchParams.get("service");
+  const serviceName = searchParams.get("serviceName");
+  const practitionerId = searchParams.get("practitioner");
+  const practitionerName = searchParams.get("practitionerName");
+
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -91,16 +112,70 @@ export default function BookingPage() {
     medications: "",
     allergies: "",
     symptoms: "",
-    practitioner: "",
-    appointmentType: "",
+    practitioner: practitionerName || "",
+    appointmentType: serviceName || "",
     date: "",
     time: "",
     consent: false,
+    clinicId: clinicId || "",
+    clinicName: clinicName || "",
+    serviceId: serviceId || "",
+    practitionerId: practitionerId || "",
   });
+
+  // Pre-fill form with patient data if logged in
+  useEffect(() => {
+    if (patient) {
+      setFormData(prev => ({
+        ...prev,
+        firstName: patient.first_name || prev.firstName,
+        lastName: patient.last_name || prev.lastName,
+        email: patient.email || prev.email,
+        phone: patient.phone || prev.phone,
+        dateOfBirth: patient.date_of_birth || prev.dateOfBirth,
+        gender: patient.gender || prev.gender,
+        medications: patient.current_medications || prev.medications,
+        allergies: (patient.allergies || []).join(", ") || prev.allergies,
+        conditions: patient.chronic_conditions || prev.conditions,
+      }));
+    }
+  }, [patient]);
+
+  useEffect(() => {
+    if (practitionerName) {
+      setFormData(prev => ({ ...prev, practitioner: practitionerName }));
+    }
+    if (serviceName) {
+      setFormData(prev => ({ ...prev, appointmentType: serviceName }));
+    }
+  }, [practitionerName, serviceName]);
 
   const progress = (currentStep / steps.length) * 100;
 
+  // Redirect to login if trying to book without being logged in
+  const handleBookingStart = () => {
+    if (!user) {
+      const currentUrl = window.location.href;
+      router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
+      return false;
+    }
+    
+    // Check if onboarding is complete
+    if (patient && !patient.onboarding_completed) {
+      const currentUrl = window.location.href;
+      router.push(`/patient/onboarding?redirect=${encodeURIComponent(currentUrl)}`);
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleNext = () => {
+    // Check auth on step 1 to step 2 transition
+    if (currentStep === 1) {
+      if (!handleBookingStart()) return;
+    }
+    
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
@@ -109,6 +184,58 @@ export default function BookingPage() {
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const submitBooking = async () => {
+    if (!user || !patient) {
+      setSubmitError("Please log in to complete your booking.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      // Create appointment record
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert({
+          patient_id: patient.id,
+          clinic_id: clinicId || null,
+          practitioner_id: practitionerId || null,
+          service_id: serviceId || null,
+          appointment_date: formData.date,
+          appointment_time: formData.time,
+          status: 'scheduled',
+          notes: formData.symptoms,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Queue appointment confirmation email
+      await supabase.from('email_notifications').insert({
+        recipient_email: patient.email,
+        recipient_name: `${patient.first_name} ${patient.last_name}`,
+        recipient_type: 'patient',
+        subject: 'Appointment Confirmed - MediFlow',
+        body: `Dear ${patient.first_name}, Your appointment has been confirmed for ${formData.date} at ${formData.time}${clinicName ? ` at ${clinicName}` : ''}${practitionerName ? ` with ${practitionerName}` : ''}.`,
+        html_body: `<h1>Appointment Confirmed</h1><p>Dear ${patient.first_name},</p><p>Your appointment has been confirmed:</p><ul><li><strong>Date:</strong> ${formData.date}</li><li><strong>Time:</strong> ${formData.time}</li>${clinicName ? `<li><strong>Clinic:</strong> ${clinicName}</li>` : ''}${practitionerName ? `<li><strong>Doctor:</strong> ${practitionerName}</li>` : ''}${serviceName ? `<li><strong>Service:</strong> ${serviceName}</li>` : ''}</ul><p>Please arrive 15 minutes before your appointment time.</p>`,
+        notification_type: 'appointment_confirmation',
+        related_entity_type: 'appointment',
+        related_entity_id: data.id,
+        status: 'pending',
+      });
+
+      // Move to confirmation step
+      setCurrentStep(4);
+    } catch (err) {
+      console.error('Booking error:', err);
+      setSubmitError('Failed to complete booking. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -532,9 +659,26 @@ export default function BookingPage() {
               </span>
             </Link>
 
-            <div className="flex items-center gap-2 text-sm text-clinic-text/60 dark:text-white/60">
-              <Shield className="w-4 h-4 text-clinic-teal" />
-              <span>Secure & HIPAA Compliant</span>
+            <div className="flex items-center gap-4">
+              {user ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="w-4 h-4 text-clinic-teal" />
+                  <span className="text-clinic-navy dark:text-white font-medium">
+                    {patient?.first_name} {patient?.last_name}
+                  </span>
+                </div>
+              ) : (
+                <Link href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '/book')}`}>
+                  <Button variant="outline" size="sm">
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Sign In
+                  </Button>
+                </Link>
+              )}
+              <div className="flex items-center gap-2 text-sm text-clinic-text/60 dark:text-white/60">
+                <Shield className="w-4 h-4 text-clinic-teal" />
+                <span className="hidden sm:inline">Secure & HIPAA Compliant</span>
+              </div>
             </div>
           </div>
         </div>
@@ -542,6 +686,56 @@ export default function BookingPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
+          {/* Login Prompt for Non-authenticated Users */}
+          {!authLoading && !user && currentStep === 1 && (
+            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-amber-800 dark:text-amber-300 text-sm">
+                    Sign in for faster booking
+                  </p>
+                  <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
+                    Your information will be pre-filled from your profile. You'll need to sign in to complete the booking.
+                  </p>
+                  <Link href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '/book')}`}>
+                    <Button size="sm" className="mt-3 bg-amber-600 hover:bg-amber-700 text-white">
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Sign In Now
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Clinic Info Banner */}
+          {clinicName && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-clinic-navy/5 to-clinic-teal/5 dark:from-clinic-navy/20 dark:to-clinic-teal/20 rounded-xl border border-clinic-navy/10 dark:border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-clinic-navy/10 dark:bg-white/10 flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-clinic-navy dark:text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-clinic-text/60 dark:text-white/60">Booking appointment at</p>
+                  <p className="font-display font-bold text-clinic-navy dark:text-white">{clinicName}</p>
+                </div>
+                {serviceName && (
+                  <div className="ml-auto text-right">
+                    <p className="text-xs text-clinic-text/60 dark:text-white/60">Service</p>
+                    <p className="font-medium text-clinic-teal">{serviceName}</p>
+                  </div>
+                )}
+                {practitionerName && !serviceName && (
+                  <div className="ml-auto text-right">
+                    <p className="text-xs text-clinic-text/60 dark:text-white/60">Practitioner</p>
+                    <p className="font-medium text-clinic-teal">{practitionerName}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Progress Steps */}
           {currentStep < 4 && (
             <div className="mb-8">
@@ -611,30 +805,71 @@ export default function BookingPage() {
 
             {renderStepContent()}
 
+            {/* Error Display */}
+            {submitError && (
+              <div className="mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center gap-2 text-red-700 dark:text-red-400 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {submitError}
+              </div>
+            )}
+
             {/* Navigation */}
             {currentStep < 4 && (
               <div className="flex items-center justify-between mt-8 pt-6 border-t border-clinic-navy/5 dark:border-white/5">
                 <Button
                   variant="ghost"
                   onClick={handleBack}
-                  disabled={currentStep === 1}
+                  disabled={currentStep === 1 || isSubmitting}
                   className="gap-2"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back
                 </Button>
-                <Button
-                  onClick={handleNext}
-                  className="gap-2 bg-clinic-teal hover:bg-clinic-teal/90 text-white"
-                >
-                  {currentStep === 3 ? "Confirm Booking" : "Continue"}
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
+                {currentStep === 3 ? (
+                  <Button
+                    onClick={submitBooking}
+                    disabled={isSubmitting || !formData.consent}
+                    className="gap-2 bg-clinic-teal hover:bg-clinic-teal/90 text-white"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Booking...
+                      </>
+                    ) : (
+                      <>
+                        Confirm Booking
+                        <Check className="w-4 h-4" />
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleNext}
+                    className="gap-2 bg-clinic-teal hover:bg-clinic-teal/90 text-white"
+                  >
+                    Continue
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             )}
           </div>
         </div>
       </main>
+      <PatientChatbot />
     </div>
+  );
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center">
+        <div className="animate-pulse text-clinic-navy dark:text-white">Loading booking form...</div>
+      </div>
+    }>
+      <BookingContent />
+    </Suspense>
   );
 }

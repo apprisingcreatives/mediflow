@@ -52,6 +52,27 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check and update trial status
+    const clinic = admin.clinics;
+    if (clinic && clinic.payment_status === "trial" && clinic.trial_end_date) {
+      const trialEnd = new Date(clinic.trial_end_date);
+      const today = new Date();
+      
+      if (today > trialEnd && clinic.is_trial_active) {
+        // Trial expired, update status
+        await supabase
+          .from("clinics")
+          .update({
+            is_trial_active: false,
+            is_subscription_active: false,
+          })
+          .eq("id", clinic.id);
+
+        clinic.is_trial_active = false;
+        clinic.is_subscription_active = false;
+      }
+    }
+
     // Generate token
     const token = Buffer.from(`${admin.id}:${admin.clinic_id}:${Date.now()}`).toString("base64");
 
@@ -63,7 +84,7 @@ export async function POST(request: Request) {
         name: admin.name,
         role: admin.role,
       },
-      clinic: admin.clinics,
+      clinic,
     });
   } catch {
     return NextResponse.json(

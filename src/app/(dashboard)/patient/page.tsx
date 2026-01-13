@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   Calendar,
@@ -15,12 +16,15 @@ import {
   Video,
   Phone,
   MapPin,
+  LogOut,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 const upcomingAppointments = [
   {
@@ -63,14 +67,64 @@ const recentMessages = [
   },
 ];
 
-const healthSummary = [
-  { label: "Blood Pressure", value: "120/80", status: "normal", date: "Feb 28" },
-  { label: "Heart Rate", value: "72 bpm", status: "normal", date: "Feb 28" },
-  { label: "Weight", value: "165 lbs", status: "normal", date: "Feb 28" },
-  { label: "Blood Glucose", value: "95 mg/dL", status: "normal", date: "Feb 15" },
+const getHealthSummary = (patient: { blood_type?: string | null; allergies?: string[] | null; chronic_conditions?: string[] | null; onboarding_completed?: boolean; } | null) => [
+  { 
+    label: "Blood Type", 
+    value: patient?.blood_type || "Not Set", 
+    status: patient?.blood_type ? "normal" : "pending", 
+    date: "Profile" 
+  },
+  { 
+    label: "Allergies", 
+    value: (patient?.allergies?.length || 0) > 0 ? `${patient?.allergies?.length} recorded` : "None", 
+    status: "normal", 
+    date: "Profile" 
+  },
+  { 
+    label: "Conditions", 
+    value: (patient?.chronic_conditions?.length || 0) > 0 ? `${patient?.chronic_conditions?.length} active` : "None", 
+    status: (patient?.chronic_conditions?.length || 0) > 0 ? "attention" : "normal", 
+    date: "Profile" 
+  },
+  { 
+    label: "Profile", 
+    value: patient?.onboarding_completed ? "Complete" : "Incomplete", 
+    status: patient?.onboarding_completed ? "normal" : "attention", 
+    date: "" 
+  },
 ];
 
 export default function PatientPortal() {
+  const router = useRouter();
+  const { user, patient, isLoading, signOut } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user) {
+        router.push("/login?redirect=/patient");
+      } else if (patient && !patient.onboarding_completed) {
+        router.push("/patient/onboarding");
+      }
+    }
+  }, [user, patient, isLoading, router]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center">
+        <div className="animate-pulse text-clinic-navy dark:text-white">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-clinic-bg dark:bg-slate-900">
       {/* Header */}
@@ -118,10 +172,21 @@ export default function PatientPortal() {
                   2
                 </span>
               </Button>
-              <Avatar className="w-9 h-9">
-                <AvatarImage src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80" />
-                <AvatarFallback>JD</AvatarFallback>
-              </Avatar>
+              <div className="flex items-center gap-2">
+                <Avatar className="w-9 h-9">
+                  <AvatarFallback className="bg-clinic-navy text-white">
+                    {patient?.first_name?.[0]}{patient?.last_name?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-medium text-clinic-navy dark:text-white">
+                    {patient?.first_name} {patient?.last_name}
+                  </p>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
@@ -132,7 +197,7 @@ export default function PatientPortal() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="font-display text-2xl sm:text-3xl font-bold text-clinic-navy dark:text-white mb-2">
-            Welcome back, Jessica
+            Welcome back, {patient?.first_name || "Patient"}
           </h1>
           <p className="text-clinic-text/60 dark:text-white/60">
             Here's an overview of your health and upcoming appointments
@@ -268,7 +333,7 @@ export default function PatientPortal() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {healthSummary.map((metric) => (
+                  {getHealthSummary(patient).map((metric) => (
                     <div
                       key={metric.label}
                       className="p-4 rounded-xl bg-clinic-bg/50 dark:bg-slate-700/50"
@@ -285,12 +350,16 @@ export default function PatientPortal() {
                             "w-2 h-2 rounded-full",
                             metric.status === "normal"
                               ? "bg-clinic-teal"
-                              : "bg-amber-500"
+                              : metric.status === "attention"
+                              ? "bg-amber-500"
+                              : "bg-gray-300"
                           )}
                         />
-                        <span className="text-xs text-clinic-text/50 dark:text-white/50">
-                          {metric.date}
-                        </span>
+                        {metric.date && (
+                          <span className="text-xs text-clinic-text/50 dark:text-white/50">
+                            {metric.date}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}

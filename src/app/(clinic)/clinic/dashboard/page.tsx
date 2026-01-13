@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import {
   Activity,
   Building2,
@@ -17,6 +18,9 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
+  CreditCard,
+  AlertCircle,
+  Lock,
 } from "lucide-react";
 
 interface Clinic {
@@ -24,6 +28,11 @@ interface Clinic {
   name: string;
   email: string;
   subscription_plan: string;
+  trial_start_date?: string;
+  trial_end_date?: string;
+  is_trial_active?: boolean;
+  is_subscription_active?: boolean;
+  payment_status?: string;
 }
 
 interface AIFeature {
@@ -43,6 +52,9 @@ export default function ClinicDashboard() {
   const [adminName, setAdminName] = useState("Admin");
   const [aiFeatures, setAIFeatures] = useState<AIFeature[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isTrialExpired, setIsTrialExpired] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("clinicToken");
@@ -55,7 +67,21 @@ export default function ClinicDashboard() {
     }
 
     if (clinicData) {
-      setClinic(JSON.parse(clinicData));
+      const parsedClinic = JSON.parse(clinicData);
+      setClinic(parsedClinic);
+      
+      // Calculate trial days remaining
+      if (parsedClinic.trial_end_date) {
+        const trialEnd = new Date(parsedClinic.trial_end_date);
+        const today = new Date();
+        const diffTime = trialEnd.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        setTrialDaysRemaining(diffDays);
+        
+        if (diffDays <= 0 && parsedClinic.payment_status === "trial") {
+          setIsTrialExpired(true);
+        }
+      }
     }
 
     if (adminData) {
@@ -64,7 +90,40 @@ export default function ClinicDashboard() {
     }
 
     fetchAIFeatures();
+    fetchLatestClinicData();
   }, [router]);
+
+  const fetchLatestClinicData = async () => {
+    const clinicData = localStorage.getItem("clinic");
+    if (!clinicData) return;
+
+    const clinic = JSON.parse(clinicData);
+    try {
+      const res = await fetch(`/api/clinic/${clinic.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.clinic) {
+          setClinic(data.clinic);
+          localStorage.setItem("clinic", JSON.stringify(data.clinic));
+          
+          // Update trial status
+          if (data.clinic.trial_end_date) {
+            const trialEnd = new Date(data.clinic.trial_end_date);
+            const today = new Date();
+            const diffTime = trialEnd.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            setTrialDaysRemaining(diffDays);
+            
+            if (diffDays <= 0 && data.clinic.payment_status === "trial") {
+              setIsTrialExpired(true);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch clinic data:", error);
+    }
+  };
 
   const fetchAIFeatures = async () => {
     const clinicData = localStorage.getItem("clinic");
@@ -118,31 +177,42 @@ export default function ClinicDashboard() {
           </Link>
           <Link
             href="/clinic/appointments"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5 ${isTrialExpired ? "opacity-50 pointer-events-none" : ""}`}
           >
             <Calendar className="w-5 h-5" />
             Appointments
+            {isTrialExpired && <Lock className="w-3 h-3 ml-auto" />}
           </Link>
           <Link
             href="/clinic/patients"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5 ${isTrialExpired ? "opacity-50 pointer-events-none" : ""}`}
           >
             <Users className="w-5 h-5" />
             Patients
+            {isTrialExpired && <Lock className="w-3 h-3 ml-auto" />}
           </Link>
           <Link
             href="/clinic/services"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5 ${isTrialExpired ? "opacity-50 pointer-events-none" : ""}`}
           >
             <FileText className="w-5 h-5" />
             Services
+            {isTrialExpired && <Lock className="w-3 h-3 ml-auto" />}
           </Link>
           <Link
             href="/clinic/ai-features"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5"
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5 ${isTrialExpired ? "opacity-50 pointer-events-none" : ""}`}
           >
             <Sparkles className="w-5 h-5" />
             AI Features
+            {isTrialExpired && <Lock className="w-3 h-3 ml-auto" />}
+          </Link>
+          <Link
+            href="/clinic/billing"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5"
+          >
+            <CreditCard className="w-5 h-5" />
+            Billing
           </Link>
           <Link
             href="/clinic/settings"
@@ -195,8 +265,101 @@ export default function ClinicDashboard() {
         </header>
 
         <div className="p-6">
+          {/* Trial/Subscription Banner */}
+          {clinic?.payment_status === "trial" && trialDaysRemaining !== null && (
+            <div className={`mb-6 p-4 rounded-2xl ${
+              isTrialExpired 
+                ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                : trialDaysRemaining <= 3
+                ? "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+                : "bg-clinic-teal/5 dark:bg-clinic-teal/10 border border-clinic-teal/20"
+            }`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  {isTrialExpired ? (
+                    <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+                  ) : trialDaysRemaining <= 3 ? (
+                    <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <Clock className="w-6 h-6 text-clinic-teal flex-shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <h3 className={`font-semibold ${
+                      isTrialExpired 
+                        ? "text-red-700 dark:text-red-400"
+                        : trialDaysRemaining <= 3
+                        ? "text-amber-700 dark:text-amber-400"
+                        : "text-clinic-navy dark:text-white"
+                    }`}>
+                      {isTrialExpired 
+                        ? "Your Trial Has Expired"
+                        : trialDaysRemaining <= 3
+                        ? `Only ${trialDaysRemaining} day${trialDaysRemaining === 1 ? "" : "s"} left in your trial!`
+                        : `${trialDaysRemaining} days remaining in your free trial`
+                      }
+                    </h3>
+                    <p className={`text-sm mt-1 ${
+                      isTrialExpired 
+                        ? "text-red-600/80 dark:text-red-400/80"
+                        : trialDaysRemaining <= 3
+                        ? "text-amber-600/80 dark:text-amber-400/80"
+                        : "text-clinic-text/60 dark:text-white/60"
+                    }`}>
+                      {isTrialExpired 
+                        ? "Subscribe now to restore access to all features."
+                        : "Upgrade to a paid plan to continue using all features after your trial ends."
+                      }
+                    </p>
+                    {!isTrialExpired && (
+                      <div className="mt-3">
+                        <Progress 
+                          value={((14 - trialDaysRemaining) / 14) * 100} 
+                          className="h-2 w-48"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Link href="/clinic/billing">
+                  <Button 
+                    className={isTrialExpired 
+                      ? "bg-red-500 hover:bg-red-600 text-white" 
+                      : "bg-clinic-teal hover:bg-clinic-teal/90 text-white"
+                    }
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    {isTrialExpired ? "Subscribe Now" : "Upgrade Plan"}
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Trial Expired Overlay Content */}
+          {isTrialExpired && (
+            <div className="mb-6 p-8 bg-white dark:bg-slate-800 rounded-2xl border-2 border-dashed border-red-200 dark:border-red-800">
+              <div className="text-center">
+                <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-8 h-8 text-red-500" />
+                </div>
+                <h2 className="text-xl font-display font-bold text-clinic-navy dark:text-white mb-2">
+                  Features Locked
+                </h2>
+                <p className="text-clinic-text/60 dark:text-white/60 max-w-md mx-auto mb-6">
+                  Your 14-day free trial has ended. Subscribe to a plan to restore access to all features including appointments, patient management, and AI tools.
+                </p>
+                <Link href="/clinic/billing">
+                  <Button size="lg" className="bg-clinic-teal hover:bg-clinic-teal/90 text-white">
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    View Plans & Subscribe
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Quick Stats */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 ${isTrialExpired ? "opacity-50 pointer-events-none" : ""}`}
             <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-clinic-teal/10 flex items-center justify-center">

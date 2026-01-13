@@ -145,16 +145,12 @@ export function FeaturesSection() {
         {/* Bento Grid */}
         <div
           ref={gridRef}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr"
         >
           {features.map((feature, index) => (
             <div
               key={feature.title}
-              className={cn(
-                "group relative p-6 lg:p-8 rounded-2xl bg-white dark:bg-slate-800 border border-clinic-navy/5 dark:border-white/5 shadow-glass hover:shadow-glass-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden",
-                feature.size === "large" && "md:col-span-2 lg:col-span-1 lg:row-span-2",
-                feature.size === "medium" && "lg:col-span-1"
-              )}
+              className="group relative p-6 lg:p-8 rounded-2xl bg-white dark:bg-slate-800 border border-clinic-navy/5 dark:border-white/5 shadow-glass hover:shadow-glass-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden flex flex-col"
             >
               {/* Background Gradient */}
               <div
@@ -164,40 +160,37 @@ export function FeaturesSection() {
                 )}
               />
 
+              {/* Animated Pulse Circle */}
+              <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                <span className="flex h-8 w-8">
+                  <span className={cn(
+                    "animate-ping absolute inline-flex h-full w-full rounded-full opacity-40",
+                    `bg-gradient-to-br ${feature.color}`
+                  )} />
+                  <span className={cn(
+                    "relative inline-flex rounded-full h-8 w-8",
+                    `bg-gradient-to-br ${feature.color}`
+                  )} />
+                </span>
+              </div>
+
               {/* Icon */}
               <div
                 className={cn(
-                  "w-12 h-12 lg:w-14 lg:h-14 rounded-xl flex items-center justify-center mb-4 bg-gradient-to-br shadow-lg group-hover:shadow-glow transition-shadow",
+                  "w-12 h-12 lg:w-14 lg:h-14 rounded-xl flex items-center justify-center mb-4 bg-gradient-to-br shadow-lg group-hover:shadow-glow transition-all duration-300 group-hover:scale-110",
                   feature.color
                 )}
               >
-                <feature.icon className="w-6 h-6 lg:w-7 lg:h-7 text-white" />
+                <feature.icon className="w-6 h-6 lg:w-7 lg:h-7 text-white transition-transform duration-300 group-hover:rotate-6" />
               </div>
 
               {/* Content */}
               <h3 className="font-display text-xl lg:text-2xl font-semibold text-clinic-navy dark:text-white mb-2">
                 {feature.title}
               </h3>
-              <p className="text-clinic-text/70 dark:text-white/70 leading-relaxed">
+              <p className="text-clinic-text/70 dark:text-white/70 leading-relaxed flex-1">
                 {feature.description}
               </p>
-
-              {/* Hover Arrow */}
-              <div className="absolute bottom-6 right-6 w-8 h-8 rounded-full bg-clinic-navy/5 dark:bg-white/5 flex items-center justify-center opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
-                <svg
-                  className="w-4 h-4 text-clinic-navy dark:text-white"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </div>
             </div>
           ))}
         </div>

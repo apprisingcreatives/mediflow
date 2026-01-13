@@ -1,23 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Activity, Eye, EyeOff, Shield, Lock } from "lucide-react";
+import { Activity, Eye, EyeOff, Shield, Lock, AlertCircle } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
-export default function LoginPage() {
+function LoginContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { signIn, user, isLoading: authLoading } = useAuth();
+  
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const redirectUrl = searchParams.get("redirect") || "/patient";
+
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.push(redirectUrl);
+    }
+  }, [user, authLoading, router, redirectUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setIsLoading(true);
-    // Simulate login
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsLoading(false);
+    
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      setError(error.message);
+      setIsLoading(false);
+    } else {
+      router.push(redirectUrl);
+    }
   };
 
   return (
@@ -47,6 +71,13 @@ export default function LoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-center gap-2 text-red-700 dark:text-red-400 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email address</Label>
               <Input
@@ -54,6 +85,8 @@ export default function LoginPage() {
                 type="email"
                 placeholder="you@clinic.com"
                 className="h-12"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -74,6 +107,8 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   className="h-12 pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
                 <button
@@ -211,5 +246,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
+        <div className="animate-pulse text-clinic-navy dark:text-white">Loading...</div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

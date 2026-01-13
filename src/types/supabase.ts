@@ -44,6 +44,83 @@ export type Database = {
         }
         Relationships: []
       }
+      appointments: {
+        Row: {
+          ai_recommendation_reason: string | null
+          ai_recommended: boolean | null
+          appointment_date: string
+          appointment_time: string
+          clinic_id: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          patient_id: string | null
+          practitioner_id: string | null
+          service_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_recommendation_reason?: string | null
+          ai_recommended?: boolean | null
+          appointment_date: string
+          appointment_time: string
+          clinic_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          practitioner_id?: string | null
+          service_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_recommendation_reason?: string | null
+          ai_recommended?: boolean | null
+          appointment_date?: string
+          appointment_time?: string
+          clinic_id?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          practitioner_id?: string | null
+          service_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_practitioner_id_fkey"
+            columns: ["practitioner_id"]
+            isOneToOne: false
+            referencedRelation: "practitioners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "clinic_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinic_admins: {
         Row: {
           clinic_id: string | null
@@ -143,6 +220,53 @@ export type Database = {
           },
         ]
       }
+      clinic_payments: {
+        Row: {
+          amount: number
+          clinic_id: string | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          id: string
+          paid_at: string | null
+          payment_method: string | null
+          status: string | null
+          stripe_payment_intent_id: string | null
+        }
+        Insert: {
+          amount: number
+          clinic_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Update: {
+          amount?: number
+          clinic_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          paid_at?: string | null
+          payment_method?: string | null
+          status?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_payments_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinic_services: {
         Row: {
           clinic_id: string | null
@@ -199,10 +323,19 @@ export type Database = {
           email: string
           id: string
           is_active: boolean | null
+          is_subscription_active: boolean | null
+          is_trial_active: boolean | null
+          last_payment_date: string | null
           logo_url: string | null
           name: string
+          next_billing_date: string | null
+          payment_status: string | null
           phone: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           subscription_plan: string | null
+          trial_end_date: string | null
+          trial_start_date: string | null
           updated_at: string | null
         }
         Insert: {
@@ -213,10 +346,19 @@ export type Database = {
           email: string
           id?: string
           is_active?: boolean | null
+          is_subscription_active?: boolean | null
+          is_trial_active?: boolean | null
+          last_payment_date?: string | null
           logo_url?: string | null
           name: string
+          next_billing_date?: string | null
+          payment_status?: string | null
           phone?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_plan?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -227,10 +369,243 @@ export type Database = {
           email?: string
           id?: string
           is_active?: boolean | null
+          is_subscription_active?: boolean | null
+          is_trial_active?: boolean | null
+          last_payment_date?: string | null
           logo_url?: string | null
           name?: string
+          next_billing_date?: string | null
+          payment_status?: string | null
           phone?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           subscription_plan?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      email_notifications: {
+        Row: {
+          body: string
+          created_at: string | null
+          error_message: string | null
+          html_body: string | null
+          id: string
+          metadata: Json | null
+          notification_type: string
+          recipient_email: string
+          recipient_name: string | null
+          recipient_type: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          sent_at: string | null
+          status: string | null
+          subject: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          error_message?: string | null
+          html_body?: string | null
+          id?: string
+          metadata?: Json | null
+          notification_type: string
+          recipient_email: string
+          recipient_name?: string | null
+          recipient_type?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          error_message?: string | null
+          html_body?: string | null
+          id?: string
+          metadata?: Json | null
+          notification_type?: string
+          recipient_email?: string
+          recipient_name?: string | null
+          recipient_type?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          body: string
+          created_at: string | null
+          html_body: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          subject: string
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          html_body?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          subject: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          html_body?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          subject?: string
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: []
+      }
+      patient_documents: {
+        Row: {
+          ai_analysis: string | null
+          ai_recommended_specialty: string | null
+          ai_summary: string | null
+          analyzed_at: string | null
+          created_at: string | null
+          description: string | null
+          document_type: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          patient_id: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          ai_analysis?: string | null
+          ai_recommended_specialty?: string | null
+          ai_summary?: string | null
+          analyzed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          document_type?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          patient_id?: string | null
+          uploaded_at?: string | null
+        }
+        Update: {
+          ai_analysis?: string | null
+          ai_recommended_specialty?: string | null
+          ai_summary?: string | null
+          analyzed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          document_type?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          patient_id?: string | null
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          address: string | null
+          allergies: string[] | null
+          auth_user_id: string | null
+          blood_type: string | null
+          chronic_conditions: string[] | null
+          city: string | null
+          created_at: string | null
+          current_medications: string | null
+          date_of_birth: string | null
+          email: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          first_name: string
+          gender: string | null
+          id: string
+          insurance_policy_number: string | null
+          insurance_provider: string | null
+          last_name: string
+          medical_notes: string | null
+          onboarding_completed: boolean | null
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          allergies?: string[] | null
+          auth_user_id?: string | null
+          blood_type?: string | null
+          chronic_conditions?: string[] | null
+          city?: string | null
+          created_at?: string | null
+          current_medications?: string | null
+          date_of_birth?: string | null
+          email: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          first_name: string
+          gender?: string | null
+          id?: string
+          insurance_policy_number?: string | null
+          insurance_provider?: string | null
+          last_name: string
+          medical_notes?: string | null
+          onboarding_completed?: boolean | null
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          allergies?: string[] | null
+          auth_user_id?: string | null
+          blood_type?: string | null
+          chronic_conditions?: string[] | null
+          city?: string | null
+          created_at?: string | null
+          current_medications?: string | null
+          date_of_birth?: string | null
+          email?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          first_name?: string
+          gender?: string | null
+          id?: string
+          insurance_policy_number?: string | null
+          insurance_provider?: string | null
+          last_name?: string
+          medical_notes?: string | null
+          onboarding_completed?: boolean | null
+          phone?: string | null
           updated_at?: string | null
         }
         Relationships: []
