@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET(
   request: Request,
@@ -13,12 +8,14 @@ export async function GET(
   try {
     const { clinicId } = await params;
 
-    const { data: features, error } = await supabase
+    const { data: features, error } = await supabaseAdmin
       .from("clinic_ai_features")
-      .select(`
+      .select(
+        `
         *,
         ai_features (*)
-      `)
+      `
+      )
       .eq("clinic_id", clinicId);
 
     if (error) {
@@ -49,7 +46,7 @@ export async function PATCH(
       );
     }
 
-    const { data: feature, error } = await supabase
+    const { data: feature, error } = await supabaseAdmin
       .from("clinic_ai_features")
       .update({
         is_enabled: isEnabled,
@@ -59,10 +56,12 @@ export async function PATCH(
       })
       .eq("clinic_id", clinicId)
       .eq("feature_id", featureId)
-      .select(`
+      .select(
+        `
         *,
         ai_features (*)
-      `)
+      `
+      )
       .single();
 
     if (error) {

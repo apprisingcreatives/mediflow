@@ -66,13 +66,6 @@ export function Header() {
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-4">
             <Button
-              variant="ghost"
-              className="text-clinic-text/70 dark:text-white/70 hover:text-clinic-navy dark:hover:text-white hover:bg-clinic-navy/5 dark:hover:bg-white/10"
-              asChild
-            >
-              <Link href="/login">Sign In</Link>
-            </Button>
-            <Button
               className="bg-clinic-teal hover:bg-clinic-teal/90 text-white shadow-glow hover:shadow-glow transition-all duration-300"
               asChild
             >
@@ -116,13 +109,6 @@ export function Header() {
                 </nav>
 
                 <div className="mt-auto pt-8 flex flex-col gap-3">
-                  <Button
-                    variant="outline"
-                    className="w-full border-clinic-navy/20 dark:border-white/20 text-clinic-navy dark:text-white hover:bg-clinic-navy/5 dark:hover:bg-white/10"
-                    asChild
-                  >
-                    <Link href="/login">Sign In</Link>
-                  </Button>
                   <Button
                     className="w-full bg-clinic-teal hover:bg-clinic-teal/90 text-white"
                     asChild

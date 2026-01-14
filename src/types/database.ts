@@ -16,7 +16,7 @@ export interface Clinic {
   logo_url: string | null;
   description: string | null;
   is_active: boolean;
-  subscription_plan: 'starter' | 'professional' | 'enterprise';
+  subscription_plan: "starter" | "professional" | "enterprise";
   created_at: string;
   updated_at: string;
 }
@@ -90,6 +90,7 @@ export interface ClinicWithDetails extends Clinic {
 export interface Patient {
   id: string;
   auth_user_id: string | null;
+  clinic_id: string | null;
   email: string;
   first_name: string;
   last_name: string;
@@ -101,7 +102,7 @@ export interface Patient {
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   blood_type: string | null;
-  allergies: string[] | null;
+  allergies: string[] | string[] | null;
   chronic_conditions: string[] | null;
   current_medications: string | null;
   medical_notes: string | null;
@@ -137,7 +138,7 @@ export interface Appointment {
   service_id: string | null;
   appointment_date: string;
   appointment_time: string;
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no-show';
+  status: "scheduled" | "confirmed" | "completed" | "cancelled" | "no-show";
   notes: string | null;
   ai_recommended: boolean;
   ai_recommendation_reason: string | null;

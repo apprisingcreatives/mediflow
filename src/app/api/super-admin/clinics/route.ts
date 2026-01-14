@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET() {
   try {
-    const { data: clinics, error } = await supabase
+    const { data: clinics, error } = await supabaseAdmin
       .from("clinics")
-      .select(`
+      .select(
+        `
         *,
         clinic_services (*),
         clinic_ai_features (
@@ -19,7 +15,8 @@ export async function GET() {
         ),
         practitioners (*),
         clinic_admins (*)
-      `)
+      `
+      )
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -38,7 +35,15 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, phone, address, city, description, subscription_plan } = body;
+    const {
+      name,
+      email,
+      phone,
+      address,
+      city,
+      description,
+      subscription_plan,
+    } = body;
 
     if (!name || !email) {
       return NextResponse.json(
@@ -47,7 +52,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: clinic, error } = await supabase
+    const { data: clinic, error } = await supabaseAdmin
       .from("clinics")
       .insert({
         name,
@@ -66,7 +71,7 @@ export async function POST(request: Request) {
     }
 
     // Create default AI features for the clinic
-    const { data: features } = await supabase
+    const { data: features } = await supabaseAdmin
       .from("ai_features")
       .select("id, is_premium");
 
@@ -77,7 +82,7 @@ export async function POST(request: Request) {
         is_enabled: !feature.is_premium,
       }));
 
-      await supabase.from("clinic_ai_features").insert(clinicFeatures);
+      await supabaseAdmin.from("clinic_ai_features").insert(clinicFeatures);
     }
 
     return NextResponse.json({ clinic }, { status: 201 });

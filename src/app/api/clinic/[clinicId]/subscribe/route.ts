@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(
   request: Request,
@@ -16,7 +11,7 @@ export async function POST(
       await request.json();
 
     // Get clinic data
-    const { data: clinic, error: clinicError } = await supabase
+    const { data: clinic, error: clinicError } = await supabaseAdmin
       .from("clinics")
       .select("*")
       .eq("id", clinicId)
@@ -35,7 +30,7 @@ export async function POST(
     }
 
     // Update clinic subscription
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from("clinics")
       .update({
         subscription_plan: plan,
@@ -52,7 +47,7 @@ export async function POST(
     }
 
     // Create payment record
-    const { error: paymentError } = await supabase
+    const { error: paymentError } = await supabaseAdmin
       .from("clinic_payments")
       .insert({
         clinic_id: clinicId,
@@ -69,7 +64,7 @@ export async function POST(
     }
 
     // Queue payment confirmation email
-    const { data: admin } = await supabase
+    const { data: admin } = await supabaseAdmin
       .from("clinic_admins")
       .select("email, name")
       .eq("clinic_id", clinicId)
@@ -77,7 +72,7 @@ export async function POST(
       .single();
 
     if (admin) {
-      await supabase.from("email_notifications").insert({
+      await supabaseAdmin.from("email_notifications").insert({
         recipient_email: admin.email,
         recipient_name: admin.name,
         recipient_type: "clinic",

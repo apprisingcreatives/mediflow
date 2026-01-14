@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase";
 import bcrypt from "bcryptjs";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(request: Request) {
   try {
@@ -19,12 +14,14 @@ export async function POST(request: Request) {
     }
 
     // Get admin with clinic info
-    const { data: admin, error } = await supabase
+    const { data: admin, error } = await supabaseAdmin
       .from("clinic_admins")
-      .select(`
+      .select(
+        `
         *,
         clinics (*)
-      `)
+      `
+      )
       .eq("email", email)
       .single();
 
@@ -57,10 +54,10 @@ export async function POST(request: Request) {
     if (clinic && clinic.payment_status === "trial" && clinic.trial_end_date) {
       const trialEnd = new Date(clinic.trial_end_date);
       const today = new Date();
-      
+
       if (today > trialEnd && clinic.is_trial_active) {
         // Trial expired, update status
-        await supabase
+        await supabaseAdmin
           .from("clinics")
           .update({
             is_trial_active: false,
@@ -74,7 +71,9 @@ export async function POST(request: Request) {
     }
 
     // Generate token
-    const token = Buffer.from(`${admin.id}:${admin.clinic_id}:${Date.now()}`).toString("base64");
+    const token = Buffer.from(
+      `${admin.id}:${admin.clinic_id}:${Date.now()}`
+    ).toString("base64");
 
     return NextResponse.json({
       token,

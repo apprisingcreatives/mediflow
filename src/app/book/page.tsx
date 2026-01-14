@@ -51,7 +51,8 @@ const practitioners = [
     id: 1,
     name: "Dr. Sarah Chen",
     specialty: "Family Medicine",
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&q=80",
+    image:
+      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&q=80",
     nextAvailable: "Tomorrow",
     rating: 4.9,
   },
@@ -59,7 +60,8 @@ const practitioners = [
     id: 2,
     name: "Dr. Michael Rodriguez",
     specialty: "Internal Medicine",
-    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&q=80",
+    image:
+      "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&q=80",
     nextAvailable: "Mar 12",
     rating: 4.8,
   },
@@ -67,7 +69,8 @@ const practitioners = [
     id: 3,
     name: "Dr. Emily Watson",
     specialty: "Family Medicine",
-    image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&q=80",
+    image:
+      "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&q=80",
     nextAvailable: "Mar 13",
     rating: 4.9,
   },
@@ -90,7 +93,7 @@ function BookingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, patient, isLoading: authLoading } = useAuth();
-  
+
   const clinicId = searchParams.get("clinic");
   const clinicName = searchParams.get("clinicName");
   const serviceId = searchParams.get("service");
@@ -126,7 +129,7 @@ function BookingContent() {
   // Pre-fill form with patient data if logged in
   useEffect(() => {
     if (patient) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         firstName: patient.first_name || prev.firstName,
         lastName: patient.last_name || prev.lastName,
@@ -143,10 +146,10 @@ function BookingContent() {
 
   useEffect(() => {
     if (practitionerName) {
-      setFormData(prev => ({ ...prev, practitioner: practitionerName }));
+      setFormData((prev) => ({ ...prev, practitioner: practitionerName }));
     }
     if (serviceName) {
-      setFormData(prev => ({ ...prev, appointmentType: serviceName }));
+      setFormData((prev) => ({ ...prev, appointmentType: serviceName }));
     }
   }, [practitionerName, serviceName]);
 
@@ -159,14 +162,16 @@ function BookingContent() {
       router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
       return false;
     }
-    
+
     // Check if onboarding is complete
     if (patient && !patient.onboarding_completed) {
       const currentUrl = window.location.href;
-      router.push(`/patient/onboarding?redirect=${encodeURIComponent(currentUrl)}`);
+      router.push(
+        `/patient/onboarding?redirect=${encodeURIComponent(currentUrl)}`
+      );
       return false;
     }
-    
+
     return true;
   };
 
@@ -175,7 +180,7 @@ function BookingContent() {
     if (currentStep === 1) {
       if (!handleBookingStart()) return;
     }
-    
+
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
@@ -197,9 +202,24 @@ function BookingContent() {
     setSubmitError(null);
 
     try {
+      // Update patient clinic association if not already set (only if clinic_id column exists)
+      if (clinicId && patient) {
+        try {
+          await supabase
+            .from("patients")
+            .update({ clinic_id: clinicId })
+            .eq("id", patient.id);
+        } catch (error) {
+          // Column might not exist yet, ignore for now
+          console.log(
+            "Clinic association update skipped (column may not exist yet)"
+          );
+        }
+      }
+
       // Create appointment record
       const { data, error } = await supabase
-        .from('appointments')
+        .from("appointments")
         .insert({
           patient_id: patient.id,
           clinic_id: clinicId || null,
@@ -207,7 +227,7 @@ function BookingContent() {
           service_id: serviceId || null,
           appointment_date: formData.date,
           appointment_time: formData.time,
-          status: 'scheduled',
+          status: "scheduled",
           notes: formData.symptoms,
         })
         .select()
@@ -216,24 +236,24 @@ function BookingContent() {
       if (error) throw error;
 
       // Queue appointment confirmation email
-      await supabase.from('email_notifications').insert({
+      await supabase.from("email_notifications").insert({
         recipient_email: patient.email,
         recipient_name: `${patient.first_name} ${patient.last_name}`,
-        recipient_type: 'patient',
-        subject: 'Appointment Confirmed - MediFlow',
-        body: `Dear ${patient.first_name}, Your appointment has been confirmed for ${formData.date} at ${formData.time}${clinicName ? ` at ${clinicName}` : ''}${practitionerName ? ` with ${practitionerName}` : ''}.`,
-        html_body: `<h1>Appointment Confirmed</h1><p>Dear ${patient.first_name},</p><p>Your appointment has been confirmed:</p><ul><li><strong>Date:</strong> ${formData.date}</li><li><strong>Time:</strong> ${formData.time}</li>${clinicName ? `<li><strong>Clinic:</strong> ${clinicName}</li>` : ''}${practitionerName ? `<li><strong>Doctor:</strong> ${practitionerName}</li>` : ''}${serviceName ? `<li><strong>Service:</strong> ${serviceName}</li>` : ''}</ul><p>Please arrive 15 minutes before your appointment time.</p>`,
-        notification_type: 'appointment_confirmation',
-        related_entity_type: 'appointment',
+        recipient_type: "patient",
+        subject: "Appointment Confirmed - MediFlow",
+        body: `Dear ${patient.first_name}, Your appointment has been confirmed for ${formData.date} at ${formData.time}${clinicName ? ` at ${clinicName}` : ""}${practitionerName ? ` with ${practitionerName}` : ""}.`,
+        html_body: `<h1>Appointment Confirmed</h1><p>Dear ${patient.first_name},</p><p>Your appointment has been confirmed:</p><ul><li><strong>Date:</strong> ${formData.date}</li><li><strong>Time:</strong> ${formData.time}</li>${clinicName ? `<li><strong>Clinic:</strong> ${clinicName}</li>` : ""}${practitionerName ? `<li><strong>Doctor:</strong> ${practitionerName}</li>` : ""}${serviceName ? `<li><strong>Service:</strong> ${serviceName}</li>` : ""}</ul><p>Please arrive 15 minutes before your appointment time.</p>`,
+        notification_type: "appointment_confirmation",
+        related_entity_type: "appointment",
         related_entity_id: data.id,
-        status: 'pending',
+        status: "pending",
       });
 
       // Move to confirmation step
       setCurrentStep(4);
     } catch (err) {
-      console.error('Booking error:', err);
-      setSubmitError('Failed to complete booking. Please try again.');
+      console.error("Booking error:", err);
+      setSubmitError("Failed to complete booking. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -327,7 +347,9 @@ function BookingContent() {
                     <SelectItem value="male">Male</SelectItem>
                     <SelectItem value="female">Female</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
-                    <SelectItem value="prefer-not">Prefer not to say</SelectItem>
+                    <SelectItem value="prefer-not">
+                      Prefer not to say
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -349,8 +371,8 @@ function BookingContent() {
                     AI-Assisted Intake
                   </h4>
                   <p className="text-sm text-clinic-text/70 dark:text-white/70">
-                    Our AI will help prioritize your care based on your responses.
-                    This information is kept confidential and secure.
+                    Our AI will help prioritize your care based on your
+                    responses. This information is kept confidential and secure.
                   </p>
                 </div>
               </div>
@@ -390,7 +412,10 @@ function BookingContent() {
                         }
                       }}
                     />
-                    <Label htmlFor={condition} className="text-sm cursor-pointer">
+                    <Label
+                      htmlFor={condition}
+                      className="text-sm cursor-pointer"
+                    >
                       {condition}
                     </Label>
                   </div>
@@ -668,7 +693,9 @@ function BookingContent() {
                   </span>
                 </div>
               ) : (
-                <Link href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '/book')}`}>
+                <Link
+                  href={`/login?redirect=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "/book")}`}
+                >
                   <Button variant="outline" size="sm">
                     <LogIn className="w-4 h-4 mr-2" />
                     Sign In
@@ -677,7 +704,9 @@ function BookingContent() {
               )}
               <div className="flex items-center gap-2 text-sm text-clinic-text/60 dark:text-white/60">
                 <Shield className="w-4 h-4 text-clinic-teal" />
-                <span className="hidden sm:inline">Secure & HIPAA Compliant</span>
+                <span className="hidden sm:inline">
+                  Secure & HIPAA Compliant
+                </span>
               </div>
             </div>
           </div>
@@ -696,10 +725,16 @@ function BookingContent() {
                     Sign in for faster booking
                   </p>
                   <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
-                    Your information will be pre-filled from your profile. You'll need to sign in to complete the booking.
+                    Your information will be pre-filled from your profile.
+                    You'll need to sign in to complete the booking.
                   </p>
-                  <Link href={`/login?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '/book')}`}>
-                    <Button size="sm" className="mt-3 bg-amber-600 hover:bg-amber-700 text-white">
+                  <Link
+                    href={`/login?redirect=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "/book")}`}
+                  >
+                    <Button
+                      size="sm"
+                      className="mt-3 bg-amber-600 hover:bg-amber-700 text-white"
+                    >
                       <LogIn className="w-4 h-4 mr-2" />
                       Sign In Now
                     </Button>
@@ -717,19 +752,31 @@ function BookingContent() {
                   <Building2 className="w-5 h-5 text-clinic-navy dark:text-white" />
                 </div>
                 <div>
-                  <p className="text-xs text-clinic-text/60 dark:text-white/60">Booking appointment at</p>
-                  <p className="font-display font-bold text-clinic-navy dark:text-white">{clinicName}</p>
+                  <p className="text-xs text-clinic-text/60 dark:text-white/60">
+                    Booking appointment at
+                  </p>
+                  <p className="font-display font-bold text-clinic-navy dark:text-white">
+                    {clinicName}
+                  </p>
                 </div>
                 {serviceName && (
                   <div className="ml-auto text-right">
-                    <p className="text-xs text-clinic-text/60 dark:text-white/60">Service</p>
-                    <p className="font-medium text-clinic-teal">{serviceName}</p>
+                    <p className="text-xs text-clinic-text/60 dark:text-white/60">
+                      Service
+                    </p>
+                    <p className="font-medium text-clinic-teal">
+                      {serviceName}
+                    </p>
                   </div>
                 )}
                 {practitionerName && !serviceName && (
                   <div className="ml-auto text-right">
-                    <p className="text-xs text-clinic-text/60 dark:text-white/60">Practitioner</p>
-                    <p className="font-medium text-clinic-teal">{practitionerName}</p>
+                    <p className="text-xs text-clinic-text/60 dark:text-white/60">
+                      Practitioner
+                    </p>
+                    <p className="font-medium text-clinic-teal">
+                      {practitionerName}
+                    </p>
                   </div>
                 )}
               </div>
@@ -864,11 +911,15 @@ function BookingContent() {
 
 export default function BookingPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center">
-        <div className="animate-pulse text-clinic-navy dark:text-white">Loading booking form...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center">
+          <div className="animate-pulse text-clinic-navy dark:text-white">
+            Loading booking form...
+          </div>
+        </div>
+      }
+    >
       <BookingContent />
     </Suspense>
   );

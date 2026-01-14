@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase";
 import bcrypt from "bcryptjs";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +13,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: admin, error } = await supabase
+    const { data: admin, error } = await supabaseAdmin
       .from("super_admins")
       .select("*")
       .eq("email", email)
@@ -32,7 +27,9 @@ export async function POST(request: Request) {
     }
 
     // For demo purposes, accept "admin123" as password
-    const isValidPassword = password === "admin123" || await bcrypt.compare(password, admin.password_hash);
+    const isValidPassword =
+      password === "admin123" ||
+      (await bcrypt.compare(password, admin.password_hash));
 
     if (!isValidPassword) {
       return NextResponse.json(

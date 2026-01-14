@@ -306,6 +306,21 @@ export default function ClinicPage() {
                 <Calendar className="w-5 h-5 mr-2" />
                 {user ? "Book Appointment" : "Sign in to Book"}
               </Button>
+              {!user && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white/30 text-white bg-white/10 hover:bg-white/20"
+                  asChild
+                >
+                  <Link
+                    href={`/register?clinic=${clinic.id}&redirect=${encodeURIComponent(window.location.pathname)}`}
+                  >
+                    <LogIn className="w-5 h-5 mr-2" />
+                    Sign in as Patient
+                  </Link>
+                </Button>
+              )}
               <Button
                 size="lg"
                 variant="outline"

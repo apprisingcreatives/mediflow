@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET(
   request: Request,
@@ -13,9 +8,10 @@ export async function GET(
   try {
     const { clinicId } = await params;
 
-    const { data: clinic, error } = await supabase
+    const { data: clinic, error } = await supabaseAdmin
       .from("clinics")
-      .select(`
+      .select(
+        `
         *,
         clinic_services (*),
         clinic_ai_features (
@@ -24,7 +20,8 @@ export async function GET(
         ),
         practitioners (*),
         clinic_admins (*)
-      `)
+      `
+      )
       .eq("id", clinicId)
       .single();
 
@@ -49,7 +46,7 @@ export async function PATCH(
     const { clinicId } = await params;
     const body = await request.json();
 
-    const { data: clinic, error } = await supabase
+    const { data: clinic, error } = await supabaseAdmin
       .from("clinics")
       .update({
         ...body,
@@ -79,7 +76,7 @@ export async function DELETE(
   try {
     const { clinicId } = await params;
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("clinics")
       .delete()
       .eq("id", clinicId);

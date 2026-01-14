@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function GET() {
   try {
-    const { data: features, error } = await supabase
+    const { data: features, error } = await supabaseAdmin
       .from("ai_features")
       .select("*")
       .order("category", { ascending: true });

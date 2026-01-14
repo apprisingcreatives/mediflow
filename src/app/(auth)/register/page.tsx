@@ -14,24 +14,55 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Activity, Eye, EyeOff, Shield, Sparkles, Users, AlertCircle, CheckCircle } from "lucide-react";
+import {
+  Activity,
+  Eye,
+  EyeOff,
+  Shield,
+  Sparkles,
+  Users,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  DollarSign,
+} from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+
+interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+  duration_minutes: number;
+  price: number;
+  currency: string;
+}
+
+interface Clinic {
+  id: string;
+  name: string;
+  description: string | null;
+  clinic_services: Service[];
+}
 
 function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signUp, user, isLoading: authLoading } = useAuth();
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [clinic, setClinic] = useState<Clinic | null>(null);
+  const [clinicLoading, setClinicLoading] = useState(false);
 
   const redirectUrl = searchParams.get("redirect") || "/patient/onboarding";
+  const clinicId = searchParams.get("clinic");
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -39,13 +70,50 @@ function RegisterContent() {
     }
   }, [user, authLoading, router, redirectUrl]);
 
+  useEffect(() => {
+    if (clinicId) {
+      fetchClinic();
+    }
+  }, [clinicId]);
+
+  const fetchClinic = async () => {
+    if (!clinicId) return;
+
+    setClinicLoading(true);
+    try {
+      const res = await fetch(`/api/clinics/${clinicId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setClinic(data.clinic);
+      }
+    } catch (error) {
+      console.error("Failed to fetch clinic:", error);
+    } finally {
+      setClinicLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!agreeToTerms) {
+      setError(
+        "Please agree to the Terms of Service and Privacy Policy to continue."
+      );
+      return;
+    }
+
     setIsLoading(true);
-    
-    const { error } = await signUp(email, password, firstName, lastName);
-    
+
+    const { error } = await signUp(
+      email,
+      password,
+      firstName,
+      lastName,
+      clinicId || undefined
+    );
+
     if (error) {
       setError(error.message);
       setIsLoading(false);
@@ -60,62 +128,105 @@ function RegisterContent() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Panel - Visual */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-clinic-navy via-clinic-navy to-slate-800 p-16 items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-clinic-teal/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-clinic-ai/10 rounded-full blur-3xl" />
-        </div>
+      {/* Left Panel - Clinic Services */}
+      {clinicId && (
+        <div className="hidden lg:flex flex-1 bg-gradient-to-br from-clinic-navy via-clinic-navy to-slate-800 p-16 items-start justify-center relative overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-clinic-teal/20 rounded-full blur-3xl" />
+            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-clinic-ai/10 rounded-full blur-3xl" />
+          </div>
 
-        <div className="relative z-10 text-white max-w-lg">
-          <h2 className="font-display text-4xl font-bold mb-6">
-            Join 500+ Clinics Transforming Healthcare
-          </h2>
-          <p className="text-white/70 text-lg mb-8">
-            Start your 14-day free trial and discover how MediFlow can
-            streamline your practice operations.
-          </p>
+          <div className="relative z-10 text-white max-w-lg w-full">
+            {clinicLoading ? (
+              <div className="space-y-4">
+                <div className="h-8 bg-white/10 rounded-lg animate-pulse" />
+                <div className="h-4 bg-white/10 rounded animate-pulse" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-16 bg-white/10 rounded-xl animate-pulse"
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : clinic ? (
+              <>
+                <h2 className="font-display text-3xl font-bold mb-2">
+                  Register with {clinic.name}
+                </h2>
+                {clinic.description && (
+                  <p className="text-white/70 text-lg mb-8">
+                    {clinic.description}
+                  </p>
+                )}
 
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl">
-              <div className="w-10 h-10 rounded-full bg-clinic-teal/20 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-clinic-teal" />
-              </div>
-              <div>
-                <h4 className="font-semibold">AI-Powered Intake</h4>
-                <p className="text-sm text-white/60">
-                  Reduce admin time by 60%
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-xl mb-4">
+                    Available Services
+                  </h3>
+                  {clinic.clinic_services &&
+                  clinic.clinic_services.length > 0 ? (
+                    clinic.clinic_services.slice(0, 4).map((service) => (
+                      <div
+                        key={service.id}
+                        className="flex items-center gap-4 p-4 bg-white/5 rounded-xl"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-clinic-teal/20 flex items-center justify-center">
+                          <DollarSign className="w-5 h-5 text-clinic-teal" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{service.name}</h4>
+                          <div className="flex items-center gap-4 text-sm text-white/60">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {service.duration_minutes} min
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="w-3 h-3" />₱{service.price}
+                            </span>
+                          </div>
+                          {service.description && (
+                            <p className="text-xs text-white/50 mt-1">
+                              {service.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl">
+                      <div className="w-10 h-10 rounded-full bg-clinic-teal/20 flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-clinic-teal" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">AI-Powered Care</h4>
+                        <p className="text-sm text-white/60">
+                          Advanced healthcare services
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-center">
+                <h2 className="font-display text-3xl font-bold mb-4">
+                  Register as Patient
+                </h2>
+                <p className="text-white/70 text-lg">
+                  Create your account to access healthcare services
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl">
-              <div className="w-10 h-10 rounded-full bg-clinic-ai/20 flex items-center justify-center">
-                <Users className="w-5 h-5 text-clinic-ai" />
-              </div>
-              <div>
-                <h4 className="font-semibold">Patient Portal</h4>
-                <p className="text-sm text-white/60">
-                  Modern patient experience
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 p-4 bg-white/5 rounded-xl">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div>
-                <h4 className="font-semibold">HIPAA Compliant</h4>
-                <p className="text-sm text-white/60">
-                  Enterprise-grade security
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Right Panel - Form */}
-      <div className="flex-1 flex items-center justify-center p-8 lg:p-16 bg-white dark:bg-slate-900">
+      <div
+        className={`${clinicId ? "flex-1" : "w-full"} flex items-center justify-center p-8 lg:p-16 bg-white dark:bg-slate-900`}
+      >
         <div className="w-full max-w-md">
           <Link href="/" className="flex items-center gap-2 mb-8">
             <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-clinic-navy to-clinic-teal">
@@ -130,9 +241,6 @@ function RegisterContent() {
             <h1 className="font-display text-3xl font-bold text-clinic-navy dark:text-white mb-2">
               Create your account
             </h1>
-            <p className="text-clinic-text/60 dark:text-white/60">
-              Start your 14-day free trial. No credit card required.
-            </p>
           </div>
 
           {success && (
@@ -140,7 +248,9 @@ function RegisterContent() {
               <CheckCircle className="w-5 h-5 flex-shrink-0" />
               <div>
                 <p className="font-medium">Account created successfully!</p>
-                <p className="text-sm opacity-80">Redirecting to complete your profile...</p>
+                <p className="text-sm opacity-80">
+                  Redirecting to complete your profile...
+                </p>
               </div>
             </div>
           )}
@@ -221,14 +331,30 @@ function RegisterContent() {
             </div>
 
             <div className="flex items-start gap-2">
-              <Checkbox id="terms" required className="mt-1" />
-              <Label htmlFor="terms" className="text-sm font-normal leading-relaxed cursor-pointer">
+              <Checkbox
+                id="terms"
+                checked={agreeToTerms}
+                onCheckedChange={(checked) =>
+                  setAgreeToTerms(checked as boolean)
+                }
+                className="mt-1"
+              />
+              <Label
+                htmlFor="terms"
+                className="text-sm font-normal leading-relaxed cursor-pointer"
+              >
                 I agree to the{" "}
-                <Link href="/terms" className="text-clinic-teal hover:underline">
+                <Link
+                  href="/terms"
+                  className="text-clinic-teal hover:underline"
+                >
                   Terms of Service
                 </Link>{" "}
                 and{" "}
-                <Link href="/privacy" className="text-clinic-teal hover:underline">
+                <Link
+                  href="/privacy"
+                  className="text-clinic-teal hover:underline"
+                >
                   Privacy Policy
                 </Link>
               </Label>
@@ -284,7 +410,11 @@ function RegisterContent() {
               Google
             </Button>
             <Button variant="outline" className="h-12">
-              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701" />
               </svg>
               Apple
@@ -293,7 +423,10 @@ function RegisterContent() {
 
           <p className="text-center text-sm text-clinic-text/60 dark:text-white/60 mt-8">
             Already have an account?{" "}
-            <Link href="/login" className="text-clinic-teal hover:underline font-medium">
+            <Link
+              href="/login"
+              className="text-clinic-teal hover:underline font-medium"
+            >
               Sign in
             </Link>
           </p>
@@ -305,11 +438,15 @@ function RegisterContent() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
-        <div className="animate-pulse text-clinic-navy dark:text-white">Loading...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
+          <div className="animate-pulse text-clinic-navy dark:text-white">
+            Loading...
+          </div>
+        </div>
+      }
+    >
       <RegisterContent />
     </Suspense>
   );

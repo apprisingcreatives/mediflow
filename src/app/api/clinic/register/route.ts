@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase";
 import bcrypt from "bcryptjs";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     // Check if clinic email already exists
-    const { data: existingClinic } = await supabase
+    const { data: existingClinic } = await supabaseAdmin
       .from("clinics")
       .select("id")
       .eq("email", clinic.email)
@@ -40,7 +35,7 @@ export async function POST(request: Request) {
     }
 
     // Check if admin email already exists
-    const { data: existingAdmin } = await supabase
+    const { data: existingAdmin } = await supabaseAdmin
       .from("clinic_admins")
       .select("id")
       .eq("email", admin.email)
@@ -59,7 +54,7 @@ export async function POST(request: Request) {
     trialEndDate.setDate(trialEndDate.getDate() + 14);
 
     // Create clinic with trial
-    const { data: newClinic, error: clinicError } = await supabase
+    const { data: newClinic, error: clinicError } = await supabaseAdmin
       .from("clinics")
       .insert({
         name: clinic.name,
@@ -85,40 +80,44 @@ export async function POST(request: Request) {
     // Hash password and create admin
     const passwordHash = await bcrypt.hash(admin.password, 10);
 
-    const { error: adminError } = await supabase.from("clinic_admins").insert({
-      clinic_id: newClinic.id,
-      name: admin.name,
-      email: admin.email,
-      password_hash: passwordHash,
-      role: "admin",
-    });
+    const { error: adminError } = await supabaseAdmin
+      .from("clinic_admins")
+      .insert({
+        clinic_id: newClinic.id,
+        name: admin.name,
+        email: admin.email,
+        password_hash: passwordHash,
+        role: "admin",
+      });
 
     if (adminError) {
       // Rollback clinic creation
-      await supabase.from("clinics").delete().eq("id", newClinic.id);
+      await supabaseAdmin.from("clinics").delete().eq("id", newClinic.id);
       return NextResponse.json({ error: adminError.message }, { status: 500 });
     }
 
     // Create services
     if (services && services.length > 0) {
-      const servicesToInsert = services.map((service: {
-        name: string;
-        description?: string;
-        duration?: string;
-        price: string;
-      }) => ({
-        clinic_id: newClinic.id,
-        name: service.name,
-        description: service.description || null,
-        duration_minutes: parseInt(service.duration || "30"),
-        price: parseFloat(service.price),
-      }));
+      const servicesToInsert = services.map(
+        (service: {
+          name: string;
+          description?: string;
+          duration?: string;
+          price: string;
+        }) => ({
+          clinic_id: newClinic.id,
+          name: service.name,
+          description: service.description || null,
+          duration_minutes: parseInt(service.duration || "30"),
+          price: parseFloat(service.price),
+        })
+      );
 
-      await supabase.from("clinic_services").insert(servicesToInsert);
+      await supabaseAdmin.from("clinic_services").insert(servicesToInsert);
     }
 
     // Create AI features for the clinic
-    const { data: features } = await supabase
+    const { data: features } = await supabaseAdmin
       .from("ai_features")
       .select("id, is_premium");
 
@@ -129,11 +128,11 @@ export async function POST(request: Request) {
         is_enabled: !feature.is_premium,
       }));
 
-      await supabase.from("clinic_ai_features").insert(clinicFeatures);
+      await supabaseAdmin.from("clinic_ai_features").insert(clinicFeatures);
     }
 
     // Queue welcome email notification
-    await supabase.from("email_notifications").insert({
+    await supabaseAdmin.from("email_notifications").insert({
       recipient_email: admin.email,
       recipient_name: admin.name,
       recipient_type: "clinic",

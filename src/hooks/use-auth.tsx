@@ -21,7 +21,8 @@ interface AuthContextType {
     email: string,
     password: string,
     firstName: string,
-    lastName: string
+    lastName: string,
+    clinicId?: string
   ) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signInWithApple: () => Promise<{ error: Error | null }>;
@@ -107,7 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     firstName: string,
-    lastName: string
+    lastName: string,
+    clinicId?: string
   ) => {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -121,29 +123,109 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (!error && data.user) {
-      // Create patient record
-      const { error: patientError } = await supabase.from("patients").insert({
+      // Create patient record with clinic association (if column exists)
+      const patientData: any = {
         auth_user_id: data.user.id,
         email: email,
         first_name: firstName,
         last_name: lastName,
         onboarding_completed: false,
-      });
+      };
 
-      if (patientError) {
+      // Try to insert with clinic_id first
+      let insertData = { ...patientData };
+      if (clinicId) {
+        insertData.clinic_id = clinicId;
+      }
+
+      let { error: patientError } = await supabase
+        .from("patients")
+        .insert(insertData);
+
+      // If clinic_id column doesn't exist, retry without it
+      if (patientError && patientError.message?.includes("clinic_id")) {
+        console.warn(
+          "clinic_id column not found, creating patient without clinic association"
+        );
+        const { error: retryError } = await supabase
+          .from("patients")
+          .insert(patientData);
+
+        if (retryError) {
+          console.error("Error creating patient record:", retryError);
+          return { error: new Error("Failed to create patient profile") };
+        }
+      } else if (patientError) {
         console.error("Error creating patient record:", patientError);
         return { error: new Error("Failed to create patient profile") };
       }
 
-      // Queue welcome email
+      // Get clinic information for customized email
+      let clinicInfo = null;
+      if (clinicId) {
+        const { data: clinicData } = await supabase
+          .from("clinics")
+          .select("name, email, phone, address, city")
+          .eq("id", clinicId)
+          .single();
+        clinicInfo = clinicData;
+      }
+
+      // Queue customized welcome email
+      const clinicName = clinicInfo?.name || "MediFlow";
+      const clinicContact = clinicInfo?.email || "support@mediflow.ai";
+      const clinicPhone = clinicInfo?.phone || "+63 920 478 6075";
+
       await supabase.from("email_notifications").insert({
         recipient_email: email,
         recipient_name: `${firstName} ${lastName}`,
         recipient_type: "patient",
-        subject: "Welcome to MediFlow",
-        body: `Dear ${firstName}, Welcome to MediFlow! Your account has been created successfully. Complete your health profile to get started.`,
-        html_body: `<h1>Welcome to MediFlow!</h1><p>Dear ${firstName},</p><p>Welcome to MediFlow! Your account has been created successfully.</p><p>Complete your health profile to get personalized care recommendations.</p>`,
+        subject: `Welcome to ${clinicName} - Your Health Journey Begins`,
+        body: `Dear ${firstName},
+
+Welcome to ${clinicName}! Your patient account has been created successfully.
+
+Your Clinic Details:
+- Clinic: ${clinicName}
+${clinicInfo?.address ? `- Address: ${clinicInfo.address}${clinicInfo.city ? `, ${clinicInfo.city}` : ""}` : ""}
+${clinicInfo?.phone ? `- Phone: ${clinicInfo.phone}` : ""}
+- Contact: ${clinicContact}
+
+Next Steps:
+1. Complete your health profile with medical history and preferences
+2. Book your first appointment through our easy online system
+3. Receive personalized care recommendations powered by AI
+
+We're excited to be part of your healthcare journey!
+
+Best regards,
+The ${clinicName} Team`,
+        html_body: `<h1>Welcome to ${clinicName}!</h1>
+<p>Dear ${firstName},</p>
+
+<p>Welcome to ${clinicName}! Your patient account has been created successfully.</p>
+
+<h2>Your Clinic Details:</h2>
+<ul>
+  <li><strong>Clinic:</strong> ${clinicName}</li>
+  ${clinicInfo?.address ? `<li><strong>Address:</strong> ${clinicInfo.address}${clinicInfo.city ? `, ${clinicInfo.city}` : ""}</li>` : ""}
+  ${clinicInfo?.phone ? `<li><strong>Phone:</strong> ${clinicInfo.phone}</li>` : ""}
+  <li><strong>Contact:</strong> <a href="mailto:${clinicContact}">${clinicContact}</a></li>
+</ul>
+
+<h2>Next Steps:</h2>
+<ol>
+  <li>Complete your health profile with medical history and preferences</li>
+  <li>Book your first appointment through our easy online system</li>
+  <li>Receive personalized care recommendations powered by AI</li>
+</ol>
+
+<p>We're excited to be part of your healthcare journey!</p>
+
+<p>Best regards,<br>The ${clinicName} Team</p>`,
         notification_type: "welcome_patient",
+        related_entity_type: clinicId ? "clinic" : null,
+        related_entity_id: clinicId || null,
         status: "pending",
       });
     }
