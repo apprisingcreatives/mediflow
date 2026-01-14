@@ -113,23 +113,6 @@ export interface Patient {
   updated_at: string;
 }
 
-export interface PatientDocument {
-  id: string;
-  patient_id: string;
-  file_name: string;
-  file_url: string;
-  file_type: string | null;
-  file_size: number | null;
-  document_type: string | null;
-  description: string | null;
-  ai_analysis: string | null;
-  ai_recommended_specialty: string | null;
-  ai_summary: string | null;
-  uploaded_at: string;
-  analyzed_at: string | null;
-  created_at: string;
-}
-
 export interface Appointment {
   id: string;
   patient_id: string | null;
@@ -144,4 +127,99 @@ export interface Appointment {
   ai_recommendation_reason: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Patient Onboarding System Types
+export interface ClinicOnboardingQuestion {
+  id: string;
+  clinic_id: string;
+  question_text: string;
+  question_type:
+    | "text"
+    | "textarea"
+    | "select"
+    | "multiselect"
+    | "yesno"
+    | "number"
+    | "date";
+  options: string[] | null;
+  is_required: boolean;
+  display_order: number;
+  category: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClinicRequiredDocument {
+  id: string;
+  clinic_id: string;
+  document_name: string;
+  document_description: string | null;
+  is_required: boolean;
+  allowed_file_types: string | null;
+  max_file_size_mb: number;
+  display_order: number;
+  category: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PatientQuestionResponse {
+  id: string;
+  patient_id: string;
+  clinic_id: string;
+  question_id: string;
+  response_value: string | null;
+  response_options: string[] | null;
+  responded_at: string;
+  created_at: string;
+  updated_at: string;
+  question?: ClinicOnboardingQuestion;
+}
+
+export interface PatientDocument {
+  id: string;
+  patient_id: string;
+  clinic_id: string;
+  document_type_id: string;
+  file_name: string;
+  file_path: string;
+  file_size_bytes: number | null;
+  mime_type: string | null;
+  uploaded_at: string;
+  verified_by: string | null;
+  verified_at: string | null;
+  status: "pending" | "approved" | "rejected";
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+  document_type?: ClinicRequiredDocument;
+}
+
+export interface AITreatmentPrediction {
+  id: string;
+  patient_id: string;
+  clinic_id: string;
+  prediction_data: any;
+  confidence_score: number | null;
+  recommended_treatments: any;
+  risk_factors: any;
+  predicted_conditions: any;
+  generated_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  status: "pending" | "reviewed" | "accepted" | "rejected";
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PatientOnboardingData {
+  questions: ClinicOnboardingQuestion[];
+  documents: ClinicRequiredDocument[];
+  responses: PatientQuestionResponse[];
+  uploadedDocuments: PatientDocument[];
+  aiPrediction?: AITreatmentPrediction;
 }

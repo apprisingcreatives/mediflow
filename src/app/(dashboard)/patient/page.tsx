@@ -18,11 +18,20 @@ import {
   MapPin,
   LogOut,
   User,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -35,7 +44,8 @@ const upcomingAppointments = [
     time: "10:00 AM",
     type: "in-person",
     location: "Bay Area Medical Group",
-    avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80",
+    avatar:
+      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80",
   },
   {
     id: 2,
@@ -44,7 +54,8 @@ const upcomingAppointments = [
     date: "Mar 15",
     time: "2:30 PM",
     type: "video",
-    avatar: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&q=80",
+    avatar:
+      "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&q=80",
   },
 ];
 
@@ -55,7 +66,8 @@ const recentMessages = [
     preview: "Your lab results are in. Everything looks good...",
     time: "2 hours ago",
     unread: true,
-    avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80",
+    avatar:
+      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80",
   },
   {
     id: 2,
@@ -67,30 +79,44 @@ const recentMessages = [
   },
 ];
 
-const getHealthSummary = (patient: { blood_type?: string | null; allergies?: string[] | null; chronic_conditions?: string[] | null; onboarding_completed?: boolean; } | null) => [
-  { 
-    label: "Blood Type", 
-    value: patient?.blood_type || "Not Set", 
-    status: patient?.blood_type ? "normal" : "pending", 
-    date: "Profile" 
+const getHealthSummary = (
+  patient: {
+    blood_type?: string | null;
+    allergies?: string[] | null;
+    chronic_conditions?: string[] | null;
+    onboarding_completed?: boolean;
+  } | null
+) => [
+  {
+    label: "Blood Type",
+    value: patient?.blood_type || "Not Set",
+    status: patient?.blood_type ? "normal" : "pending",
+    date: "Profile",
   },
-  { 
-    label: "Allergies", 
-    value: (patient?.allergies?.length || 0) > 0 ? `${patient?.allergies?.length} recorded` : "None", 
-    status: "normal", 
-    date: "Profile" 
+  {
+    label: "Allergies",
+    value:
+      (patient?.allergies?.length || 0) > 0
+        ? `${patient?.allergies?.length} recorded`
+        : "None",
+    status: "normal",
+    date: "Profile",
   },
-  { 
-    label: "Conditions", 
-    value: (patient?.chronic_conditions?.length || 0) > 0 ? `${patient?.chronic_conditions?.length} active` : "None", 
-    status: (patient?.chronic_conditions?.length || 0) > 0 ? "attention" : "normal", 
-    date: "Profile" 
+  {
+    label: "Conditions",
+    value:
+      (patient?.chronic_conditions?.length || 0) > 0
+        ? `${patient?.chronic_conditions?.length} active`
+        : "None",
+    status:
+      (patient?.chronic_conditions?.length || 0) > 0 ? "attention" : "normal",
+    date: "Profile",
   },
-  { 
-    label: "Profile", 
-    value: patient?.onboarding_completed ? "Complete" : "Incomplete", 
-    status: patient?.onboarding_completed ? "normal" : "attention", 
-    date: "" 
+  {
+    label: "Profile",
+    value: patient?.onboarding_completed ? "Complete" : "Incomplete",
+    status: patient?.onboarding_completed ? "normal" : "attention",
+    date: "",
   },
 ];
 
@@ -102,9 +128,8 @@ export default function PatientPortal() {
     if (!isLoading) {
       if (!user) {
         router.push("/login?redirect=/patient");
-      } else if (patient && !patient.onboarding_completed) {
-        router.push("/patient/onboarding");
       }
+      // Remove automatic redirect to onboarding - show status instead
     }
   }, [user, patient, isLoading, router]);
 
@@ -116,7 +141,9 @@ export default function PatientPortal() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center">
-        <div className="animate-pulse text-clinic-navy dark:text-white">Loading...</div>
+        <div className="animate-pulse text-clinic-navy dark:text-white">
+          Loading...
+        </div>
       </div>
     );
   }
@@ -172,21 +199,55 @@ export default function PatientPortal() {
                   2
                 </span>
               </Button>
-              <div className="flex items-center gap-2">
-                <Avatar className="w-9 h-9">
-                  <AvatarFallback className="bg-clinic-navy text-white">
-                    {patient?.first_name?.[0]}{patient?.last_name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-clinic-navy dark:text-white">
-                    {patient?.first_name} {patient?.last_name}
-                  </p>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="w-4 h-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 px-2"
+                  >
+                    <Avatar className="w-9 h-9">
+                      <AvatarFallback className="bg-clinic-navy text-white">
+                        {patient?.first_name?.[0]}
+                        {patient?.last_name?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="hidden sm:block text-left">
+                      <p className="text-sm font-medium text-clinic-navy dark:text-white">
+                        {patient?.first_name} {patient?.last_name}
+                      </p>
+                    </div>
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <User className="w-4 h-4 mr-2" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Bell className="w-4 h-4 mr-2" />
+                    Notifications
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Medical Records
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="text-red-500"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -204,11 +265,47 @@ export default function PatientPortal() {
           </p>
         </div>
 
-        {/* Quick Actions */}
+        {/* Onboarding Status */}
+        {patient && !patient.onboarding_completed && (
+          <Card className="mb-8 border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-amber-900 dark:text-amber-100">
+                      Complete Your Health Profile
+                    </h3>
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      Finish your onboarding to get personalized care
+                      recommendations
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() =>
+                    router.push(
+                      `/clinic/${patient.clinic_id}/patient/onboarding`
+                    )
+                  }
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  Complete Now
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { icon: Plus, label: "Book Appointment", color: "bg-clinic-teal" },
-            { icon: MessageSquare, label: "Send Message", color: "bg-clinic-ai" },
+            {
+              icon: MessageSquare,
+              label: "Send Message",
+              color: "bg-clinic-ai",
+            },
             { icon: FileText, label: "View Records", color: "bg-clinic-navy" },
             { icon: Video, label: "Start Video Call", color: "bg-emerald-500" },
           ].map((action) => (
@@ -308,8 +405,13 @@ export default function PatientPortal() {
                       )}
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Button size="sm" className="bg-clinic-teal hover:bg-clinic-teal/90 text-white">
-                        {appointment.type === "video" ? "Join Call" : "Check In"}
+                      <Button
+                        size="sm"
+                        className="bg-clinic-teal hover:bg-clinic-teal/90 text-white"
+                      >
+                        {appointment.type === "video"
+                          ? "Join Call"
+                          : "Check In"}
                       </Button>
                       <Button variant="outline" size="sm">
                         Reschedule
@@ -351,8 +453,8 @@ export default function PatientPortal() {
                             metric.status === "normal"
                               ? "bg-clinic-teal"
                               : metric.status === "attention"
-                              ? "bg-amber-500"
-                              : "bg-gray-300"
+                                ? "bg-amber-500"
+                                : "bg-gray-300"
                           )}
                         />
                         {metric.date && (
@@ -434,9 +536,7 @@ export default function PatientPortal() {
             {/* Contact Info */}
             <Card className="border-0 shadow-glass bg-gradient-to-br from-clinic-navy to-clinic-navy/90 text-white">
               <CardContent className="p-6">
-                <h3 className="font-display font-semibold mb-4">
-                  Need Help?
-                </h3>
+                <h3 className="font-display font-semibold mb-4">Need Help?</h3>
                 <div className="space-y-3">
                   <a
                     href="tel:+1234567890"

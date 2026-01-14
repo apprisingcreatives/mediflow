@@ -20,11 +20,13 @@ MediFlow is a comprehensive, AI-powered healthcare management platform designed 
 - **Intelligent Patient Intake**: AI-driven patient registration and data collection
 - **Smart Scheduling**: Automated appointment optimization and conflict resolution
 - **Document Processing**: AI-assisted document analysis and categorization
+- **Patient Onboarding AI**: AI-powered treatment predictions based on health history
 - **Chatbot Integration**: Patient and clinic chatbots for enhanced user experience
 
 ### 👥 User Management
 
 - **Patient Portal**: Secure patient dashboard for appointment booking and health records
+- **Patient Onboarding**: Clinic-specific health questionnaires and document collection
 - **Admin Dashboard**: Comprehensive administrative interface for clinic operations
 - **Super Admin**: System-wide administration and clinic oversight
 - **Authentication**: Secure login and registration with role-based permissions
@@ -34,6 +36,47 @@ MediFlow is a comprehensive, AI-powered healthcare management platform designed 
 - **HIPAA Compliant**: Built with healthcare data privacy standards
 - **Secure Data Storage**: Encrypted patient data and secure API endpoints
 - **Audit Trails**: Comprehensive logging and activity tracking
+
+## 🏥 Patient Onboarding System
+
+MediFlow includes a comprehensive, clinic-specific patient onboarding system that collects health history and required documents while providing AI-powered treatment recommendations.
+
+### Key Features
+
+- **Clinic-Specific Configuration**: Each clinic can define their own set of health history questions and required documents
+- **Dynamic Question Types**: Support for text, textarea, select, multiselect, yes/no, number, and date questions
+- **Document Management**: Secure file upload with type validation and size limits
+- **AI Treatment Prediction**: Machine learning-powered analysis of patient responses to recommend treatments
+- **Progress Tracking**: Real-time progress indicators for onboarding completion
+- **Patient Access Control**: Patients can only access clinics they are registered with
+
+### Database Schema
+
+The onboarding system uses several key tables:
+
+- `clinic_onboarding_questions` - Clinic-specific health history questions
+- `clinic_required_documents` - Document requirements per clinic
+- `patient_question_responses` - Patient answers to onboarding questions
+- `patient_documents` - Uploaded patient documents with verification status
+- `ai_treatment_predictions` - AI-generated treatment recommendations
+
+### Clinic Management
+
+Clinics can manage their onboarding configuration through the dashboard:
+
+1. **Question Management**: Add, edit, and organize health history questions
+2. **Document Requirements**: Define required documents with file type restrictions
+3. **Category Organization**: Group questions by medical categories (Medical History, Lifestyle, etc.)
+4. **AI Integration**: View AI predictions and treatment recommendations
+
+### Patient Experience
+
+Patients complete onboarding through an intuitive interface:
+
+1. **Dynamic Questionnaires**: Clinic-specific questions with appropriate input types
+2. **Document Upload**: Secure file upload with validation
+3. **Progress Tracking**: Visual progress indicators
+4. **AI Insights**: View AI-generated health insights and recommendations
 
 ## 🛠️ Tech Stack
 

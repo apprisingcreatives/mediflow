@@ -48,7 +48,17 @@ const steps = [
   { id: 4, name: "AI Analysis", icon: Brain },
 ];
 
-const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"];
+const bloodTypes = [
+  "A+",
+  "A-",
+  "B+",
+  "B-",
+  "AB+",
+  "AB-",
+  "O+",
+  "O-",
+  "Unknown",
+];
 const genders = ["Male", "Female", "Non-binary", "Prefer not to say"];
 
 const chronicConditions = [
@@ -68,11 +78,11 @@ const chronicConditions = [
 export default function PatientOnboardingPage() {
   const router = useRouter();
   const { user, patient, isLoading: authLoading, refreshPatient } = useAuth();
-  
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
     phone: "",
     dateOfBirth: "",
@@ -91,7 +101,9 @@ export default function PatientOnboardingPage() {
   });
 
   const [allergiesInput, setAllergiesInput] = useState("");
-  const [uploadedDocuments, setUploadedDocuments] = useState<PatientDocument[]>([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<PatientDocument[]>(
+    []
+  );
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [aiRecommendation, setAiRecommendation] = useState<{
@@ -125,7 +137,7 @@ export default function PatientOnboardingPage() {
         insurancePolicyNumber: patient.insurance_policy_number || "",
       });
       setAllergiesInput((patient.allergies || []).join(", "));
-      
+
       // Fetch existing documents
       fetchDocuments();
     }
@@ -133,13 +145,13 @@ export default function PatientOnboardingPage() {
 
   const fetchDocuments = async () => {
     if (!patient) return;
-    
+
     const { data, error } = await supabase
-      .from('patient_documents')
-      .select('*')
-      .eq('patient_id', patient.id)
-      .order('created_at', { ascending: false });
-    
+      .from("patient_documents")
+      .select("*")
+      .eq("patient_id", patient.id)
+      .order("created_at", { ascending: false });
+
     if (data) {
       setUploadedDocuments(data);
     }
@@ -150,7 +162,12 @@ export default function PatientOnboardingPage() {
   const handleConditionToggle = (condition: string) => {
     setFormData((prev) => {
       if (condition === "None") {
-        return { ...prev, chronicConditions: prev.chronicConditions.includes("None") ? [] : ["None"] };
+        return {
+          ...prev,
+          chronicConditions: prev.chronicConditions.includes("None")
+            ? []
+            : ["None"],
+        };
       }
       const newConditions = prev.chronicConditions.includes(condition)
         ? prev.chronicConditions.filter((c) => c !== condition)
@@ -161,7 +178,10 @@ export default function PatientOnboardingPage() {
 
   const handleAllergiesChange = (value: string) => {
     setAllergiesInput(value);
-    const allergies = value.split(",").map((a) => a.trim()).filter(Boolean);
+    const allergies = value
+      .split(",")
+      .map((a) => a.trim())
+      .filter(Boolean);
     setFormData((prev) => ({ ...prev, allergies }));
   };
 
@@ -177,21 +197,21 @@ export default function PatientOnboardingPage() {
         // Upload to Supabase Storage
         const fileName = `${patient.id}/${Date.now()}-${file.name}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('patient-documents')
+          .from("patient-documents")
           .upload(fileName, file);
 
         if (uploadError) {
-          console.error('Upload error:', uploadError);
+          console.error("Upload error:", uploadError);
           // Continue with mock data for demo
         }
 
-        const fileUrl = uploadData?.path 
+        const fileUrl = uploadData?.path
           ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/patient-documents/${uploadData.path}`
           : `/documents/${file.name}`;
 
         // Save document record
         const { data: docData, error: docError } = await supabase
-          .from('patient_documents')
+          .from("patient_documents")
           .insert({
             patient_id: patient.id,
             file_name: file.name,
@@ -204,14 +224,14 @@ export default function PatientOnboardingPage() {
           .single();
 
         if (docError) {
-          console.error('Document save error:', docError);
+          console.error("Document save error:", docError);
         } else if (docData) {
           setUploadedDocuments((prev) => [docData, ...prev]);
         }
       }
     } catch (err) {
-      console.error('Upload failed:', err);
-      setError('Failed to upload documents. Please try again.');
+      console.error("Upload failed:", err);
+      setError("Failed to upload documents. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -219,19 +239,25 @@ export default function PatientOnboardingPage() {
 
   const getDocumentType = (fileName: string): string => {
     const lower = fileName.toLowerCase();
-    if (lower.includes('lab') || lower.includes('result')) return 'Lab Results';
-    if (lower.includes('xray') || lower.includes('scan') || lower.includes('mri')) return 'Imaging';
-    if (lower.includes('prescription') || lower.includes('rx')) return 'Prescription';
-    if (lower.includes('insurance')) return 'Insurance';
-    if (lower.includes('referral')) return 'Referral';
-    return 'Medical Record';
+    if (lower.includes("lab") || lower.includes("result")) return "Lab Results";
+    if (
+      lower.includes("xray") ||
+      lower.includes("scan") ||
+      lower.includes("mri")
+    )
+      return "Imaging";
+    if (lower.includes("prescription") || lower.includes("rx"))
+      return "Prescription";
+    if (lower.includes("insurance")) return "Insurance";
+    if (lower.includes("referral")) return "Referral";
+    return "Medical Record";
   };
 
   const removeDocument = async (docId: string) => {
     const { error } = await supabase
-      .from('patient_documents')
+      .from("patient_documents")
       .delete()
-      .eq('id', docId);
+      .eq("id", docId);
 
     if (!error) {
       setUploadedDocuments((prev) => prev.filter((d) => d.id !== docId));
@@ -243,7 +269,8 @@ export default function PatientOnboardingPage() {
       // Skip analysis if no documents
       setAiRecommendation({
         specialty: "General Practice",
-        reason: "Based on your health profile, we recommend starting with a general practitioner for an initial assessment.",
+        reason:
+          "Based on your health profile, we recommend starting with a general practitioner for an initial assessment.",
         confidence: 75,
       });
       return;
@@ -255,50 +282,42 @@ export default function PatientOnboardingPage() {
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     // Mock AI recommendation based on conditions
-    const hasHeartCondition = formData.chronicConditions.includes("Heart Disease") || 
-                              formData.chronicConditions.includes("Hypertension");
+    const hasHeartCondition =
+      formData.chronicConditions.includes("Heart Disease") ||
+      formData.chronicConditions.includes("Hypertension");
     const hasDiabetes = formData.chronicConditions.includes("Diabetes");
-    const hasMentalHealth = formData.chronicConditions.includes("Mental Health Condition");
+    const hasMentalHealth = formData.chronicConditions.includes(
+      "Mental Health Condition"
+    );
 
     let recommendation = {
       specialty: "General Practice",
-      reason: "Based on your health profile and uploaded documents, we recommend starting with a general practitioner.",
+      reason:
+        "Based on your health profile and uploaded documents, we recommend starting with a general practitioner.",
       confidence: 85,
     };
 
     if (hasHeartCondition) {
       recommendation = {
         specialty: "Cardiology",
-        reason: "Your health history indicates cardiovascular concerns. A cardiologist can provide specialized care and monitoring.",
+        reason:
+          "Your health history indicates cardiovascular concerns. A cardiologist can provide specialized care and monitoring.",
         confidence: 92,
       };
     } else if (hasDiabetes) {
       recommendation = {
         specialty: "Endocrinology",
-        reason: "For optimal diabetes management, an endocrinologist can provide specialized treatment plans.",
+        reason:
+          "For optimal diabetes management, an endocrinologist can provide specialized treatment plans.",
         confidence: 88,
       };
     } else if (hasMentalHealth) {
       recommendation = {
         specialty: "Psychiatry",
-        reason: "Mental health conditions benefit from specialized psychiatric care and support.",
+        reason:
+          "Mental health conditions benefit from specialized psychiatric care and support.",
         confidence: 90,
       };
-    }
-
-    // Update documents with AI analysis
-    for (const doc of uploadedDocuments) {
-      if (!doc.ai_analysis) {
-        await supabase
-          .from('patient_documents')
-          .update({
-            ai_analysis: `Document analyzed: ${doc.document_type || 'Medical record'}`,
-            ai_recommended_specialty: recommendation.specialty,
-            ai_summary: `This ${doc.document_type || 'document'} has been reviewed and factored into the specialist recommendation.`,
-            analyzed_at: new Date().toISOString(),
-          })
-          .eq('id', doc.id);
-      }
     }
 
     setAiRecommendation(recommendation);
@@ -307,13 +326,13 @@ export default function PatientOnboardingPage() {
 
   const saveProgress = async () => {
     if (!patient) return;
-    
+
     setIsLoading(true);
     setError(null);
 
     try {
       const { error } = await supabase
-        .from('patients')
+        .from("patients")
         .update({
           phone: formData.phone || null,
           date_of_birth: formData.dateOfBirth || null,
@@ -324,7 +343,10 @@ export default function PatientOnboardingPage() {
           emergency_contact_phone: formData.emergencyContactPhone || null,
           blood_type: formData.bloodType || null,
           allergies: formData.allergies.length > 0 ? formData.allergies : null,
-          chronic_conditions: formData.chronicConditions.length > 0 ? formData.chronicConditions : null,
+          chronic_conditions:
+            formData.chronicConditions.length > 0
+              ? formData.chronicConditions
+              : null,
           current_medications: formData.currentMedications || null,
           medical_notes: formData.medicalNotes || null,
           insurance_provider: formData.insuranceProvider || null,
@@ -332,14 +354,14 @@ export default function PatientOnboardingPage() {
           onboarding_completed: currentStep === 4,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', patient.id);
+        .eq("id", patient.id);
 
       if (error) throw error;
-      
+
       await refreshPatient();
     } catch (err) {
-      console.error('Save error:', err);
-      setError('Failed to save. Please try again.');
+      console.error("Save error:", err);
+      setError("Failed to save. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -369,7 +391,9 @@ export default function PatientOnboardingPage() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center">
-        <div className="animate-pulse text-clinic-navy dark:text-white">Loading...</div>
+        <div className="animate-pulse text-clinic-navy dark:text-white">
+          Loading...
+        </div>
       </div>
     );
   }
@@ -496,7 +520,9 @@ export default function PatientOnboardingPage() {
                       type="tel"
                       placeholder="+63 XXX XXX XXXX"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
@@ -505,7 +531,12 @@ export default function PatientOnboardingPage() {
                       id="dob"
                       type="date"
                       value={formData.dateOfBirth}
-                      onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          dateOfBirth: e.target.value,
+                        })
+                      }
                     />
                   </div>
                 </div>
@@ -514,14 +545,18 @@ export default function PatientOnboardingPage() {
                   <Label>Gender</Label>
                   <Select
                     value={formData.gender}
-                    onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, gender: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
                       {genders.map((g) => (
-                        <SelectItem key={g} value={g}>{g}</SelectItem>
+                        <SelectItem key={g} value={g}>
+                          {g}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -533,7 +568,9 @@ export default function PatientOnboardingPage() {
                     id="address"
                     placeholder="Street address"
                     value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
                   />
                 </div>
 
@@ -543,7 +580,9 @@ export default function PatientOnboardingPage() {
                     id="city"
                     placeholder="City"
                     value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, city: e.target.value })
+                    }
                   />
                 </div>
 
@@ -558,7 +597,12 @@ export default function PatientOnboardingPage() {
                         id="emergencyName"
                         placeholder="Full name"
                         value={formData.emergencyContactName}
-                        onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            emergencyContactName: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -568,7 +612,12 @@ export default function PatientOnboardingPage() {
                         type="tel"
                         placeholder="+63 XXX XXX XXXX"
                         value={formData.emergencyContactPhone}
-                        onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            emergencyContactPhone: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -597,14 +646,18 @@ export default function PatientOnboardingPage() {
                   <Label>Blood Type</Label>
                   <Select
                     value={formData.bloodType}
-                    onValueChange={(value) => setFormData({ ...formData, bloodType: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, bloodType: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select blood type" />
                     </SelectTrigger>
                     <SelectContent>
                       {bloodTypes.map((bt) => (
-                        <SelectItem key={bt} value={bt}>{bt}</SelectItem>
+                        <SelectItem key={bt} value={bt}>
+                          {bt}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -650,8 +703,12 @@ export default function PatientOnboardingPage() {
                         onClick={() => handleConditionToggle(condition)}
                       >
                         <Checkbox
-                          checked={formData.chronicConditions.includes(condition)}
-                          onCheckedChange={() => handleConditionToggle(condition)}
+                          checked={formData.chronicConditions.includes(
+                            condition
+                          )}
+                          onCheckedChange={() =>
+                            handleConditionToggle(condition)
+                          }
                         />
                         <span className="text-sm text-clinic-navy dark:text-white">
                           {condition}
@@ -667,7 +724,12 @@ export default function PatientOnboardingPage() {
                     id="medications"
                     placeholder="List any medications you are currently taking, including dosage"
                     value={formData.currentMedications}
-                    onChange={(e) => setFormData({ ...formData, currentMedications: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        currentMedications: e.target.value,
+                      })
+                    }
                     rows={3}
                   />
                 </div>
@@ -678,7 +740,9 @@ export default function PatientOnboardingPage() {
                     id="notes"
                     placeholder="Any other health information you'd like to share"
                     value={formData.medicalNotes}
-                    onChange={(e) => setFormData({ ...formData, medicalNotes: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, medicalNotes: e.target.value })
+                    }
                     rows={3}
                   />
                 </div>
@@ -694,7 +758,12 @@ export default function PatientOnboardingPage() {
                         id="insuranceProvider"
                         placeholder="Insurance company"
                         value={formData.insuranceProvider}
-                        onChange={(e) => setFormData({ ...formData, insuranceProvider: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            insuranceProvider: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -703,7 +772,12 @@ export default function PatientOnboardingPage() {
                         id="policyNumber"
                         placeholder="Policy/Member ID"
                         value={formData.insurancePolicyNumber}
-                        onChange={(e) => setFormData({ ...formData, insurancePolicyNumber: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            insurancePolicyNumber: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -723,7 +797,8 @@ export default function PatientOnboardingPage() {
                       Upload Medical Documents
                     </h2>
                     <p className="text-sm text-clinic-text/60 dark:text-white/60">
-                      Share records from previous doctors for AI-assisted recommendations
+                      Share records from previous doctors for AI-assisted
+                      recommendations
                     </p>
                   </div>
                 </div>
@@ -764,8 +839,9 @@ export default function PatientOnboardingPage() {
                         AI-Powered Analysis
                       </p>
                       <p className="text-xs text-clinic-text/60 dark:text-white/60 mt-1">
-                        Our AI will analyze your documents to recommend the best specialist for your needs.
-                        All data is encrypted and HIPAA-compliant.
+                        Our AI will analyze your documents to recommend the best
+                        specialist for your needs. All data is encrypted and
+                        HIPAA-compliant.
                       </p>
                     </div>
                   </div>
@@ -787,8 +863,11 @@ export default function PatientOnboardingPage() {
                               {doc.file_name}
                             </p>
                             <p className="text-xs text-clinic-text/60 dark:text-white/60">
-                              {doc.document_type || "Document"}
-                              {doc.file_size && ` • ${(doc.file_size / 1024).toFixed(1)} KB`}
+                              {typeof doc.document_type === "object"
+                                ? doc.document_type.document_name
+                                : doc.document_type || "Document"}
+                              {doc.file_size_bytes &&
+                                ` • ${(doc.file_size_bytes / 1024).toFixed(1)} KB`}
                             </p>
                           </div>
                         </div>
@@ -871,7 +950,8 @@ export default function PatientOnboardingPage() {
                             Profile Complete!
                           </p>
                           <p className="text-xs text-green-600/80 dark:text-green-400/80 mt-1">
-                            You're all set to book appointments. Your information will help doctors provide better care.
+                            You're all set to book appointments. Your
+                            information will help doctors provide better care.
                           </p>
                         </div>
                       </div>
@@ -892,11 +972,6 @@ export default function PatientOnboardingPage() {
                               </p>
                               <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />
                             </div>
-                            {doc.ai_summary && (
-                              <p className="text-xs text-clinic-text/60 dark:text-white/60 ml-6">
-                                {doc.ai_summary}
-                              </p>
-                            )}
                           </div>
                         ))}
                       </div>

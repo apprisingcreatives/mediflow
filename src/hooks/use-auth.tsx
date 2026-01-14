@@ -28,6 +28,7 @@ interface AuthContextType {
   signInWithApple: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshPatient: () => Promise<void>;
+  canAccessClinic: (clinicId: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -260,6 +261,10 @@ The ${clinicName} Team`,
     return { error };
   };
 
+  const canAccessClinic = (clinicId: string): boolean => {
+    return patient?.clinic_id === clinicId;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -273,6 +278,7 @@ The ${clinicName} Team`,
         signInWithApple,
         signOut,
         refreshPatient,
+        canAccessClinic,
       }}
     >
       {children}
