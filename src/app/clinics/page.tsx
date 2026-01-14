@@ -48,7 +48,8 @@ const fallbackClinics: Clinic[] = [
     address: "123 Main Street",
     city: "San Francisco",
     logo_url: null,
-    description: "A comprehensive healthcare facility offering primary care, specialist consultations, and advanced diagnostic services.",
+    description:
+      "A comprehensive healthcare facility offering primary care, specialist consultations, and advanced diagnostic services.",
     subscription_plan: "professional",
     clinic_services: [
       { id: "s1", name: "General Checkup", price: 150 },
@@ -56,7 +57,11 @@ const fallbackClinics: Clinic[] = [
       { id: "s3", name: "Pediatrics", price: 125 },
     ],
     practitioners: [
-      { id: "p1", name: "Dr. Sarah Johnson", specialization: "Internal Medicine" },
+      {
+        id: "p1",
+        name: "Dr. Sarah Johnson",
+        specialization: "Internal Medicine",
+      },
       { id: "p2", name: "Dr. Michael Chen", specialization: "Cardiology" },
     ],
   },
@@ -68,7 +73,8 @@ const fallbackClinics: Clinic[] = [
     address: "456 Oak Avenue",
     city: "Los Angeles",
     logo_url: null,
-    description: "Family-oriented healthcare with a focus on preventive medicine and holistic wellness approaches.",
+    description:
+      "Family-oriented healthcare with a focus on preventive medicine and holistic wellness approaches.",
     subscription_plan: "basic",
     clinic_services: [
       { id: "s4", name: "Family Medicine", price: 120 },
@@ -86,7 +92,8 @@ const fallbackClinics: Clinic[] = [
     address: "789 Medical Plaza",
     city: "New York",
     logo_url: null,
-    description: "State-of-the-art specialty care featuring cutting-edge technology and expert specialists.",
+    description:
+      "State-of-the-art specialty care featuring cutting-edge technology and expert specialists.",
     subscription_plan: "professional",
     clinic_services: [
       { id: "s6", name: "Neurology", price: 300 },
@@ -104,7 +111,8 @@ const fallbackClinics: Clinic[] = [
 
 export default function ClinicsPage() {
   const [clinics, setClinics] = useState<Clinic[]>(fallbackClinics);
-  const [filteredClinics, setFilteredClinics] = useState<Clinic[]>(fallbackClinics);
+  const [filteredClinics, setFilteredClinics] =
+    useState<Clinic[]>(fallbackClinics);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
@@ -115,7 +123,7 @@ export default function ClinicsPage() {
 
   useEffect(() => {
     let result = clinics;
-    
+
     if (searchQuery) {
       result = result.filter(
         (c) =>
@@ -124,11 +132,11 @@ export default function ClinicsPage() {
           c.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
+
     if (selectedCity) {
       result = result.filter((c) => c.city === selectedCity);
     }
-    
+
     setFilteredClinics(result);
   }, [clinics, searchQuery, selectedCity]);
 
@@ -136,24 +144,24 @@ export default function ClinicsPage() {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      const res = await fetch("/api/clinics", { 
+
+      const res = await fetch("/api/clinics", {
         signal: controller.signal,
-        cache: 'no-store'
+        cache: "no-store",
       });
       clearTimeout(timeoutId);
-      
+
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
-      
+
       const data = await res.json();
       if (data.clinics && data.clinics.length > 0) {
         setClinics(data.clinics);
         setFilteredClinics(data.clinics);
       }
     } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
+      if ((error as Error).name !== "AbortError") {
         console.error("Failed to fetch clinics:", error);
       }
       // Keep using fallback clinics on error
@@ -162,7 +170,9 @@ export default function ClinicsPage() {
     }
   };
 
-  const cities = [...new Set(clinics.map((c) => c.city).filter(Boolean))];
+  const cities = Array.from(
+    new Set(clinics.map((c) => c.city).filter(Boolean))
+  );
 
   return (
     <div className="min-h-screen bg-clinic-bg dark:bg-slate-900">
@@ -359,27 +369,30 @@ export default function ClinicsPage() {
                     </div>
                   </div>
 
-                  {clinic.clinic_services && clinic.clinic_services.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex flex-wrap gap-1">
-                        {clinic.clinic_services.slice(0, 2).map((service) => (
-                          <span
-                            key={service.id}
-                            className="text-xs px-2 py-1 bg-clinic-teal/10 text-clinic-teal rounded-full"
-                          >
-                            {service.name}
-                          </span>
-                        ))}
-                        {clinic.clinic_services.length > 2 && (
-                          <span className="text-xs px-2 py-1 bg-clinic-navy/10 text-clinic-navy dark:bg-white/10 dark:text-white rounded-full">
-                            +{clinic.clinic_services.length - 2} more
-                          </span>
-                        )}
+                  {clinic.clinic_services &&
+                    clinic.clinic_services.length > 0 && (
+                      <div className="mb-4">
+                        <div className="flex flex-wrap gap-1">
+                          {clinic.clinic_services.slice(0, 2).map((service) => (
+                            <span
+                              key={service.id}
+                              className="text-xs px-2 py-1 bg-clinic-teal/10 text-clinic-teal rounded-full"
+                            >
+                              {service.name}
+                            </span>
+                          ))}
+                          {clinic.clinic_services.length > 2 && (
+                            <span className="text-xs px-2 py-1 bg-clinic-navy/10 text-clinic-navy dark:bg-white/10 dark:text-white rounded-full">
+                              +{clinic.clinic_services.length - 2} more
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  <Link href={`/clinics/${generateSlug(clinic.name)}-${clinic.id.slice(0, 8)}`}>
+                  <Link
+                    href={`/clinics/${generateSlug(clinic.name)}-${clinic.id.slice(0, 8)}`}
+                  >
                     <Button className="w-full bg-clinic-navy hover:bg-clinic-navy/90 text-white group/btn">
                       View Clinic
                       <ChevronRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform" />

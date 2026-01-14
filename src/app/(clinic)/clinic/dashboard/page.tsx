@@ -52,7 +52,9 @@ export default function ClinicDashboard() {
   const [adminName, setAdminName] = useState("Admin");
   const [aiFeatures, setAIFeatures] = useState<AIFeature[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(
+    null
+  );
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isTrialExpired, setIsTrialExpired] = useState(false);
 
@@ -69,7 +71,7 @@ export default function ClinicDashboard() {
     if (clinicData) {
       const parsedClinic = JSON.parse(clinicData);
       setClinic(parsedClinic);
-      
+
       // Calculate trial days remaining
       if (parsedClinic.trial_end_date) {
         const trialEnd = new Date(parsedClinic.trial_end_date);
@@ -77,7 +79,7 @@ export default function ClinicDashboard() {
         const diffTime = trialEnd.getTime() - today.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         setTrialDaysRemaining(diffDays);
-        
+
         if (diffDays <= 0 && parsedClinic.payment_status === "trial") {
           setIsTrialExpired(true);
         }
@@ -105,7 +107,7 @@ export default function ClinicDashboard() {
         if (data.clinic) {
           setClinic(data.clinic);
           localStorage.setItem("clinic", JSON.stringify(data.clinic));
-          
+
           // Update trial status
           if (data.clinic.trial_end_date) {
             const trialEnd = new Date(data.clinic.trial_end_date);
@@ -113,7 +115,7 @@ export default function ClinicDashboard() {
             const diffTime = trialEnd.getTime() - today.getTime();
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             setTrialDaysRemaining(diffDays);
-            
+
             if (diffDays <= 0 && data.clinic.payment_status === "trial") {
               setIsTrialExpired(true);
             }
@@ -254,8 +256,8 @@ export default function ClinicDashboard() {
                   clinic?.subscription_plan === "professional"
                     ? "bg-clinic-ai/10 text-clinic-ai"
                     : clinic?.subscription_plan === "enterprise"
-                    ? "bg-yellow-500/10 text-yellow-600"
-                    : "bg-clinic-navy/10 text-clinic-navy dark:bg-white/10 dark:text-white"
+                      ? "bg-yellow-500/10 text-yellow-600"
+                      : "bg-clinic-navy/10 text-clinic-navy dark:bg-white/10 dark:text-white"
                 }`}
               >
                 {clinic?.subscription_plan || "starter"} plan
@@ -266,74 +268,80 @@ export default function ClinicDashboard() {
 
         <div className="p-6">
           {/* Trial/Subscription Banner */}
-          {clinic?.payment_status === "trial" && trialDaysRemaining !== null && (
-            <div className={`mb-6 p-4 rounded-2xl ${
-              isTrialExpired 
-                ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
-                : trialDaysRemaining <= 3
-                ? "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
-                : "bg-clinic-teal/5 dark:bg-clinic-teal/10 border border-clinic-teal/20"
-            }`}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  {isTrialExpired ? (
-                    <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
-                  ) : trialDaysRemaining <= 3 ? (
-                    <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
-                  ) : (
-                    <Clock className="w-6 h-6 text-clinic-teal flex-shrink-0 mt-0.5" />
-                  )}
-                  <div>
-                    <h3 className={`font-semibold ${
-                      isTrialExpired 
-                        ? "text-red-700 dark:text-red-400"
-                        : trialDaysRemaining <= 3
-                        ? "text-amber-700 dark:text-amber-400"
-                        : "text-clinic-navy dark:text-white"
-                    }`}>
-                      {isTrialExpired 
-                        ? "Your Trial Has Expired"
-                        : trialDaysRemaining <= 3
-                        ? `Only ${trialDaysRemaining} day${trialDaysRemaining === 1 ? "" : "s"} left in your trial!`
-                        : `${trialDaysRemaining} days remaining in your free trial`
-                      }
-                    </h3>
-                    <p className={`text-sm mt-1 ${
-                      isTrialExpired 
-                        ? "text-red-600/80 dark:text-red-400/80"
-                        : trialDaysRemaining <= 3
-                        ? "text-amber-600/80 dark:text-amber-400/80"
-                        : "text-clinic-text/60 dark:text-white/60"
-                    }`}>
-                      {isTrialExpired 
-                        ? "Subscribe now to restore access to all features."
-                        : "Upgrade to a paid plan to continue using all features after your trial ends."
-                      }
-                    </p>
-                    {!isTrialExpired && (
-                      <div className="mt-3">
-                        <Progress 
-                          value={((14 - trialDaysRemaining) / 14) * 100} 
-                          className="h-2 w-48"
-                        />
-                      </div>
+          {clinic?.payment_status === "trial" &&
+            trialDaysRemaining !== null && (
+              <div
+                className={`mb-6 p-4 rounded-2xl ${
+                  isTrialExpired
+                    ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                    : trialDaysRemaining <= 3
+                      ? "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+                      : "bg-clinic-teal/5 dark:bg-clinic-teal/10 border border-clinic-teal/20"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    {isTrialExpired ? (
+                      <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+                    ) : trialDaysRemaining <= 3 ? (
+                      <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <Clock className="w-6 h-6 text-clinic-teal flex-shrink-0 mt-0.5" />
                     )}
+                    <div>
+                      <h3
+                        className={`font-semibold ${
+                          isTrialExpired
+                            ? "text-red-700 dark:text-red-400"
+                            : trialDaysRemaining <= 3
+                              ? "text-amber-700 dark:text-amber-400"
+                              : "text-clinic-navy dark:text-white"
+                        }`}
+                      >
+                        {isTrialExpired
+                          ? "Your Trial Has Expired"
+                          : trialDaysRemaining <= 3
+                            ? `Only ${trialDaysRemaining} day${trialDaysRemaining === 1 ? "" : "s"} left in your trial!`
+                            : `${trialDaysRemaining} days remaining in your free trial`}
+                      </h3>
+                      <p
+                        className={`text-sm mt-1 ${
+                          isTrialExpired
+                            ? "text-red-600/80 dark:text-red-400/80"
+                            : trialDaysRemaining <= 3
+                              ? "text-amber-600/80 dark:text-amber-400/80"
+                              : "text-clinic-text/60 dark:text-white/60"
+                        }`}
+                      >
+                        {isTrialExpired
+                          ? "Subscribe now to restore access to all features."
+                          : "Upgrade to a paid plan to continue using all features after your trial ends."}
+                      </p>
+                      {!isTrialExpired && (
+                        <div className="mt-3">
+                          <Progress
+                            value={((14 - trialDaysRemaining) / 14) * 100}
+                            className="h-2 w-48"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  <Link href="/clinic/billing">
+                    <Button
+                      className={
+                        isTrialExpired
+                          ? "bg-red-500 hover:bg-red-600 text-white"
+                          : "bg-clinic-teal hover:bg-clinic-teal/90 text-white"
+                      }
+                    >
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      {isTrialExpired ? "Subscribe Now" : "Upgrade Plan"}
+                    </Button>
+                  </Link>
                 </div>
-                <Link href="/clinic/billing">
-                  <Button 
-                    className={isTrialExpired 
-                      ? "bg-red-500 hover:bg-red-600 text-white" 
-                      : "bg-clinic-teal hover:bg-clinic-teal/90 text-white"
-                    }
-                  >
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    {isTrialExpired ? "Subscribe Now" : "Upgrade Plan"}
-                  </Button>
-                </Link>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Trial Expired Overlay Content */}
           {isTrialExpired && (
@@ -346,10 +354,15 @@ export default function ClinicDashboard() {
                   Features Locked
                 </h2>
                 <p className="text-clinic-text/60 dark:text-white/60 max-w-md mx-auto mb-6">
-                  Your 14-day free trial has ended. Subscribe to a plan to restore access to all features including appointments, patient management, and AI tools.
+                  Your 14-day free trial has ended. Subscribe to a plan to
+                  restore access to all features including appointments, patient
+                  management, and AI tools.
                 </p>
                 <Link href="/clinic/billing">
-                  <Button size="lg" className="bg-clinic-teal hover:bg-clinic-teal/90 text-white">
+                  <Button
+                    size="lg"
+                    className="bg-clinic-teal hover:bg-clinic-teal/90 text-white"
+                  >
                     <CreditCard className="w-5 h-5 mr-2" />
                     View Plans & Subscribe
                   </Button>
@@ -359,7 +372,9 @@ export default function ClinicDashboard() {
           )}
 
           {/* Quick Stats */}
-          <div className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 ${isTrialExpired ? "opacity-50 pointer-events-none" : ""}`}
+          <div
+            className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 ${isTrialExpired ? "opacity-50 pointer-events-none" : ""}`}
+          >
             <div className="p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-clinic-teal/10 flex items-center justify-center">
@@ -556,8 +571,8 @@ export default function ClinicDashboard() {
                         apt.status === "completed"
                           ? "bg-green-100 text-green-700"
                           : apt.status === "in-progress"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-600"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-600"
                       }`}
                     >
                       {apt.status}
