@@ -56,7 +56,8 @@ const features = [
   {
     icon: Shield,
     title: "Compliance Controls",
-    description: "Built-in HIPAA, GDPR, and SOC 2 compliance with audit trails.",
+    description:
+      "Built-in HIPAA, GDPR, and SOC 2 compliance with audit trails.",
     color: "from-clinic-navy to-slate-600",
     size: "small",
   },
@@ -150,7 +151,7 @@ export function FeaturesSection() {
           {features.map((feature, index) => (
             <div
               key={feature.title}
-              className="group relative p-6 lg:p-8 rounded-2xl bg-white dark:bg-slate-800 border border-clinic-navy/5 dark:border-white/5 shadow-glass hover:shadow-glass-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden flex flex-col"
+              className="group relative p-6 lg:p-8 rounded-2xl bg-white dark:bg-slate-800 border border-clinic-navy/5 dark:border-white/5 shadow-glass hover:shadow-glass-lg transition-all duration-300 hover:-translate-y-1 min-h-[280px] flex flex-col"
             >
               {/* Background Gradient */}
               <div
@@ -163,14 +164,18 @@ export function FeaturesSection() {
               {/* Animated Pulse Circle */}
               <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-500">
                 <span className="flex h-8 w-8">
-                  <span className={cn(
-                    "animate-ping absolute inline-flex h-full w-full rounded-full opacity-40",
-                    `bg-gradient-to-br ${feature.color}`
-                  )} />
-                  <span className={cn(
-                    "relative inline-flex rounded-full h-8 w-8",
-                    `bg-gradient-to-br ${feature.color}`
-                  )} />
+                  <span
+                    className={cn(
+                      "animate-ping absolute inline-flex h-full w-full rounded-full opacity-40",
+                      `bg-gradient-to-br ${feature.color}`
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "relative inline-flex rounded-full h-8 w-8",
+                      `bg-gradient-to-br ${feature.color}`
+                    )}
+                  />
                 </span>
               </div>
 

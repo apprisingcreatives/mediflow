@@ -67,33 +67,42 @@ export default function ClinicPage() {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"services" | "doctors">("services");
+  const [activeTab, setActiveTab] = useState<"services" | "doctors">(
+    "services"
+  );
 
-  const handleBooking = (serviceId?: string, serviceName?: string, practitionerId?: string, practitionerName?: string) => {
+  const handleBooking = (
+    serviceId?: string,
+    serviceName?: string,
+    practitionerId?: string,
+    practitionerName?: string
+  ) => {
     if (!clinic) return;
-    
+
     let bookingUrl = `/book?clinic=${clinic.id}&clinicName=${encodeURIComponent(clinic.name)}`;
-    
+
     if (serviceId && serviceName) {
       bookingUrl += `&service=${serviceId}&serviceName=${encodeURIComponent(serviceName)}`;
     }
-    
+
     if (practitionerId && practitionerName) {
       bookingUrl += `&practitioner=${practitionerId}&practitionerName=${encodeURIComponent(practitionerName)}`;
     }
-    
+
     // If user is not logged in, redirect to login first
     if (!user) {
       router.push(`/login?redirect=${encodeURIComponent(bookingUrl)}`);
       return;
     }
-    
+
     // If patient hasn't completed onboarding, redirect to onboarding
     if (patient && !patient.onboarding_completed) {
-      router.push(`/patient/onboarding?redirect=${encodeURIComponent(bookingUrl)}`);
+      router.push(
+        `/patient/onboarding?redirect=${encodeURIComponent(bookingUrl)}`
+      );
       return;
     }
-    
+
     router.push(bookingUrl);
   };
 
@@ -108,24 +117,27 @@ export default function ClinicPage() {
       // Extract the ID from slug (format: clinic-name-12345678)
       const parts = slug.split("-");
       const clinicId = parts[parts.length - 1];
-      
+
       // Check if it looks like a UUID prefix
       const isIdAtEnd = /^[0-9a-f]{8}$/i.test(clinicId);
-      
-      const searchParam = isIdAtEnd 
-        ? `${clinicId}-${clinicId}-${clinicId}-${clinicId}-${clinicId}${clinicId}${clinicId}${clinicId}`.slice(0, 36) 
+
+      const searchParam = isIdAtEnd
+        ? `${clinicId}-${clinicId}-${clinicId}-${clinicId}-${clinicId}${clinicId}${clinicId}${clinicId}`.slice(
+            0,
+            36
+          )
         : slug;
 
       // Try different approaches to find the clinic
       let res = await fetch(`/api/clinics/${slug}`);
-      
+
       if (!res.ok) {
         // Try with just the ID if we extracted one
         if (isIdAtEnd) {
           // Get all clinics and find by partial ID match
           const allRes = await fetch("/api/clinics");
           const allData = await allRes.json();
-          const foundClinic = allData.clinics?.find((c: Clinic) => 
+          const foundClinic = allData.clinics?.find((c: Clinic) =>
             c.id.startsWith(clinicId)
           );
           if (foundClinic) {
@@ -157,7 +169,10 @@ export default function ClinicPage() {
             <div className="h-64 bg-clinic-navy/10 dark:bg-white/10 rounded-2xl" />
             <div className="grid md:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-40 bg-clinic-navy/10 dark:bg-white/10 rounded-xl" />
+                <div
+                  key={i}
+                  className="h-40 bg-clinic-navy/10 dark:bg-white/10 rounded-xl"
+                />
               ))}
             </div>
           </div>
@@ -255,7 +270,9 @@ export default function ClinicPage() {
                 {clinic.city && (
                   <span className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-clinic-teal" />
-                    {clinic.address ? `${clinic.address}, ${clinic.city}` : clinic.city}
+                    {clinic.address
+                      ? `${clinic.address}, ${clinic.city}`
+                      : clinic.city}
                   </span>
                 )}
                 {clinic.phone && (
@@ -292,8 +309,14 @@ export default function ClinicPage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-white/30 text-white hover:bg-white/10"
-                onClick={() => clinic.phone ? window.location.href = `tel:${clinic.phone}` : clinic.email ? window.location.href = `mailto:${clinic.email}` : null}
+                className="border-white/30 text-white bg-white/10"
+                onClick={() =>
+                  clinic.phone
+                    ? (window.location.href = `tel:${clinic.phone}`)
+                    : clinic.email
+                      ? (window.location.href = `mailto:${clinic.email}`)
+                      : null
+                }
               >
                 <Phone className="w-5 h-5 mr-2" />
                 Contact Clinic
@@ -444,7 +467,8 @@ export default function ClinicPage() {
               </div>
             ))}
 
-            {(!clinic.clinic_services || clinic.clinic_services.length === 0) && (
+            {(!clinic.clinic_services ||
+              clinic.clinic_services.length === 0) && (
               <div className="col-span-full text-center py-12">
                 <Stethoscope className="w-12 h-12 text-clinic-navy/20 mx-auto mb-4" />
                 <p className="text-clinic-text/60 dark:text-white/60">
@@ -491,9 +515,18 @@ export default function ClinicPage() {
                   <Button
                     variant="outline"
                     className="w-full border-clinic-teal text-clinic-teal hover:bg-clinic-teal hover:text-white"
-                    onClick={() => handleBooking(undefined, undefined, doctor.id, doctor.name)}
+                    onClick={() =>
+                      handleBooking(
+                        undefined,
+                        undefined,
+                        doctor.id,
+                        doctor.name
+                      )
+                    }
                   >
-                    {user ? `Book with ${doctor.name.split(" ")[0]}` : "Sign in to Book"}
+                    {user
+                      ? `Book with ${doctor.name.split(" ")[0]}`
+                      : "Sign in to Book"}
                   </Button>
                 </div>
               </div>

@@ -8,17 +8,18 @@ const supabase = createClient(
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ clinicId: string }> }
 ) {
   try {
-    const { id } = await params;
-    const { plan, billing_cycle, amount, card_last_four } = await request.json();
+    const { clinicId } = await params;
+    const { plan, billing_cycle, amount, card_last_four } =
+      await request.json();
 
     // Get clinic data
     const { data: clinic, error: clinicError } = await supabase
       .from("clinics")
       .select("*")
-      .eq("id", id)
+      .eq("id", clinicId)
       .single();
 
     if (clinicError || !clinic) {
@@ -44,7 +45,7 @@ export async function POST(
         last_payment_date: new Date().toISOString(),
         next_billing_date: nextBillingDate.toISOString(),
       })
-      .eq("id", id);
+      .eq("id", clinicId);
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 });
@@ -54,7 +55,7 @@ export async function POST(
     const { error: paymentError } = await supabase
       .from("clinic_payments")
       .insert({
-        clinic_id: id,
+        clinic_id: clinicId,
         amount,
         currency: "PHP",
         payment_method: `Card ending in ${card_last_four}`,
@@ -71,7 +72,7 @@ export async function POST(
     const { data: admin } = await supabase
       .from("clinic_admins")
       .select("email, name")
-      .eq("clinic_id", id)
+      .eq("clinic_id", clinicId)
       .limit(1)
       .single();
 
@@ -85,7 +86,7 @@ export async function POST(
         html_body: `<h1>Payment Successful</h1><p>Dear ${admin.name},</p><p>Your payment of <strong>₱${amount.toLocaleString()}</strong> for the <strong>${plan}</strong> plan has been processed successfully.</p><p>Your subscription is now active. Enjoy all the features!</p>`,
         notification_type: "payment_success",
         related_entity_type: "clinic",
-        related_entity_id: id,
+        related_entity_id: clinicId,
         status: "pending",
       });
     }
@@ -100,6 +101,9 @@ export async function POST(
     });
   } catch (error) {
     console.error("Subscription error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
