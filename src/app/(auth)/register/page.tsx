@@ -119,7 +119,7 @@ function RegisterContent() {
       setIsLoading(false);
     } else {
       setSuccess(true);
-      // For email confirmation flow
+      // Auto sign in the user since email is confirmed
       setTimeout(() => {
         router.push(redirectUrl);
       }, 2000);

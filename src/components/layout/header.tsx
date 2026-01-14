@@ -4,8 +4,18 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, X, Activity } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Menu, X, Activity, User, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 const navLinks = [
   { href: "/#features", label: "Features" },
@@ -18,6 +28,7 @@ const navLinks = [
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, patient, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,6 +38,17 @@ export function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const getInitials = (firstName?: string, lastName?: string) => {
+    if (firstName && lastName) {
+      return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    }
+    return "U";
+  };
 
   return (
     <header
@@ -65,12 +87,67 @@ export function Header() {
 
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-4">
-            <Button
-              className="bg-clinic-teal hover:bg-clinic-teal/90 text-white shadow-glow hover:shadow-glow transition-all duration-300"
-              asChild
-            >
-              <Link href="/demo">Book a Demo</Link>
-            </Button>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="relative h-10 w-10 rounded-full"
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-clinic-teal text-white">
+                        {getInitials(patient?.first_name, patient?.last_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {patient?.first_name} {patient?.last_name}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/patient" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/patient/onboarding" className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="cursor-pointer"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link href="/login">Sign In</Link>
+                </Button>
+                <Button
+                  className="bg-clinic-teal hover:bg-clinic-teal/90 text-white shadow-glow hover:shadow-glow transition-all duration-300"
+                  asChild
+                >
+                  <Link href="/demo">Book a Demo</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Trigger */}
@@ -109,12 +186,50 @@ export function Header() {
                 </nav>
 
                 <div className="mt-auto pt-8 flex flex-col gap-3">
-                  <Button
-                    className="w-full bg-clinic-teal hover:bg-clinic-teal/90 text-white"
-                    asChild
-                  >
-                    <Link href="/demo">Book a Demo</Link>
-                  </Button>
+                  {user ? (
+                    <>
+                      <div className="flex items-center gap-3 p-3 bg-clinic-navy/5 dark:bg-white/10 rounded-lg">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-clinic-teal text-white text-sm">
+                            {getInitials(
+                              patient?.first_name,
+                              patient?.last_name
+                            )}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {patient?.first_name} {patient?.last_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Button variant="outline" asChild className="w-full">
+                          <Link href="/patient">Profile</Link>
+                        </Button>
+                        <Button variant="outline" asChild className="w-full">
+                          <Link href="/patient/onboarding">Settings</Link>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={handleSignOut}
+                          className="w-full"
+                        >
+                          Log Out
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <Button
+                      className="w-full bg-clinic-teal hover:bg-clinic-teal/90 text-white"
+                      asChild
+                    >
+                      <Link href="/demo">Book a Demo</Link>
+                    </Button>
+                  )}
                 </div>
               </div>
             </SheetContent>

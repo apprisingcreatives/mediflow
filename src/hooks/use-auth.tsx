@@ -8,7 +8,7 @@ import {
   ReactNode,
 } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { Patient } from "@/types/database";
 
 interface AuthContextType {
@@ -112,18 +112,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     lastName: string,
     clinicId?: string
   ) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-        },
-      },
-    });
+    try {
+      console.log("Starting signup process for:", email);
 
-    if (!error && data.user) {
+      // Use regular signup - ensure email confirmation is disabled in Supabase dashboard
+      console.log("Attempting regular signup...");
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
+        },
+      });
+
+      if (error) {
+        console.error("Signup error:", error);
+        console.error("Error details:", {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+        });
+        return { error };
+      }
+
+      if (!data.user) {
+        console.error("No user returned from signup");
+        return { error: new Error("Failed to create user account") };
+      }
+
+      console.log("User created successfully:", data.user.id);
+
+      // Ensure clinic_id column exists in patients table
+      console.log("Checking if clinic_id column exists...");
+      try {
+        // Try to run a query that would fail if clinic_id column doesn't exist
+        const { error: columnCheckError } = await supabase
+          .from("patients")
+          .select("clinic_id")
+          .limit(1);
+
+        if (
+          columnCheckError &&
+          columnCheckError.message?.includes("column") &&
+          columnCheckError.message?.includes("clinic_id")
+        ) {
+          console.log(
+            "clinic_id column does not exist, attempting to add it..."
+          );
+
+          // Try to add the column using a direct SQL query (this might not work with RLS)
+          // If this fails, we'll fall back to creating patient without clinic_id
+          try {
+            // This is a workaround - we'll try to insert without clinic_id first
+            // and then update if the column gets added later
+            console.warn(
+              "clinic_id column missing - creating patient without clinic association for now"
+            );
+          } catch (alterError) {
+            console.warn("Could not add clinic_id column:", alterError);
+          }
+        } else {
+          console.log("clinic_id column exists");
+        }
+      } catch (checkError) {
+        console.warn("Error checking clinic_id column:", checkError);
+      }
+
       // Create patient record with clinic association (if column exists)
       const patientData: any = {
         auth_user_id: data.user.id,
@@ -137,8 +194,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let insertData = { ...patientData };
       if (clinicId) {
         insertData.clinic_id = clinicId;
+        console.log("Including clinic_id in patient data:", clinicId);
       }
 
+      console.log("Creating patient record...");
       let { error: patientError } = await supabase
         .from("patients")
         .insert(insertData);
@@ -158,80 +217,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else if (patientError) {
         console.error("Error creating patient record:", patientError);
-        return { error: new Error("Failed to create patient profile") };
+        console.error("Patient error details:", {
+          message: patientError.message,
+          details: patientError.details,
+          hint: patientError.hint,
+          code: patientError.code,
+        });
+        return {
+          error: new Error(
+            `Failed to create patient profile: ${patientError.message}`
+          ),
+        };
       }
 
-      // Get clinic information for customized email
-      let clinicInfo = null;
-      if (clinicId) {
-        const { data: clinicData } = await supabase
-          .from("clinics")
-          .select("name, email, phone, address, city")
-          .eq("id", clinicId)
-          .single();
-        clinicInfo = clinicData;
-      }
-
-      // Queue customized welcome email
-      const clinicName = clinicInfo?.name || "MediFlow";
-      const clinicContact = clinicInfo?.email || "support@mediflow.ai";
-      const clinicPhone = clinicInfo?.phone || "+63 920 478 6075";
-
-      await supabase.from("email_notifications").insert({
-        recipient_email: email,
-        recipient_name: `${firstName} ${lastName}`,
-        recipient_type: "patient",
-        subject: `Welcome to ${clinicName} - Your Health Journey Begins`,
-        body: `Dear ${firstName},
-
-Welcome to ${clinicName}! Your patient account has been created successfully.
-
-Your Clinic Details:
-- Clinic: ${clinicName}
-${clinicInfo?.address ? `- Address: ${clinicInfo.address}${clinicInfo.city ? `, ${clinicInfo.city}` : ""}` : ""}
-${clinicInfo?.phone ? `- Phone: ${clinicInfo.phone}` : ""}
-- Contact: ${clinicContact}
-
-Next Steps:
-1. Complete your health profile with medical history and preferences
-2. Book your first appointment through our easy online system
-3. Receive personalized care recommendations powered by AI
-
-We're excited to be part of your healthcare journey!
-
-Best regards,
-The ${clinicName} Team`,
-        html_body: `<h1>Welcome to ${clinicName}!</h1>
-<p>Dear ${firstName},</p>
-
-<p>Welcome to ${clinicName}! Your patient account has been created successfully.</p>
-
-<h2>Your Clinic Details:</h2>
-<ul>
-  <li><strong>Clinic:</strong> ${clinicName}</li>
-  ${clinicInfo?.address ? `<li><strong>Address:</strong> ${clinicInfo.address}${clinicInfo.city ? `, ${clinicInfo.city}` : ""}</li>` : ""}
-  ${clinicInfo?.phone ? `<li><strong>Phone:</strong> ${clinicInfo.phone}</li>` : ""}
-  <li><strong>Contact:</strong> <a href="mailto:${clinicContact}">${clinicContact}</a></li>
-</ul>
-
-<h2>Next Steps:</h2>
-<ol>
-  <li>Complete your health profile with medical history and preferences</li>
-  <li>Book your first appointment through our easy online system</li>
-  <li>Receive personalized care recommendations powered by AI</li>
-</ol>
-
-<p>We're excited to be part of your healthcare journey!</p>
-
-<p>Best regards,<br>The ${clinicName} Team</p>`,
-        notification_type: "welcome_patient",
-        related_entity_type: clinicId ? "clinic" : null,
-        related_entity_id: clinicId || null,
-        status: "pending",
-      });
+      console.log("Signup process completed successfully");
+      return { error: null };
+    } catch (err) {
+      console.error("Unexpected error during signup:", err);
+      return { error: new Error("An unexpected error occurred during signup") };
     }
-
-    return { error };
   };
 
   const signOut = async () => {

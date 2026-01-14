@@ -18,6 +18,7 @@ function LoginContent() {
     signInWithGoogle,
     signInWithApple,
     user,
+    patient,
     isLoading: authLoading,
   } = useAuth();
 
@@ -30,10 +31,15 @@ function LoginContent() {
   const redirectUrl = searchParams.get("redirect") || "/patient";
 
   useEffect(() => {
-    if (user && !authLoading) {
-      router.push(redirectUrl);
+    if (user && patient && !authLoading) {
+      // Redirect to clinic-specific patient dashboard if patient has a clinic
+      if (patient.clinic_id) {
+        router.push(`/clinic/${patient.clinic_id}/patient`);
+      } else {
+        router.push(redirectUrl);
+      }
     }
-  }, [user, authLoading, router, redirectUrl]);
+  }, [user, patient, authLoading, router, redirectUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,9 +51,8 @@ function LoginContent() {
     if (error) {
       setError(error.message);
       setIsLoading(false);
-    } else {
-      router.push(redirectUrl);
     }
+    // Remove immediate redirect - let useEffect handle it after patient data loads
   };
 
   const handleGoogleSignIn = async () => {

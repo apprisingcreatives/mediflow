@@ -385,7 +385,12 @@ export default function PatientOnboardingPage() {
 
   const handleComplete = async () => {
     await saveProgress();
-    router.push("/patient");
+    // Redirect to clinic-specific dashboard if patient has a clinic, otherwise general patient dashboard
+    if (patient?.clinic_id) {
+      router.push(`/clinic/${patient.clinic_id}/patient`);
+    } else {
+      router.push("/patient");
+    }
   };
 
   if (authLoading) {

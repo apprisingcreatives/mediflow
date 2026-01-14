@@ -128,8 +128,11 @@ export default function PatientPortal() {
     if (!isLoading) {
       if (!user) {
         router.push("/login?redirect=/patient");
+      } else if (patient?.clinic_id) {
+        // Redirect to clinic-specific patient dashboard
+        router.push(`/clinic/${patient.clinic_id}/patient`);
       }
-      // Remove automatic redirect to onboarding - show status instead
+      // If no clinic_id, stay on general patient page (for patients not yet assigned to clinics)
     }
   }, [user, patient, isLoading, router]);
 
