@@ -13,7 +13,7 @@ import { PatientChatbot } from "@/components/chatbot/patient-chatbot";
 export default function HomePage() {
   return (
     <main className="min-h-screen">
-      <Header />
+      <Header showSignIn={false} />
       <HeroSection />
       <TrustBar />
       <FeaturesSection />

@@ -1,3 +1,8 @@
+/**
+ * Updated useAuth hook for per-clinic database architecture
+ * Handles authentication against both central and clinic-specific databases
+ */
+
 "use client";
 
 import {
@@ -8,13 +13,19 @@ import {
   ReactNode,
 } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { supabase, supabaseAdmin } from "@/lib/supabase";
+import {
+  supabase,
+  supabaseAdmin,
+  getClinicSupabaseClient,
+} from "@/lib/supabase";
+import { getClinicSupabaseAdminClient } from "@/lib/clinic-supabase";
 import { Patient } from "@/types/database";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   patient: Patient | null;
+  clinicId: string | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (
@@ -37,20 +48,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [clinicId, setClinicId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchPatient = async (userId: string) => {
+  /**
+   * Fetch patient from clinic's database
+   * Assumes clinicId is already determined from context/URL
+   */
+  const fetchPatient = async (userId: string, clinicContextId?: string) => {
     try {
-      const { data, error } = await supabase
+      // Determine clinic ID from context or patient record
+      let targetClinicId = clinicContextId;
+
+      // If no clinic context, try to get from URL or patient record in central DB
+      if (!targetClinicId) {
+        // Check if patient exists in central database with clinic_id
+        const { data: centralPatient } = await supabase
+          .from("patients")
+          .select("clinic_id")
+          .eq("auth_user_id", userId)
+          .single();
+
+        targetClinicId = centralPatient?.clinic_id;
+      }
+
+      if (!targetClinicId) {
+        console.warn("No clinic context found for patient");
+        setPatient(null);
+        return;
+      }
+
+      // Fetch patient from clinic's database
+      const clinicClient = await getClinicSupabaseClient(targetClinicId);
+      const { data, error } = await clinicClient
         .from("patients")
         .select("*")
         .eq("auth_user_id", userId)
         .single();
 
       if (error && error.code !== "PGRST116") {
-        console.error("Error fetching patient:", error);
+        console.error("Error fetching patient from clinic database:", error);
       }
+
       setPatient(data);
+      setClinicId(targetClinicId);
     } catch (err) {
       console.error("Failed to fetch patient:", err);
     }
@@ -64,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const getSession = async () => {
+      // Get session from central auth
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -79,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     getSession();
 
+    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -89,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await fetchPatient(session.user.id);
       } else {
         setPatient(null);
+        setClinicId(null);
       }
 
       setIsLoading(false);
@@ -97,6 +141,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  /**
+   * Sign in - authenticates against central auth
+   * Patient data is then fetched from their clinic's database
+   * Also checks if account is activated
+   */
   const signIn = async (email: string, password: string) => {
     try {
       // First, authenticate with Supabase Auth
@@ -138,6 +187,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /**
+   * Sign up - creates user in central auth and clinic's database
+   */
   const signUp = async (
     email: string,
     password: string,
@@ -146,10 +198,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clinicId?: string
   ) => {
     try {
-      console.log("Starting signup process for:", email);
+      if (!clinicId) {
+        return { error: new Error("Clinic ID is required for registration") };
+      }
 
-      // Use regular signup - ensure email confirmation is disabled in Supabase dashboard
-      console.log("Attempting regular signup...");
+      // Create user in central Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -161,113 +214,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
 
-      if (error) {
-        console.error("Signup error:", error);
-        console.error("Error details:", {
-          message: error.message,
-          status: error.status,
-          name: error.name,
-        });
-        return { error };
+      if (error || !data.user) {
+        return { error: error || new Error("Failed to create user") };
       }
 
-      if (!data.user) {
-        console.error("No user returned from signup");
-        return { error: new Error("Failed to create user account") };
-      }
-
-      console.log("User created successfully:", data.user.id);
-
-      // Ensure clinic_id column exists in patients table
-      console.log("Checking if clinic_id column exists...");
-      try {
-        // Try to run a query that would fail if clinic_id column doesn't exist
-        const { error: columnCheckError } = await supabase
-          .from("patients")
-          .select("clinic_id")
-          .limit(1);
-
-        if (
-          columnCheckError &&
-          columnCheckError.message?.includes("column") &&
-          columnCheckError.message?.includes("clinic_id")
-        ) {
-          console.log(
-            "clinic_id column does not exist, attempting to add it..."
-          );
-
-          // Try to add the column using a direct SQL query (this might not work with RLS)
-          // If this fails, we'll fall back to creating patient without clinic_id
-          try {
-            // This is a workaround - we'll try to insert without clinic_id first
-            // and then update if the column gets added later
-            console.warn(
-              "clinic_id column missing - creating patient without clinic association for now"
-            );
-          } catch (alterError) {
-            console.warn("Could not add clinic_id column:", alterError);
-          }
-        } else {
-          console.log("clinic_id column exists");
-        }
-      } catch (checkError) {
-        console.warn("Error checking clinic_id column:", checkError);
-      }
-
-      // Create patient record with clinic association (if column exists)
-      const patientData: any = {
-        auth_user_id: data.user.id,
-        email: email,
-        first_name: firstName,
-        last_name: lastName,
-        onboarding_completed: false,
-        is_active: false, // New accounts start as inactive until email verified
-      };
-
-      // Try to insert with clinic_id first
-      let insertData = { ...patientData };
-      if (clinicId) {
-        insertData.clinic_id = clinicId;
-        console.log("Including clinic_id in patient data:", clinicId);
-      }
-
-      console.log("Creating patient record...");
-      let { error: patientError } = await supabase
+      // Create patient in clinic's database
+      const clinicAdminClient = await getClinicSupabaseAdminClient(clinicId);
+      const { error: patientError } = await clinicAdminClient
         .from("patients")
-        .insert(insertData);
-
-      // If clinic_id column doesn't exist, retry without it
-      if (patientError && patientError.message?.includes("clinic_id")) {
-        console.warn(
-          "clinic_id column not found, creating patient without clinic association"
-        );
-        const { error: retryError } = await supabase
-          .from("patients")
-          .insert(patientData);
-
-        if (retryError) {
-          console.error("Error creating patient record:", retryError);
-          return { error: new Error("Failed to create patient profile") };
-        }
-      } else if (patientError) {
-        console.error("Error creating patient record:", patientError);
-        console.error("Patient error details:", {
-          message: patientError.message,
-          details: patientError.details,
-          hint: patientError.hint,
-          code: patientError.code,
+        .insert({
+          auth_user_id: data.user.id,
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          onboarding_completed: false,
+          is_active: false, // New accounts start as inactive until email verified
         });
-        return {
-          error: new Error(
-            `Failed to create patient profile: ${patientError.message}`
-          ),
-        };
+
+      if (patientError) {
+        // Clean up: delete the auth user since we couldn't create the patient record
+        await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+        return { error: patientError };
       }
 
-      console.log("Signup process completed successfully");
+      // Create reference in central database for federation/audit
+      await supabaseAdmin.from("clinic_patient_references").insert({
+        clinic_id: clinicId,
+        central_auth_user_id: data.user.id,
+        email,
+        clinic_patient_id: null, // Will be updated after fetching
+      });
+
       return { error: null };
     } catch (err) {
-      console.error("Unexpected error during signup:", err);
       return { error: new Error("An unexpected error occurred during signup") };
     }
   };
@@ -277,13 +256,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setPatient(null);
+    setClinicId(null);
   };
 
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/patient`,
+        redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/patient`,
       },
     });
     return { error };
@@ -293,14 +273,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "apple",
       options: {
-        redirectTo: `${window.location.origin}/patient`,
+        redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/patient`,
       },
     });
     return { error };
   };
 
-  const canAccessClinic = (clinicId: string): boolean => {
-    return patient?.clinic_id === clinicId;
+  /**
+   * Check if patient can access a specific clinic
+   */
+  const canAccessClinic = (targetClinicId: string): boolean => {
+    return clinicId === targetClinicId;
   };
 
   return (
@@ -309,6 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         patient,
+        clinicId,
         isLoading,
         signIn,
         signUp,

@@ -307,19 +307,30 @@ export default function ClinicPage() {
                 {user ? "Book Appointment" : "Sign in to Book"}
               </Button>
               {!user && (
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-white/30 text-white bg-white/10 hover:bg-white/20"
-                  asChild
-                >
-                  <Link
-                    href={`/register?clinic=${clinic.id}&redirect=${encodeURIComponent(window.location.pathname)}`}
+                <div className="flex flex-col gap-2">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-white/30 text-white bg-white/10 hover:bg-white/20"
+                    asChild
                   >
-                    <LogIn className="w-5 h-5 mr-2" />
-                    Sign in as Patient
-                  </Link>
-                </Button>
+                    <Link
+                      href={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}
+                    >
+                      <LogIn className="w-5 h-5 mr-2" />
+                      Sign In
+                    </Link>
+                  </Button>
+                  <p className="text-white/60 text-sm text-center">
+                    Don't have an account?{" "}
+                    <Link
+                      href={`/register?clinic=${clinic.id}&redirect=${encodeURIComponent(window.location.pathname)}`}
+                      className="text-clinic-teal hover:underline"
+                    >
+                      Register here
+                    </Link>
+                  </p>
+                </div>
               )}
               <Button
                 size="lg"

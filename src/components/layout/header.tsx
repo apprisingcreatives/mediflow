@@ -25,7 +25,11 @@ const navLinks = [
   { href: "/#pricing", label: "Pricing" },
 ];
 
-export function Header() {
+interface HeaderProps {
+  showSignIn?: boolean;
+}
+
+export function Header({ showSignIn = true }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, patient, signOut } = useAuth();
@@ -137,9 +141,11 @@ export function Header() {
               </DropdownMenu>
             ) : (
               <>
-                <Button variant="ghost" asChild>
-                  <Link href="/login">Sign In</Link>
-                </Button>
+                {showSignIn && (
+                  <Button variant="ghost" asChild>
+                    <Link href="/login">Sign In</Link>
+                  </Button>
+                )}
                 <Button
                   className="bg-clinic-teal hover:bg-clinic-teal/90 text-white shadow-glow hover:shadow-glow transition-all duration-300"
                   asChild
@@ -223,12 +229,19 @@ export function Header() {
                       </div>
                     </>
                   ) : (
-                    <Button
-                      className="w-full bg-clinic-teal hover:bg-clinic-teal/90 text-white"
-                      asChild
-                    >
-                      <Link href="/demo">Book a Demo</Link>
-                    </Button>
+                    <div className="flex flex-col gap-3">
+                      {showSignIn && (
+                        <Button variant="outline" asChild className="w-full">
+                          <Link href="/login">Sign In</Link>
+                        </Button>
+                      )}
+                      <Button
+                        className="w-full bg-clinic-teal hover:bg-clinic-teal/90 text-white"
+                        asChild
+                      >
+                        <Link href="/demo">Book a Demo</Link>
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
