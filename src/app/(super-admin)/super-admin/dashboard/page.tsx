@@ -25,6 +25,7 @@ import {
   Eye,
   Edit,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -69,6 +70,7 @@ export default function SuperAdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [adminName, setAdminName] = useState("Admin");
+  const [togglingFeature, setTogglingFeature] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("superAdminToken");
@@ -121,8 +123,11 @@ export default function SuperAdminDashboard() {
     const admin = localStorage.getItem("superAdmin");
     const adminId = admin ? JSON.parse(admin).id : null;
 
+    // Set loading state for this specific feature
+    setTogglingFeature(featureId);
+
     try {
-      await fetch(`/api/super-admin/clinics/${clinicId}/features`, {
+      const response = await fetch(`/api/super-admin/clinics/${clinicId}/features`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -132,9 +137,33 @@ export default function SuperAdminDashboard() {
         }),
       });
 
-      fetchData();
+      if (!response.ok) {
+        throw new Error('Failed to toggle feature');
+      }
+
+      // Refetch data and update selectedClinic with fresh data
+      const [clinicsRes, featuresRes] = await Promise.all([
+        fetch("/api/super-admin/clinics"),
+        fetch("/api/super-admin/ai-features"),
+      ]);
+
+      const clinicsData = await clinicsRes.json();
+      const featuresData = await featuresRes.json();
+
+      const updatedClinics = clinicsData.clinics || [];
+      setClinics(updatedClinics);
+      setAIFeatures(featuresData.features || []);
+
+      // Update selectedClinic with the refreshed data
+      const refreshedClinic = updatedClinics.find((c: Clinic) => c.id === clinicId);
+      if (refreshedClinic) {
+        setSelectedClinic(refreshedClinic);
+      }
     } catch (error) {
       console.error("Failed to toggle feature:", error);
+      // You could add a toast notification here
+    } finally {
+      setTogglingFeature(null);
     }
   };
 
@@ -421,11 +450,16 @@ export default function SuperAdminDashboard() {
                         (cf) => cf.ai_features?.slug === feature.slug
                       );
                       const isEnabled = clinicFeature?.is_enabled || false;
+                      const isToggling = togglingFeature === feature.id;
 
                       return (
                         <div
                           key={feature.id}
-                          className="p-4 border border-clinic-navy/10 dark:border-white/10 rounded-xl"
+                          className={`p-4 border rounded-xl transition-all duration-300 ${
+                            isToggling 
+                              ? "opacity-60 scale-[0.99] border-clinic-navy/10 dark:border-white/10" 
+                              : "opacity-100 scale-100 border-clinic-navy/10 dark:border-white/10 hover:border-clinic-teal/30 hover:shadow-sm"
+                          }`}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -446,16 +480,23 @@ export default function SuperAdminDashboard() {
                                 {feature.category}
                               </span>
                             </div>
-                            <Switch
-                              checked={isEnabled}
-                              onCheckedChange={() =>
-                                toggleFeature(
-                                  selectedClinic.id,
-                                  feature.id,
-                                  isEnabled
-                                )
-                              }
-                            />
+                            <div className="flex items-center gap-2">
+                              {isToggling && (
+                                <Loader2 className="w-4 h-4 text-clinic-teal animate-spin" />
+                              )}
+                              <Switch
+                                checked={isEnabled}
+                                disabled={isToggling}
+                                onCheckedChange={() =>
+                                  toggleFeature(
+                                    selectedClinic.id,
+                                    feature.id,
+                                    isEnabled
+                                  )
+                                }
+                                className="transition-opacity duration-200"
+                              />
+                            </div>
                           </div>
                         </div>
                       );

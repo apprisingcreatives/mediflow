@@ -7,19 +7,37 @@ export interface SuperAdmin {
 }
 
 export interface Clinic {
-  id: string;
+  id: string; // uuid
+
   name: string;
   email: string;
   phone: string | null;
   address: string | null;
   city: string | null;
+
   logo_url: string | null;
   description: string | null;
+
   is_active: boolean;
-  subscription_plan: "starter" | "professional" | "enterprise";
-  created_at: string;
-  updated_at: string;
+  subscription_plan: 'starter' | 'pro' | 'enterprise' | string;
+
+  created_at: string; // ISO timestamp
+  updated_at: string; // ISO timestamp
+
+  trial_start_date: string | null;
+  trial_end_date: string | null;
+  is_trial_active: boolean;
+
+  is_subscription_active: boolean;
+  payment_status: 'trial' | 'active' | 'past_due' | 'canceled' | string;
+
+  last_payment_date: string | null;
+  next_billing_date: string | null;
+
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
 }
+
 
 export interface ClinicAdmin {
   id: string;
@@ -81,7 +99,7 @@ export interface Practitioner {
 }
 
 export interface ClinicWithDetails extends Clinic {
-  services?: ClinicService[];
+  clinic_services?: ClinicService[];
   ai_features?: ClinicAIFeature[];
   practitioners?: Practitioner[];
   admins?: ClinicAdmin[];

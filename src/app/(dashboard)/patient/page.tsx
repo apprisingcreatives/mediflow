@@ -35,6 +35,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 
+
+
 const upcomingAppointments = [
   {
     id: 1,
@@ -125,6 +127,7 @@ export default function PatientPortal() {
   const { user, patient, isLoading, signOut } = useAuth();
 
   useEffect(() => {
+
     if (!isLoading) {
       if (!user) {
         router.push("/login?redirect=/patient");
