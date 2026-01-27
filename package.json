@@ -3,7 +3,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "tc": "tsc -b --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
