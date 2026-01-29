@@ -35,7 +35,7 @@ interface SuperAdmin {
  * Redirects to login if not authenticated
  */
 export async function requireClinicAdmin(
-  router: Router
+  router: Router,
 ): Promise<ClinicAdmin | null> {
   try {
     const {
@@ -72,7 +72,7 @@ export async function requireClinicAdmin(
  * Redirects to login if not authenticated
  */
 export async function requireSuperAdmin(
-  router: Router
+  router: Router,
 ): Promise<SuperAdmin | null> {
   try {
     // First try Supabase session
@@ -85,7 +85,7 @@ export async function requireSuperAdmin(
       const storedAdmin = localStorage.getItem('superAdmin');
       if (storedAdmin) {
         const adminData = JSON.parse(storedAdmin);
-        
+
         // Verify the stored admin is still valid
         const { data: admin, error } = await supabase
           .from('super_admins')
@@ -122,12 +122,15 @@ export async function requireSuperAdmin(
     }
 
     // Update localStorage
-    localStorage.setItem('superAdmin', JSON.stringify({
-      id: admin.id,
-      email: admin.email,
-      name: admin.name,
-      auth_user_id: admin.auth_user_id,
-    }));
+    localStorage.setItem(
+      'superAdmin',
+      JSON.stringify({
+        id: admin.id,
+        email: admin.email,
+        name: admin.name,
+        auth_user_id: admin.auth_user_id,
+      }),
+    );
 
     return admin;
   } catch (error) {
@@ -144,6 +147,9 @@ export async function requireSuperAdmin(
  */
 export async function clinicAdminSignOut(router: Router) {
   await supabase.auth.signOut();
+  localStorage.removeItem('clinic');
+  localStorage.removeItem('clinicAdmin');
+  localStorage.removeItem('clinicToken');
   router.push('/clinic/login');
 }
 
