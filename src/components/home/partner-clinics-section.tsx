@@ -179,9 +179,9 @@ export function PartnerClinicsSection() {
     );
   }
 
-  if (clinics.length === 0) {
-    return null;
-  }
+  // if (clinics.length === 0) {
+  //   return null;
+  // }
 
   return (
     <section

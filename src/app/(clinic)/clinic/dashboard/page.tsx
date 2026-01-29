@@ -23,7 +23,8 @@ import {
   Lock,
   Globe,
 } from 'lucide-react';
-// import { useGetClinics } from '@/hooks';
+import { requireClinicAdmin, clinicAdminSignOut } from '@/lib/admin-auth';
+import { useGetClinicFeatures, useGetClinic } from '@/hooks';
 
 interface Clinic {
   id: string;
@@ -35,136 +36,94 @@ interface Clinic {
   is_trial_active?: boolean;
   is_subscription_active?: boolean;
   payment_status?: string;
-  slug?: string
+  slug?: string;
 }
 
-interface AIFeature {
+interface ClinicAdmin {
   id: string;
-  is_enabled: boolean;
-  ai_features: {
-    name: string;
-    slug: string;
-    description: string;
-    category: string;
-  };
+  email: string;
+  name: string;
+  clinic_id: string;
+  is_active: boolean;
 }
 
 export default function ClinicDashboard() {
   const router = useRouter();
-  const [clinic, setClinic] = useState<Clinic | null>(null);
-  const [adminName, setAdminName] = useState('Admin');
-  const [aiFeatures, setAIFeatures] = useState<AIFeature[]>([]);
+  const [admin, setAdmin] = useState<ClinicAdmin | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(
-    null,
-  );
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null);
   const [isTrialExpired, setIsTrialExpired] = useState(false);
-  const { slug } = clinic || {};
+
+  // ✅ Use hooks for data fetching
+  const {
+    clinic,
+    loading: clinicLoading,
+    fetchClinic,
+  } = useGetClinic();
+
+  const {
+    clinicFeatures,
+    loading: featuresLoading,
+    error: featuresError,
+    fetchClinicFeatures,
+  } = useGetClinicFeatures();
+  
+  // ✅ Auth check using the utility function
   useEffect(() => {
-    const token = localStorage.getItem('clinicToken');
-    const clinicData = localStorage.getItem('clinic');
-    const adminData = localStorage.getItem('clinicAdmin');
-
-    if (!token) {
-      router.push('/clinic/login');
-      return;
-    }
-
-    if (clinicData) {
-      const parsedClinic = JSON.parse(clinicData);
-      setClinic(parsedClinic);
-
-      // Calculate trial days remaining
-      if (parsedClinic.trial_end_date) {
-        const trialEnd = new Date(parsedClinic.trial_end_date);
-        const today = new Date();
-        const diffTime = trialEnd.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        setTrialDaysRemaining(diffDays);
-
-        if (diffDays <= 0 && parsedClinic.payment_status === 'trial') {
-          setIsTrialExpired(true);
+    const checkAuth = async () => {
+      const authenticatedAdmin = await requireClinicAdmin(router);
+      
+      if (authenticatedAdmin) {
+        setAdmin(authenticatedAdmin);
+        
+        // Fetch clinic data using hook
+        const clinicData = await fetchClinic(authenticatedAdmin.clinic_id);
+        if (clinicData) {
+          calculateTrialStatus(clinicData);
         }
+        
+        // Fetch AI features with realtime subscription
+        await fetchClinicFeatures({ clinicId: authenticatedAdmin.clinic_id });
       }
-    }
-
-    if (adminData) {
-      const parsed = JSON.parse(adminData);
-      setAdminName(parsed.name);
-    }
-
-    fetchAIFeatures();
-    fetchLatestClinicData();
-  }, [router, clinic?.id]);
-
-
-
-  const fetchLatestClinicData = async () => {
-    const clinicData = localStorage.getItem('clinic');
-    if (!clinicData) return;
-
-    const clinic = JSON.parse(clinicData);
-    try {
-      const res = await fetch(`/api/clinic/${clinic.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.clinic) {
-          setClinic(data.clinic);
-          localStorage.setItem('clinic', JSON.stringify(data.clinic));
-
-          // Update trial status
-          if (data.clinic.trial_end_date) {
-            const trialEnd = new Date(data.clinic.trial_end_date);
-            const today = new Date();
-            const diffTime = trialEnd.getTime() - today.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            setTrialDaysRemaining(diffDays);
-
-            if (diffDays <= 0 && data.clinic.payment_status === 'trial') {
-              setIsTrialExpired(true);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch clinic data:', error);
-    }
-  };
-
-  const fetchAIFeatures = async () => {
-    const clinicData = localStorage.getItem('clinic');
-    if (!clinicData) return;
-
-    const clinic = JSON.parse(clinicData);
-
-    try {
-   
-      const res = await fetch(`/api/clinic/${clinic.id}/features`, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      });
-      const data = await res.json();
-
-      setAIFeatures(data.features || []);
-    } catch (error) {
-      console.error('Failed to fetch AI features:', error);
-    } finally {
+      
       setIsLoading(false);
+    };
+
+    checkAuth();
+  }, [router,  ]);
+
+  const calculateTrialStatus = (clinicData: Clinic) => {
+    if (clinicData.trial_end_date) {
+      const trialEnd = new Date(clinicData.trial_end_date);
+      const today = new Date();
+      const diffTime = trialEnd.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      setTrialDaysRemaining(diffDays);
+
+      if (diffDays <= 0 && clinicData.payment_status === 'trial') {
+        setIsTrialExpired(true);
+      }
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('clinicToken');
-    localStorage.removeItem('clinicAdmin');
-    localStorage.removeItem('clinic');
-    router.push('/clinic/login');
+  const handleLogout = async () => {
+    await clinicAdminSignOut(router);
   };
 
-  const enabledFeatures = aiFeatures.filter((f) => f.is_enabled);
-  const disabledFeatures = aiFeatures.filter((f) => !f.is_enabled);
+  // ✅ Features are now automatically updated via realtime!
+  const enabledFeatures = clinicFeatures.filter((f) => f.is_enabled);
+  const disabledFeatures = clinicFeatures.filter((f) => !f.is_enabled);
+
+  if (isLoading) {
+    return (
+      <div className='min-h-screen bg-clinic-bg flex items-center justify-center'>
+        <div className='text-center'>
+          <Activity className='w-12 h-12 text-clinic-teal animate-spin mx-auto mb-4' />
+          <p className='text-clinic-text/60'>Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='min-h-screen bg-clinic-bg dark:bg-slate-900'>
@@ -236,11 +195,11 @@ export default function ClinicDashboard() {
             Settings
           </Link>
           <Link
-            href={`/clinics/${slug}`}
+            href={`/clinics/${clinic?.slug}`}
             className='flex items-center gap-3 px-4 py-3 rounded-xl text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5'
           >
             <Globe className='w-5 h-5' />
-            Domain
+            Public Page
           </Link>
         </nav>
 
@@ -266,7 +225,7 @@ export default function ClinicDashboard() {
                 {clinic?.name || 'Clinic Dashboard'}
               </h1>
               <p className='text-sm text-clinic-text/60 dark:text-white/60'>
-                Welcome back, {adminName}
+                Welcome back, {admin?.name}
               </p>
             </div>
             <div className='flex items-center gap-4'>
@@ -286,8 +245,8 @@ export default function ClinicDashboard() {
         </header>
 
         <div className='p-6'>
-          {/* Trial/Subscription Banner */}
-          {clinic?.payment_status === 'trial' &&
+             {/* Trial/Subscription Banner */}
+             {clinic?.payment_status === 'trial' &&
             trialDaysRemaining !== null && (
               <div
                 className={`mb-6 p-4 rounded-2xl ${
@@ -457,16 +416,21 @@ export default function ClinicDashboard() {
           </div>
 
           <div className='grid lg:grid-cols-2 gap-8'>
-            {/* AI Features Status */}
+            {/* AI Features Status - Now with REALTIME! */}
             <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6'>
               <div className='flex items-center gap-2 mb-6'>
                 <Sparkles className='w-5 h-5 text-clinic-ai' />
                 <h2 className='font-display text-xl font-bold text-clinic-navy dark:text-white'>
                   AI Features Status
                 </h2>
+                {/* ✅ Show realtime indicator */}
+                <span className='ml-auto flex items-center gap-1 text-xs text-green-500'>
+                  <span className='w-2 h-2 bg-green-500 rounded-full animate-pulse'></span>
+                  Live
+                </span>
               </div>
 
-              {isLoading ? (
+              {featuresLoading ? (
                 <div className='space-y-4'>
                   {[1, 2, 3].map((i) => (
                     <div
@@ -488,10 +452,10 @@ export default function ClinicDashboard() {
                         className='p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl'
                       >
                         <p className='font-medium text-sm text-green-700 dark:text-green-400'>
-                          {feature.ai_features.name}
+                          {feature.feature?.name}
                         </p>
                         <p className='text-xs text-green-600/70 dark:text-green-400/70'>
-                          {feature.ai_features.description}
+                          Ready to use
                         </p>
                       </div>
                     ))}
@@ -509,26 +473,23 @@ export default function ClinicDashboard() {
                           className='p-3 bg-clinic-navy/5 dark:bg-white/5 border border-clinic-navy/10 dark:border-white/10 rounded-xl'
                         >
                           <p className='font-medium text-sm text-clinic-navy/70 dark:text-white/70'>
-                            {feature.ai_features.name}
+                            {feature.feature?.name}
                           </p>
                           <p className='text-xs text-clinic-text/50 dark:text-white/50'>
-                            Contact support to enable
+                            {feature.feature?.is_premium
+                              ? 'Upgrade to enable'
+                              : 'Contact support to enable'}
                           </p>
                         </div>
                       ))}
-                      {disabledFeatures.length > 3 && (
-                        <p className='text-xs text-clinic-text/50 dark:text-white/50 text-center'>
-                          +{disabledFeatures.length - 3} more features available
-                        </p>
-                      )}
                     </div>
                   )}
                 </>
               )}
             </div>
 
-            {/* Today's Schedule */}
-            <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6'>
+                {/* Today's Schedule */}
+                <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6'>
               <div className='flex items-center justify-between mb-6'>
                 <div className='flex items-center gap-2'>
                   <Calendar className='w-5 h-5 text-clinic-teal' />

@@ -7,7 +7,6 @@ export async function GET(
 ) {
   try {
     const { clinicId } = params;
-    console.log(`[API] Fetching features for clinic: ${clinicId}`);
 
     const { data: features, error } = await supabaseAdmin
       .from('clinic_ai_features')
@@ -18,15 +17,7 @@ export async function GET(
       `,
       )
       .eq('clinic_id', clinicId);
-    
-    console.log(`[API] Total features returned: ${features?.length}`);
-    console.log(`[API] Features with is_enabled:`, features?.map(f => ({
-      name: f.ai_features?.name,
-      is_enabled: f.is_enabled,
-      id: f.id
-    })));
-    console.log(`[API] Enabled count: ${features?.filter(f => f.is_enabled).length}`);
-    
+
     if (error) {
       console.error('[API] Supabase error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });

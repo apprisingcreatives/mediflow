@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
   try {
     const { clinic, admin, services } = await request.json();
 
+    // --- Basic validations ---
     if (!clinic.name || !clinic.email) {
       return NextResponse.json(
         { error: "Clinic name and email are required" },
@@ -13,14 +13,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!admin.name || !admin.email || !admin.password) {
+    if (!admin.name || !admin.email) {
       return NextResponse.json(
-        { error: "Admin name, email, and password are required" },
+        { error: "Admin name and email are required" },
         { status: 400 }
       );
     }
 
-    // Check if clinic email already exists
+    // --- Check if clinic email already exists ---
     const { data: existingClinic } = await supabaseAdmin
       .from("clinics")
       .select("id")
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if admin email already exists
+    // --- Check if admin email already exists in clinic_admins ---
     const { data: existingAdmin } = await supabaseAdmin
       .from("clinic_admins")
       .select("id")
@@ -48,12 +48,39 @@ export async function POST(request: Request) {
       );
     }
 
-    // Calculate trial dates (14 days from now)
+    // --- Calculate trial dates ---
     const trialStartDate = new Date();
     const trialEndDate = new Date();
     trialEndDate.setDate(trialEndDate.getDate() + 14);
 
-    // Create clinic with trial
+    // --- Generate slug from clinic name ---
+    const generateSlug = (name: string): string => {
+      return name
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '') // Remove special characters
+        .replace(/[\s_-]+/g, '-') // Replace spaces, underscores with hyphens
+        .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+    };
+
+    const baseSlug = generateSlug(clinic.name);
+    let slug = baseSlug;
+    let counter = 1;
+
+    // Ensure slug is unique
+    while (true) {
+      const { data: existingSlug } = await supabaseAdmin
+        .from("clinics")
+        .select("id")
+        .eq("slug", slug)
+        .single();
+
+      if (!existingSlug) break;
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    // --- Create clinic ---
     const { data: newClinic, error: clinicError } = await supabaseAdmin
       .from("clinics")
       .insert({
@@ -63,6 +90,7 @@ export async function POST(request: Request) {
         address: clinic.address || null,
         city: clinic.city || null,
         description: clinic.description || null,
+        slug: slug, // Add the generated slug
         subscription_plan: clinic.subscription_plan || "starter",
         trial_start_date: trialStartDate.toISOString(),
         trial_end_date: trialEndDate.toISOString(),
@@ -77,26 +105,50 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: clinicError.message }, { status: 500 });
     }
 
-    // Hash password and create admin
-    const passwordHash = await bcrypt.hash(admin.password, 10);
+    // Create admin user in Supabase Auth with password
+    const { data: authUser, error: authError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email: admin.email,
+        password: admin.password,
+        email_confirm: true, // Auto-confirm email for clinic admins
+        user_metadata: {
+          name: admin.name,
+          role: "clinic_admin",
+          clinic_id: newClinic.id,
+        },
+      });
 
-    const { error: adminError } = await supabaseAdmin
+    if (authError || !authUser.user) {
+      // Rollback clinic creation
+      await supabaseAdmin.from("clinics").delete().eq("id", newClinic.id);
+      return NextResponse.json(
+        { error: authError?.message || "Failed to create admin user" },
+        { status: 500 }
+      );
+    }
+
+    // Insert admin record into clinic_admins table
+    const { error: adminInsertError } = await supabaseAdmin
       .from("clinic_admins")
       .insert({
         clinic_id: newClinic.id,
-        name: admin.name,
         email: admin.email,
-        password_hash: passwordHash,
+        name: admin.name,
         role: "admin",
+        auth_user_id: authUser.user.id,
       });
 
-    if (adminError) {
-      // Rollback clinic creation
+    if (adminInsertError) {
+      // Rollback clinic + auth user
       await supabaseAdmin.from("clinics").delete().eq("id", newClinic.id);
-      return NextResponse.json({ error: adminError.message }, { status: 500 });
+      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+      return NextResponse.json(
+        { error: adminInsertError.message },
+        { status: 500 }
+      );
     }
 
-    // Create services
+    // --- Insert services if provided ---
     if (services && services.length > 0) {
       const servicesToInsert = services.map(
         (service: {
@@ -116,7 +168,7 @@ export async function POST(request: Request) {
       await supabaseAdmin.from("clinic_services").insert(servicesToInsert);
     }
 
-    // Create AI features for the clinic
+    // --- Insert AI features for the clinic ---
     const { data: features } = await supabaseAdmin
       .from("ai_features")
       .select("id, is_premium");
@@ -131,28 +183,11 @@ export async function POST(request: Request) {
       await supabaseAdmin.from("clinic_ai_features").insert(clinicFeatures);
     }
 
-    // Queue welcome email notification
-    await supabaseAdmin.from("email_notifications").insert({
-      recipient_email: admin.email,
-      recipient_name: admin.name,
-      recipient_type: "clinic",
-      subject: `Welcome to MediFlow - Your 14 Day Trial Has Started`,
-      body: `Dear ${admin.name}, Welcome to MediFlow! Your clinic ${clinic.name} has been registered. Your 14-day free trial starts today and ends on ${trialEndDate.toLocaleDateString()}.`,
-      html_body: `<h1>Welcome to MediFlow!</h1><p>Dear ${admin.name},</p><p>Your clinic <strong>${clinic.name}</strong> has been registered successfully.</p><p>Your 14-day free trial starts today and will end on <strong>${trialEndDate.toLocaleDateString()}</strong>.</p><p>Enjoy all premium features during your trial period!</p>`,
-      notification_type: "clinic_welcome",
-      related_entity_type: "clinic",
-      related_entity_id: newClinic.id,
-      status: "pending",
-      metadata: {
-        clinic_name: clinic.name,
-        admin_name: admin.name,
-        trial_end_date: trialEndDate.toISOString(),
-      },
-    });
-
+    // --- Response ---
     return NextResponse.json(
       {
-        message: "Clinic registered successfully",
+        message:
+          "Clinic registered successfully. Admin invite has been sent via email.",
         clinic: {
           ...newClinic,
           trial_end_date: trialEndDate.toISOString(),
