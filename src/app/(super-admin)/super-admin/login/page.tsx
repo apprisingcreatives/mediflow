@@ -35,9 +35,10 @@ export default function SuperAdminLoginPage() {
         return;
       }
 
+      // Verify super admin record exists and check status
       const { data: admin, error: adminError } = await supabase
         .from('super_admins')
-        .select('*')
+        .select('id, email, name, status')
         .eq('auth_user_id', authData.user.id)
         .single();
 
@@ -48,21 +49,43 @@ export default function SuperAdminLoginPage() {
         return;
       }
 
-      if (!admin.is_active) {
+      // Check account status
+      if (admin.status === 'invited') {
         await supabase.auth.signOut();
-        setError('Your account has been deactivated');
+        setError('Please complete password setup first');
         setIsLoading(false);
         return;
       }
 
-      localStorage.setItem('superAdminToken', authData.session.access_token);
+      if (admin.status === 'suspended') {
+        await supabase.auth.signOut();
+        setError('Your account has been suspended. Contact support.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (admin.status === 'archived') {
+        await supabase.auth.signOut();
+        setError('Your account has been archived. Contact support.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (admin.status !== 'active') {
+        await supabase.auth.signOut();
+        setError(`Account status: ${admin.status}. Contact support.`);
+        setIsLoading(false);
+        return;
+      }
+
+      // ✅ Session is already set by signInWithPassword - DO NOT store token in localStorage (XSS risk)
+      // ✅ Only store non-sensitive admin info for quick access
       localStorage.setItem(
         'superAdmin',
         JSON.stringify({
           id: admin.id,
           email: admin.email,
           name: admin.name,
-          auth_user_id: admin.auth_user_id,
         }),
       );
 

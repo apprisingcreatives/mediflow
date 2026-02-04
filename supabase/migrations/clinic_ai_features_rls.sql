@@ -22,14 +22,14 @@ USING (
   EXISTS (
     SELECT 1 FROM super_admins
     WHERE super_admins.auth_user_id = auth.uid()
-    AND super_admins.is_active = true
+    AND super_admins.status = 'active'
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM super_admins
     WHERE super_admins.auth_user_id = auth.uid()
-    AND super_admins.is_active = true
+    AND super_admins.status = 'active'
   )
 );
 

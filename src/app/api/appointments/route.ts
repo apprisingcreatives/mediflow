@@ -1,23 +1,23 @@
+import { supabase } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 
 // POST - Create appointment (patients only)
 export async function POST(request: Request) {
   try {
     // Get authorization token from header
     const authHeader = request.headers.get('authorization');
-    
+
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const token = authHeader.substring(7);
-    
+
     // Verify token and get user
     const {
       data: { user },
       error: authError,
-    } = await supabaseAdmin.auth.getUser(token);
+    } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -37,12 +37,12 @@ export async function POST(request: Request) {
     if (!appointment_date || !appointment_time) {
       return NextResponse.json(
         { error: 'Date and time are required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Get patient record
-    const { data: patient, error: patientError } = await supabaseAdmin
+    const { data: patient, error: patientError } = await supabase
       .from('patients')
       .select('id, email, first_name, last_name')
       .eq('auth_user_id', user.id)
@@ -51,12 +51,12 @@ export async function POST(request: Request) {
     if (patientError || !patient) {
       return NextResponse.json(
         { error: 'Patient record not found' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     // Create appointment
-    const { data: appointment, error: appointmentError } = await supabaseAdmin
+    const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .insert({
         patient_id: patient.id,
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       console.error('Appointment creation error:', appointmentError);
       return NextResponse.json(
         { error: appointmentError.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     let practitionerName = '';
 
     if (clinic_id) {
-      const { data: clinic } = await supabaseAdmin
+      const { data: clinic } = await supabase
         .from('clinics')
         .select('name')
         .eq('id', clinic_id)
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     }
 
     if (service_id) {
-      const { data: service } = await supabaseAdmin
+      const { data: service } = await supabase
         .from('clinic_services')
         .select('name')
         .eq('id', service_id)
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     }
 
     if (practitioner_id) {
-      const { data: practitioner } = await supabaseAdmin
+      const { data: practitioner } = await supabase
         .from('practitioners')
         .select('name')
         .eq('id', practitioner_id)
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
     }
 
     // Queue confirmation email
-    await supabaseAdmin.from('email_notifications').insert({
+    await supabase.from('email_notifications').insert({
       recipient_email: patient.email,
       recipient_name: `${patient.first_name} ${patient.last_name}`,
       recipient_type: 'patient',
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -140,18 +140,18 @@ export async function GET(request: Request) {
   try {
     // Get authorization token from header
     const authHeader = request.headers.get('authorization');
-    
+
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const token = authHeader.substring(7);
-    
+
     // Verify token and get user
     const {
       data: { user },
       error: authError,
-    } = await supabaseAdmin.auth.getUser(token);
+    } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -161,7 +161,7 @@ export async function GET(request: Request) {
     const clinicId = searchParams.get('clinic_id');
 
     // Check if user is a patient
-    const { data: patient } = await supabaseAdmin
+    const { data: patient } = await supabase
       .from('patients')
       .select('id')
       .eq('auth_user_id', user.id)
@@ -169,7 +169,7 @@ export async function GET(request: Request) {
 
     if (patient) {
       // Patient: only see their own appointments
-      const { data: appointments, error } = await supabaseAdmin
+      const { data: appointments, error } = await supabase
         .from('appointments')
         .select(
           `
@@ -177,7 +177,7 @@ export async function GET(request: Request) {
           clinics(id, name),
           practitioners(id, name),
           clinic_services(id, name)
-        `
+        `,
         )
         .eq('patient_id', patient.id)
         .order('appointment_date', { ascending: true })
@@ -191,7 +191,7 @@ export async function GET(request: Request) {
     }
 
     // Check if user is a clinic admin
-    const { data: clinicAdmin } = await supabaseAdmin
+    const { data: clinicAdmin } = await supabase
       .from('clinic_admins')
       .select('id, clinic_id')
       .eq('auth_user_id', user.id)
@@ -199,7 +199,7 @@ export async function GET(request: Request) {
 
     if (clinicAdmin) {
       // Clinic admin: see all appointments for their clinic
-      let query = supabaseAdmin
+      let query = supabase
         .from('appointments')
         .select(
           `
@@ -207,7 +207,7 @@ export async function GET(request: Request) {
           patients(id, first_name, last_name, email),
           practitioners(id, name),
           clinic_services(id, name)
-        `
+        `,
         )
         .eq('clinic_id', clinicAdmin.clinic_id);
 
@@ -230,13 +230,13 @@ export async function GET(request: Request) {
     // User is neither patient nor clinic admin
     return NextResponse.json(
       { error: 'Unauthorized: Not a patient or clinic admin' },
-      { status: 403 }
+      { status: 403 },
     );
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

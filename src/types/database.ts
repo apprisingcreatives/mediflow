@@ -1,7 +1,12 @@
+export type SuperAdminStatus = 'invited' | 'active' | 'suspended' | 'archived';
+
 export interface SuperAdmin {
   id: string;
   email: string;
   name: string;
+  auth_user_id: string | null;
+  status: SuperAdminStatus;
+  invited_by: string | null;
   created_at: string;
   updated_at: string;
 }

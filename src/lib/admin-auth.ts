@@ -22,11 +22,13 @@ interface ClinicAdmin {
   auth_user_id: string;
 }
 
+type SuperAdminStatus = 'invited' | 'active' | 'suspended' | 'archived';
+
 interface SuperAdmin {
   id: string;
   email: string;
   name: string;
-  is_active: boolean;
+  status: SuperAdminStatus;
   auth_user_id: string;
 }
 
@@ -86,12 +88,12 @@ export async function requireSuperAdmin(
       if (storedAdmin) {
         const adminData = JSON.parse(storedAdmin);
 
-        // Verify the stored admin is still valid
+        // Verify the stored admin is still valid and active
         const { data: admin, error } = await supabase
           .from('super_admins')
           .select('*')
           .eq('id', adminData.id)
-          .eq('is_active', true)
+          .eq('status', 'active')
           .single();
 
         if (!error && admin) {
@@ -113,7 +115,7 @@ export async function requireSuperAdmin(
       .eq('auth_user_id', session.user.id)
       .single();
 
-    if (error || !admin || !admin.is_active) {
+    if (error || !admin || admin.status !== 'active') {
       await supabase.auth.signOut();
       localStorage.removeItem('superAdminToken');
       localStorage.removeItem('superAdmin');
