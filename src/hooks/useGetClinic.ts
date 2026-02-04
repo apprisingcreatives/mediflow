@@ -1,7 +1,7 @@
 'use client';
 
 import { supabase } from '@/lib/supabase';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 interface Clinic {
   id: string;
@@ -31,6 +31,7 @@ interface Clinic {
     id: string;
     name: string;
     specialization: string | null;
+    bio?: string;
   }>;
 }
 
@@ -38,13 +39,29 @@ const useGetClinic = () => {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fetchingRef = useRef<string | null>(null);
 
   const fetchClinic = useCallback(async (clinicId: string) => {
+    if (!clinicId) {
+      console.error('fetchClinic called without clinicId');
+      return null;
+    }
+
+    // Prevent duplicate fetches for the same clinic
+    if (fetchingRef.current === clinicId) {
+      console.log('Already fetching clinic:', clinicId);
+      return null;
+    }
+
+    fetchingRef.current = clinicId;
+
     try {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
+      console.log('Fetching clinic with ID:', clinicId);
+
+      const { data, error: queryError } = await supabase
         .from('clinics')
         .select(`
           id,
@@ -73,13 +90,24 @@ const useGetClinic = () => {
           practitioners (
             id,
             name,
-            specialization
+            specialization,
+            bio
           )
         `)
         .eq('id', clinicId)
         .single();
 
-      if (error) throw error;
+      console.log('Supabase response:', { data, error: queryError });
+
+      if (queryError) {
+        console.error('Supabase query error:', queryError);
+        throw queryError;
+      }
+
+      if (!data) {
+        console.error('No clinic data returned');
+        throw new Error('Clinic not found');
+      }
 
       setClinic(data);
       return data;
@@ -91,6 +119,7 @@ const useGetClinic = () => {
       return null;
     } finally {
       setLoading(false);
+      fetchingRef.current = null;
     }
   }, []);
 

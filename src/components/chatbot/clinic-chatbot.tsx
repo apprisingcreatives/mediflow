@@ -23,6 +23,7 @@ import {
   Stethoscope,
   MapPin,
 } from "lucide-react";
+import { ClinicWithDetails } from "@/types/database";
 
 interface Service {
   id: string;
@@ -38,17 +39,7 @@ interface Practitioner {
   specialization: string | null;
 }
 
-interface Clinic {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  address: string | null;
-  city: string | null;
-  description: string | null;
-  clinic_services: Service[];
-  practitioners: Practitioner[];
-}
+
 
 interface Message {
   id: string;
@@ -59,7 +50,7 @@ interface Message {
 }
 
 interface ClinicChatbotProps {
-  clinic: Clinic;
+  clinic: ClinicWithDetails;
 }
 
 export function ClinicChatbot({ clinic }: ClinicChatbotProps) {
@@ -92,20 +83,19 @@ export function ClinicChatbot({ clinic }: ClinicChatbotProps) {
 
     // Services
     if (lowerQuery.includes("service") || lowerQuery.includes("offer") || lowerQuery.includes("treatment") || lowerQuery.includes("available")) {
-      const servicesList = clinic.clinic_services
-        .map((s) => `• ${s.name} - ₱${s.price.toLocaleString()} (${s.duration_minutes} min)`)
+      const servicesList = clinic.clinic_services?.map((s) => `• ${s.name} - ₱${s.price.toLocaleString()} (${s.duration_minutes} min)`)
         .join("\n");
 
       return {
         response: `Here are the services we offer at ${clinic.name}: 🏥\n\n${servicesList || "No services listed yet."}\n\nWould you like to book any of these services?`,
-        quickReplies: clinic.clinic_services.slice(0, 3).map((s) => `Book ${s.name}`),
+        quickReplies: clinic.clinic_services?.slice(0, 3).map((s) => `Book ${s.name}`),
       };
     }
 
     // Pricing
     if (lowerQuery.includes("price") || lowerQuery.includes("cost") || lowerQuery.includes("fee") || lowerQuery.includes("how much")) {
       const priceList = clinic.clinic_services
-        .map((s) => `• ${s.name}: ₱${s.price.toLocaleString()}`)
+        ?.map((s) => `• ${s.name}: ₱${s.price.toLocaleString()}`)
         .join("\n");
 
       return {
@@ -117,19 +107,19 @@ export function ClinicChatbot({ clinic }: ClinicChatbotProps) {
     // Doctors
     if (lowerQuery.includes("doctor") || lowerQuery.includes("physician") || lowerQuery.includes("specialist") || lowerQuery.includes("who")) {
       const doctorsList = clinic.practitioners
-        .map((p) => `• ${p.name}${p.specialization ? ` - ${p.specialization}` : ""}`)
+        ?.map((p) => `• ${p.name}${p.specialization ? ` - ${p.specialization}` : ""}`)
         .join("\n");
 
       return {
         response: `Meet our medical team at ${clinic.name}: 👨‍⚕️👩‍⚕️\n\n${doctorsList || "Doctor information coming soon."}\n\nWould you like to book with a specific doctor?`,
-        quickReplies: clinic.practitioners.slice(0, 3).map((p) => `Book with ${p.name.split(" ")[0]}`),
+        quickReplies: clinic.practitioners?.slice(0, 3).map((p) => `Book with ${p.name.split(" ")[0]}`),
       };
     }
 
     // Appointment / Booking
     if (lowerQuery.includes("appointment") || lowerQuery.includes("book") || lowerQuery.includes("schedule") || lowerQuery.includes("reserve")) {
       return {
-        response: `Great! Let me help you book an appointment at ${clinic.name}! 📅\n\n**Booking Options:**\n\n1. 🖥️ **Online** - Use our booking system above\n2. 📞 **Phone** - Call ${clinic.phone || "us directly"}\n3. 📧 **Email** - ${clinic.email}\n\n**Available Services:**\n${clinic.clinic_services.slice(0, 3).map((s) => `• ${s.name}`).join("\n")}\n\nWhich service would you like to book?`,
+        response: `Great! Let me help you book an appointment at ${clinic.name}! 📅\n\n**Booking Options:**\n\n1. 🖥️ **Online** - Use our booking system above\n2. 📞 **Phone** - Call ${clinic.phone || "us directly"}\n3. 📧 **Email** - ${clinic.email}\n\n**Available Services:**\n${clinic.clinic_services?.slice(0, 3).map((s) => `• ${s.name}`).join("\n")}\n\nWhich service would you like to book?`,
         quickReplies: ["View all services", "Call clinic", "Email us"],
       };
     }
@@ -167,7 +157,7 @@ export function ClinicChatbot({ clinic }: ClinicChatbotProps) {
     }
 
     // Specific service booking (check if query mentions any service)
-    const mentionedService = clinic.clinic_services.find((s) =>
+    const mentionedService = clinic.clinic_services?.find((s) =>
       lowerQuery.includes(s.name.toLowerCase())
     );
     if (mentionedService) {

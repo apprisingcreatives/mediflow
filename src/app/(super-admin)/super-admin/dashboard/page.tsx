@@ -15,10 +15,8 @@ import {
   LogOut,
   Search,
   Plus,
-  ChevronRight,
   Sparkles,
   Shield,
-  Clock,
   MapPin,
   Mail,
   Phone,
@@ -44,6 +42,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { InviteUserForm } from '@/components/auth/super-admin/InviteUserForm';
+import { ClinicForm } from '@/components/forms/ClinicForm';
 import {
   useGetClinicFeatures,
   useGetClinics,
@@ -51,8 +50,6 @@ import {
   usePutClinicFeatures,
 } from '@/hooks';
 import { PublicClinicWithDetails } from '@/hooks/useGetClinics';
-import { useAuth } from '@/hooks/use-auth';
-import { isSuperAdmin } from '@/lib/permissions';
 import { requireSuperAdmin } from '@/lib/admin-auth';
 
 export default function SuperAdminDashboard() {
@@ -63,10 +60,12 @@ export default function SuperAdminDashboard() {
   const [adminName, setAdminName] = useState('Admin');
   const [togglingFeature, setTogglingFeature] = useState<string | null>(null);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isAddClinicDialogOpen, setIsAddClinicDialogOpen] = useState(false);
+  const [isEditClinicDialogOpen, setIsEditClinicDialogOpen] = useState(false);
+  const [clinicToEdit, setClinicToEdit] = useState<PublicClinicWithDetails | null>(null);
 
-  const { session, isLoading } = useAuth();
-  const { user } = session || {};
-  const { role } = user?.user_metadata || {};
+
+ 
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -162,6 +161,25 @@ export default function SuperAdminDashboard() {
     localStorage.removeItem('superAdmin');
 
     router.push('/super-admin/login');
+  };
+
+  const handleClinicFormSuccess = () => {
+    // Close the modals
+    setIsAddClinicDialogOpen(false);
+    setIsEditClinicDialogOpen(false);
+    setClinicToEdit(null);
+    
+    // Refresh clinics list
+    sendRequestClinics();
+  };
+
+  const handleEditClinic = (clinic: PublicClinicWithDetails) => {
+    // Delay to allow DropdownMenu to close and unmount its portal first
+    // This prevents overlay conflicts between Radix components
+    setTimeout(() => {
+      setClinicToEdit(clinic);
+      setIsEditClinicDialogOpen(true);
+    }, 100);
   };
 
   const filteredClinics = clinics.filter(
@@ -327,10 +345,29 @@ export default function SuperAdminDashboard() {
                 <h2 className='font-display text-xl font-bold text-clinic-navy dark:text-white'>
                   Registered Clinics
                 </h2>
-                <Button className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'>
-                  <Plus className='w-4 h-4 mr-2' />
-                  Add Clinic
-                </Button>
+                <Dialog
+                  open={isAddClinicDialogOpen}
+                  onOpenChange={setIsAddClinicDialogOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'>
+                      <Plus className='w-4 h-4 mr-2' />
+                      Add Clinic
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className='sm:max-w-[600px] bg-white dark:bg-slate-800 border-clinic-navy/10 dark:border-white/10 max-h-[90vh] overflow-y-auto'>
+                    <DialogHeader>
+                      <DialogTitle className='text-2xl font-display font-bold text-clinic-navy dark:text-white'>
+                        Add New Clinic
+                      </DialogTitle>
+                      <DialogDescription className='text-clinic-text/60 dark:text-white/60'>
+                        Register a new clinic to the platform. Fill in the required
+                        information below.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <ClinicForm onSuccess={handleClinicFormSuccess} />
+                  </DialogContent>
+                </Dialog>
               </div>
 
               <div className='relative mb-6'>
@@ -422,7 +459,7 @@ export default function SuperAdminDashboard() {
                             </span>
                           </div>
                         </div>
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant='ghost'
@@ -433,11 +470,13 @@ export default function SuperAdminDashboard() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align='end'>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => {}}>
                               <Eye className='w-4 h-4 mr-2' />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => handleEditClinic(clinic)}
+                            >
                               <Edit className='w-4 h-4 mr-2' />
                               Edit Clinic
                             </DropdownMenuItem>
@@ -545,6 +584,35 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Edit Clinic Dialog */}
+      <Dialog
+        open={isEditClinicDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditClinicDialogOpen(open);
+          if (!open) {
+            // Clear clinic data when dialog closes (with slight delay for animation)
+            setTimeout(() => setClinicToEdit(null), 150);
+          }
+        }}
+      >
+        <DialogContent className='sm:max-w-[600px] bg-white dark:bg-slate-800 border-clinic-navy/10 dark:border-white/10 max-h-[90vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle className='text-2xl font-display font-bold text-clinic-navy dark:text-white'>
+              Edit Clinic
+            </DialogTitle>
+            <DialogDescription className='text-clinic-text/60 dark:text-white/60'>
+              Update clinic information. Changes will be saved immediately.
+            </DialogDescription>
+          </DialogHeader>
+          {clinicToEdit && (
+            <ClinicForm
+              clinic={clinicToEdit}
+              onSuccess={handleClinicFormSuccess}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

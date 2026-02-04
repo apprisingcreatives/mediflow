@@ -10,7 +10,9 @@ import { PricingSection } from "@/components/home/pricing-section";
 import { CTASection } from "@/components/home/cta-section";
 import { PatientChatbot } from "@/components/chatbot/patient-chatbot";
 
+
 export default function HomePage() {
+
   return (
     <main className="min-h-screen">
       <Header showSignIn={false} />

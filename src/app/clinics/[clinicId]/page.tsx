@@ -26,6 +26,9 @@ import {
 import { cn } from "@/lib/utils";
 import { ClinicChatbot } from "@/components/chatbot/clinic-chatbot";
 import { useAuth } from "@/hooks/use-auth";
+import { useGetClinic } from "@/hooks";
+import { ClinicWithDetails } from "@/types/database";
+import { isClinicAdmin } from "@/lib/permissions";
 
 interface Service {
   id: string;
@@ -61,12 +64,12 @@ interface Clinic {
 
 export default function ClinicPage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const clinicId = params.clinicId as string;
   const router = useRouter();
   const { user, patient } = useAuth();
-  const [clinic, setClinic] = useState<Clinic | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { user_metadata } = user || {}
+  const { role} = user_metadata || {}
+  const { clinic, loading: isLoading, error, fetchClinic } = useGetClinic();
   const [activeTab, setActiveTab] = useState<"services" | "doctors">(
     "services"
   );
@@ -107,59 +110,40 @@ export default function ClinicPage() {
   };
 
   useEffect(() => {
-    if (slug) {
-      fetchClinic();
+    if (clinicId) {
+      fetchClinic(clinicId);
     }
-  }, [slug]);
+  }, [clinicId]);
 
-  const fetchClinic = async () => {
-    try {
-      // Extract the ID from slug (format: clinic-name-12345678)
-      const parts = slug.split("-");
-      const clinicId = parts[parts.length - 1];
+  const renderButtonText = () => {
+    if (!user) {
+      return "Sign in to Book"
+    }
+    if (isClinicAdmin(role)) {
+      return "Manage This Service"
+    }
+    return "Book This Service"
+    }
+  
 
-      // Check if it looks like a UUID prefix
-      const isIdAtEnd = /^[0-9a-f]{8}$/i.test(clinicId);
-
-      const searchParam = isIdAtEnd
-        ? `${clinicId}-${clinicId}-${clinicId}-${clinicId}-${clinicId}${clinicId}${clinicId}${clinicId}`.slice(
-            0,
-            36
-          )
-        : slug;
-
-      // Try different approaches to find the clinic
-      let res = await fetch(`/api/clinics/${slug}`);
-
-      if (!res.ok) {
-        // Try with just the ID if we extracted one
-        if (isIdAtEnd) {
-          // Get all clinics and find by partial ID match
-          const allRes = await fetch("/api/clinics");
-          const allData = await allRes.json();
-          const foundClinic = allData.clinics?.find((c: Clinic) =>
-            c.id.startsWith(clinicId)
-          );
-          if (foundClinic) {
-            setClinic(foundClinic);
-            setIsLoading(false);
-            return;
-          }
-        }
-        setError("Clinic not found");
-        return;
+    const renderDashboardButton = () => {
+      if (isClinicAdmin(role)) {
+        return (
+          <Button asChild    className="bg-clinic-teal hover:bg-clinic-teal/90 text-white">
+            <Link href={`/clinic/dashboard`}>
+              Dashboard
+            </Link>
+          </Button>
+        )
       }
-
-      const data = await res.json();
-      setClinic(data.clinic);
-    } catch (err) {
-      console.error("Failed to fetch clinic:", err);
-      setError("Failed to load clinic");
-    } finally {
-      setIsLoading(false);
+      return null
     }
-  };
 
+
+
+
+
+  // Show loading state only when actively loading
   if (isLoading) {
     return (
       <div className="min-h-screen bg-clinic-bg dark:bg-slate-900">
@@ -181,6 +165,7 @@ export default function ClinicPage() {
     );
   }
 
+  // Show error or not found state
   if (error || !clinic) {
     return (
       <div className="min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center">
@@ -298,6 +283,7 @@ export default function ClinicPage() {
 
             {/* CTA */}
             <div className="flex flex-col gap-3">
+              {renderDashboardButton()}
               <Button
                 size="lg"
                 className="bg-clinic-teal hover:bg-clinic-teal/90 text-white"
@@ -487,7 +473,7 @@ export default function ClinicPage() {
                   className="w-full mt-4 bg-clinic-navy hover:bg-clinic-navy/90 text-white"
                   onClick={() => handleBooking(service.id, service.name)}
                 >
-                  {user ? "Book This Service" : "Sign in to Book"}
+                  {renderButtonText()}
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
@@ -584,7 +570,7 @@ export default function ClinicPage() {
       </footer>
 
       {/* Clinic-Specific Chatbot */}
-      <ClinicChatbot clinic={clinic} />
+      <ClinicChatbot clinic={clinic as ClinicWithDetails} />
     </div>
   );
 }
