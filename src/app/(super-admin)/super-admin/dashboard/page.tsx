@@ -67,18 +67,9 @@ export default function SuperAdminDashboard() {
 
  
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      // ✅ This now works without type errors
-      const admin = await requireSuperAdmin(router);
-      if (admin) {
-        setAdminName(admin.name);
-        fetchFeatures();
-        sendRequestClinics();
-      }
-    };
-    checkAuth();
-  }, [router]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+
 
   const {
     clinics,
@@ -129,15 +120,13 @@ export default function SuperAdminDashboard() {
       setTogglingFeature(featureId);
 
       // Toggle the feature via API
+      // No need to refetch - realtime subscription will update the state automatically
       await toggleClinicFeature({
         clinicId: selectedClinic.id,
         featureId,
         isEnabled: value,
         enabledBy: adminId,
       });
-
-      // Refetch clinic features to get the updated state from server
-      await fetchClinicFeatures({ clinicId: selectedClinic.id });
     } catch (error) {
       console.error('Failed to toggle feature:', error);
       // Could add a toast notification here for better UX
@@ -202,6 +191,22 @@ export default function SuperAdminDashboard() {
         c.subscription_plan === 'enterprise',
     ).length,
   };
+
+  useEffect(() => {
+    // Prevent re-initialization on tab switch
+    if (isInitialized) return;
+
+    const checkAuth = async () => {
+      const admin = await requireSuperAdmin(router);
+      if (admin) {
+        setAdminName(admin.name);
+        setIsInitialized(true);
+        fetchFeatures();
+        sendRequestClinics();
+      }
+    };
+    checkAuth();
+  }, [router, isInitialized, ]);
 
   return (
     <div className='min-h-screen bg-clinic-bg dark:bg-slate-900'>

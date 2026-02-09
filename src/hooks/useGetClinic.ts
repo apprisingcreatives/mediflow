@@ -1,7 +1,7 @@
 'use client';
 
 import { supabase } from '@/lib/supabase';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 
 interface Clinic {
   id: string;
@@ -39,21 +39,12 @@ const useGetClinic = () => {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fetchingRef = useRef<string | null>(null);
 
   const fetchClinic = useCallback(async (clinicId: string) => {
     if (!clinicId) {
       console.error('fetchClinic called without clinicId');
       return null;
     }
-
-    // Prevent duplicate fetches for the same clinic
-    if (fetchingRef.current === clinicId) {
-      console.log('Already fetching clinic:', clinicId);
-      return null;
-    }
-
-    fetchingRef.current = clinicId;
 
     try {
       setLoading(true);
@@ -63,7 +54,8 @@ const useGetClinic = () => {
 
       const { data, error: queryError } = await supabase
         .from('clinics')
-        .select(`
+        .select(
+          `
           id,
           name,
           email,
@@ -93,7 +85,8 @@ const useGetClinic = () => {
             specialization,
             bio
           )
-        `)
+        `,
+        )
         .eq('id', clinicId)
         .single();
 
@@ -113,13 +106,10 @@ const useGetClinic = () => {
       return data;
     } catch (err) {
       console.error('Failed to fetch clinic:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch clinic'
-      );
+      setError(err instanceof Error ? err.message : 'Failed to fetch clinic');
       return null;
     } finally {
       setLoading(false);
-      fetchingRef.current = null;
     }
   }, []);
 

@@ -23,7 +23,7 @@ export default function ClinicLoginPage() {
     setIsLoading(true);
 
     try {
-      // Step 1: Sign in with Supabase Auth directly (client-side)
+      // Step 1: Sign in with Supabase Auth
       const { data: authData, error: authError } =
         await supabase.auth.signInWithPassword({
           email,
@@ -36,51 +36,30 @@ export default function ClinicLoginPage() {
         return;
       }
 
-      // Step 2: Verify user is a clinic admin and get clinic data
+      // Step 2: Verify clinic admin record exists and get clinic info
       const { data: admin, error: adminError } = await supabase
         .from('clinic_admins')
-        .select(
-          `
-          *,
-          clinic:clinics (*)
-        `,
-        )
+        .select('id, email, name, clinic_id, is_active')
         .eq('auth_user_id', authData.user.id)
         .single();
 
       if (adminError || !admin) {
-        // Not a clinic admin - sign out and show error
         await supabase.auth.signOut();
         setError('Clinic admin account not found');
         setIsLoading(false);
         return;
       }
 
-      // Step 3: Check if admin is active
+      // Step 3: Check if account is active
       if (!admin.is_active) {
         await supabase.auth.signOut();
-        setError('Your account has been deactivated');
+        setError('Your account has been deactivated. Contact support.');
         setIsLoading(false);
         return;
       }
 
-      // Step 4: Check trial status
-      const clinic = admin.clinic;
-      if (clinic.trial_end_date) {
-        const trialEnd = new Date(clinic.trial_end_date);
-        const today = new Date();
-        const diffDays = Math.ceil(
-          (trialEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-        );
-
-        if (diffDays <= 0 && clinic.payment_status === 'trial') {
-          // Trial expired - still allow login but dashboard will show restrictions
-          console.log('Trial expired, limited access');
-        }
-      }
-
-      // Step 5: Store admin and clinic info in localStorage for quick access
-      localStorage.setItem('clinicToken', authData.session.access_token);
+      // ✅ Session is already set by signInWithPassword - DO NOT store token in localStorage (XSS risk)
+      // ✅ Only store non-sensitive admin info for quick access
       localStorage.setItem(
         'clinicAdmin',
         JSON.stringify({
@@ -88,14 +67,10 @@ export default function ClinicLoginPage() {
           email: admin.email,
           name: admin.name,
           clinic_id: admin.clinic_id,
-          auth_user_id: admin.auth_user_id,
         }),
       );
-      localStorage.setItem('clinic', JSON.stringify(clinic));
 
-      // Step 6: Redirect to dashboard
-      console.log('✅ Login successful, redirecting...');
-      router.push('/clinic/dashboard');
+      router.push(`/clinic/${admin.clinic_id}/dashboard`);
     } catch (err) {
       console.error('Login error:', err);
       setError('An error occurred. Please try again.');

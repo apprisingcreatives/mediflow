@@ -25,61 +25,30 @@ const usePutClinicFeatures = () => {
         setLoading(true);
         setError(null);
 
-        // ✅ REFACTORED: Direct Supabase access with RLS
+        // ✅ Use upsert to handle both insert and update in a single query
         // RLS policy "Super admins have full access to clinic AI features" handles authorization
-        
-        // Check if record exists
-        const { data: existingFeature } = await supabase
+        // The unique constraint on (clinic_id, feature_id) enables upsert to work correctly
+        const { data, error: upsertError } = await supabase
           .from('clinic_ai_features')
-          .select('id')
-          .eq('clinic_id', clinicId)
-          .eq('feature_id', featureId)
-          .maybeSingle();
-
-        let result;
-
-        if (!existingFeature) {
-          // Insert new record (RLS policy enforces only super admins can insert)
-          const { data, error: insertError } = await supabase
-            .from('clinic_ai_features')
-            .insert({
+          .upsert(
+            {
               clinic_id: clinicId,
               feature_id: featureId,
               is_enabled: isEnabled,
               enabled_by: isEnabled ? enabledBy : null,
               enabled_at: isEnabled ? new Date().toISOString() : null,
-            })
-            .select(`
-              *,
-              ai_features (*)
-            `)
-            .single();
-
-          if (insertError) throw insertError;
-          result = data;
-        } else {
-          // Update existing record (RLS policy enforces only super admins can update)
-          const { data, error: updateError } = await supabase
-            .from('clinic_ai_features')
-            .update({
-              is_enabled: isEnabled,
-              enabled_by: isEnabled ? enabledBy : null,
-              enabled_at: isEnabled ? new Date().toISOString() : null,
               updated_at: new Date().toISOString(),
-            })
-            .eq('clinic_id', clinicId)
-            .eq('feature_id', featureId)
-            .select(`
-              *,
-              ai_features (*)
-            `)
-            .single();
+            },
+            {
+              onConflict: 'clinic_id,feature_id',
+            }
+          )
+          .select()
+          .single();
 
-          if (updateError) throw updateError;
-          result = data;
-        }
+        if (upsertError) throw upsertError;
 
-        return { feature: result };
+        return { feature: data };
       } catch (err) {
         console.error('Failed to update clinic AI feature:', err);
         const errorMessage =
