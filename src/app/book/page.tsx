@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -94,7 +94,10 @@ function BookingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, patient, isLoading: authLoading } = useAuth();
-
+  const { user_metadata } = user || {};
+  const { role, first_name, last_name, email } = user_metadata || {};
+  console.log(`@@@@@@@@@@@@user`, user);
+  console.log(`@@@@@@@@@@@@@@@@@patient`, patient);
   const clinicId = searchParams.get('clinic');
   const clinicName = searchParams.get('clinicName');
   const serviceId = searchParams.get('service');
@@ -106,9 +109,9 @@ function BookingContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
+    firstName: !role ? first_name : '',
+    lastName: !role ? last_name : '',
+    email: !role ? email : '',
     phone: '',
     dateOfBirth: '',
     gender: '',

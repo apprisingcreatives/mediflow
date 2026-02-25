@@ -73,7 +73,8 @@ const useCreateAppointment = () => {
     async (
       practitionerId: string,
       date: string,
-      serviceDurationMinutes: number = 30
+      serviceDurationMinutes: number = 30,
+      excludeAppointmentId?: string
     ): Promise<TimeSlot[]> => {
       try {
         const { data, error: rpcError } = await supabase.rpc(
@@ -82,6 +83,7 @@ const useCreateAppointment = () => {
             p_practitioner_id: practitionerId,
             p_date: date,
             p_service_duration_minutes: serviceDurationMinutes,
+            p_exclude_appointment_id: excludeAppointmentId || null,
           }
         );
 
@@ -138,6 +140,26 @@ const useCreateAppointment = () => {
           throw new Error(
             'This time slot is not available. Please choose another time.'
           );
+        }
+
+        // Ensure patient_clinics record exists (upsert to handle existing records)
+        const { error: patientClinicError } = await supabase
+          .from('patient_clinics')
+          .upsert(
+            {
+              patient_id: patientId,
+              clinic_id: clinicId,
+              is_primary: false,
+            },
+            {
+              onConflict: 'patient_id,clinic_id',
+              ignoreDuplicates: true,
+            }
+          );
+
+        if (patientClinicError) {
+          console.error('Failed to create patient_clinics record:', patientClinicError);
+          // Continue with appointment creation - the relationship might already exist
         }
 
         // Create the appointment

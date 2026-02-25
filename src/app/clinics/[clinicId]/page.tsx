@@ -35,7 +35,7 @@ export default function ClinicPage() {
   const router = useRouter();
   const { user, patient } = useAuth();
   const { user_metadata } = user || {};
-  const { role } = user_metadata || {};
+  const { role, clinic_id: userClinicId } = user_metadata || {};
   const { clinic, loading: isLoading, error, fetchClinic } = useGetClinic();
   const [activeTab, setActiveTab] = useState<'services' | 'doctors'>(
     'services',
@@ -85,14 +85,14 @@ export default function ClinicPage() {
     if (!user) {
       return 'Sign in to Book';
     }
-    if (isClinicAdmin(role)) {
+    if (isClinicAdmin({ role, clinicId, userClinicId })) {
       return 'Manage This Service';
     }
     return 'Book This Service';
   };
 
   const renderDashboardButton = () => {
-    if (isClinicAdmin(role)) {
+    if (isClinicAdmin({ role, clinicId, userClinicId })) {
       return (
         <Button
           asChild

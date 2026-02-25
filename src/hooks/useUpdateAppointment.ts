@@ -246,6 +246,50 @@ const useUpdateAppointment = () => {
           throw updateError;
         }
 
+        // If status is 'completed', update patient_clinics visit timestamps
+        if (status === 'completed') {
+          // Get appointment details to find patient_id and clinic_id
+          const { data: appointment, error: fetchError } = await supabase
+            .from('appointments')
+            .select('patient_id, clinic_id, appointment_date')
+            .eq('id', appointmentId)
+            .single();
+
+          if (!fetchError && appointment) {
+            const visitDate = appointment.appointment_date;
+
+            // Get current patient_clinics record
+            const { data: patientClinic, error: pcFetchError } = await supabase
+              .from('patient_clinics')
+              .select('id, first_visit_at')
+              .eq('patient_id', appointment.patient_id)
+              .eq('clinic_id', appointment.clinic_id)
+              .single();
+
+            if (!pcFetchError && patientClinic) {
+              // Build update object
+              const updateData: { last_visit_at: string; first_visit_at?: string } = {
+                last_visit_at: visitDate,
+              };
+
+              // Set first_visit_at only if it's null
+              if (!patientClinic.first_visit_at) {
+                updateData.first_visit_at = visitDate;
+              }
+
+              const { error: pcUpdateError } = await supabase
+                .from('patient_clinics')
+                .update(updateData)
+                .eq('id', patientClinic.id);
+
+              if (pcUpdateError) {
+                console.error('Failed to update patient_clinics visit timestamps:', pcUpdateError);
+                // Don't fail the status update, just log the error
+              }
+            }
+          }
+        }
+
         return true;
       } catch (err) {
         console.error('Failed to update status:', err);

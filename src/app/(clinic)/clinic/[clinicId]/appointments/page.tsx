@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  subMonths,
+} from 'date-fns';
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,16 +64,18 @@ export default function AppointmentsPage() {
 
   // Modal state
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] =
+    useState<Appointment | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Hooks
+  // Hooks - Enable realtime for live updates when patients book appointments
   const {
     appointments,
     loading: appointmentsLoading,
     fetchAppointments,
-  } = useGetAppointments();
+    unsubscribe,
+  } = useGetAppointments({ enableRealtime: true });
 
   const {
     practitioners,
@@ -112,6 +120,13 @@ export default function AppointmentsPage() {
     }
   }, [clinicId, fetchPractitioners, fetchServices, fetchPatients]);
 
+  // Cleanup realtime subscription on unmount
+  useEffect(() => {
+    return () => {
+      unsubscribe();
+    };
+  }, [unsubscribe]);
+
   // Fetch appointments when month changes
   useEffect(() => {
     if (clinicId) {
@@ -122,11 +137,18 @@ export default function AppointmentsPage() {
         clinicId,
         startDate: format(monthStart, 'yyyy-MM-dd'),
         endDate: format(monthEnd, 'yyyy-MM-dd'),
-        practitionerId: practitionerFilter !== 'all' ? practitionerFilter : undefined,
+        practitionerId:
+          practitionerFilter !== 'all' ? practitionerFilter : undefined,
         status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
       });
     }
-  }, [clinicId, currentMonth, practitionerFilter, statusFilter, fetchAppointments]);
+  }, [
+    clinicId,
+    currentMonth,
+    practitionerFilter,
+    statusFilter,
+    fetchAppointments,
+  ]);
 
   // Handle month change
   const handleMonthChange = useCallback((date: Date) => {
@@ -164,7 +186,11 @@ export default function AppointmentsPage() {
           durationMinutes: service?.duration_minutes || 30,
         });
 
-        if (result && data.status && data.status !== selectedAppointment.status) {
+        if (
+          result &&
+          data.status &&
+          data.status !== selectedAppointment.status
+        ) {
           await updateStatus(selectedAppointment.id, data.status);
         }
 
@@ -187,14 +213,7 @@ export default function AppointmentsPage() {
         });
       }
 
-      // Refresh appointments
-      const monthStart = startOfMonth(currentMonth);
-      const monthEnd = endOfMonth(currentMonth);
-      await fetchAppointments({
-        clinicId,
-        startDate: format(monthStart, 'yyyy-MM-dd'),
-        endDate: format(monthEnd, 'yyyy-MM-dd'),
-      });
+      // Note: No need to manually refresh - realtime subscription will handle updates automatically
 
       // Close modal
       setIsFormModalOpen(false);
@@ -202,12 +221,16 @@ export default function AppointmentsPage() {
       setSelectedDate(undefined);
     } catch (err) {
       console.error('Form submit error:', err);
-      setFormError(err instanceof Error ? err.message : 'Failed to save appointment');
+      setFormError(
+        err instanceof Error ? err.message : 'Failed to save appointment',
+      );
     }
   };
 
   // Handle invite patient
-  const handleInvitePatient = async (data: NewPatientData): Promise<Patient | null> => {
+  const handleInvitePatient = async (
+    data: NewPatientData,
+  ): Promise<Patient | null> => {
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
@@ -226,7 +249,7 @@ export default function AppointmentsPage() {
           headers: {
             Authorization: `Bearer ${session.session.access_token}`,
           },
-        }
+        },
       );
 
       // Refresh patients list
@@ -252,7 +275,9 @@ export default function AppointmentsPage() {
     } catch (err) {
       console.error('Failed to invite patient:', err);
       if (axios.isAxiosError(err)) {
-        throw new Error(err.response?.data?.error || 'Failed to invite patient');
+        throw new Error(
+          err.response?.data?.error || 'Failed to invite patient',
+        );
       }
       throw err;
     }
@@ -270,7 +295,8 @@ export default function AppointmentsPage() {
   const filteredAppointments = appointments.filter((apt) => {
     if (searchQuery) {
       const search = searchQuery.toLowerCase();
-      const patientName = `${apt.patient?.first_name} ${apt.patient?.last_name}`.toLowerCase();
+      const patientName =
+        `${apt.patient?.first_name} ${apt.patient?.last_name}`.toLowerCase();
       const practitionerName = apt.practitioner?.name?.toLowerCase() || '';
       const serviceName = apt.service?.name?.toLowerCase() || '';
 
@@ -305,13 +331,15 @@ export default function AppointmentsPage() {
       <div className='text-center py-12'>
         <Calendar className='w-12 h-12 text-clinic-navy/20 mx-auto mb-4' />
         <p className='text-clinic-text/60'>
-          This feature is locked. Please upgrade your plan to access appointments.
+          This feature is locked. Please upgrade your plan to access
+          appointments.
         </p>
       </div>
     );
   }
 
-  const isLoading = appointmentsLoading || practitionersLoading || servicesLoading;
+  const isLoading =
+    appointmentsLoading || practitionersLoading || servicesLoading;
 
   return (
     <div className='space-y-6'>
@@ -368,7 +396,10 @@ export default function AppointmentsPage() {
         </Select>
 
         {/* Practitioner Filter */}
-        <Select value={practitionerFilter} onValueChange={setPractitionerFilter}>
+        <Select
+          value={practitionerFilter}
+          onValueChange={setPractitionerFilter}
+        >
           <SelectTrigger className='w-[180px]'>
             <SelectValue placeholder='Practitioner' />
           </SelectTrigger>
@@ -388,7 +419,11 @@ export default function AppointmentsPage() {
             variant={viewMode === 'calendar' ? 'default' : 'ghost'}
             size='sm'
             onClick={() => setViewMode('calendar')}
-            className={viewMode === 'calendar' ? 'bg-clinic-teal hover:bg-clinic-teal/90' : ''}
+            className={
+              viewMode === 'calendar'
+                ? 'bg-clinic-teal hover:bg-clinic-teal/90'
+                : ''
+            }
           >
             <LayoutGrid className='w-4 h-4' />
           </Button>
@@ -396,7 +431,11 @@ export default function AppointmentsPage() {
             variant={viewMode === 'list' ? 'default' : 'ghost'}
             size='sm'
             onClick={() => setViewMode('list')}
-            className={viewMode === 'list' ? 'bg-clinic-teal hover:bg-clinic-teal/90' : ''}
+            className={
+              viewMode === 'list'
+                ? 'bg-clinic-teal hover:bg-clinic-teal/90'
+                : ''
+            }
           >
             <List className='w-4 h-4' />
           </Button>
@@ -463,7 +502,10 @@ export default function AppointmentsPage() {
                     >
                       <td className='px-6 py-4 whitespace-nowrap'>
                         <div className='text-sm font-medium text-clinic-navy dark:text-white'>
-                          {format(new Date(apt.appointment_date), 'MMM d, yyyy')}
+                          {format(
+                            new Date(apt.appointment_date),
+                            'MMM d, yyyy',
+                          )}
                         </div>
                         <div className='text-sm text-clinic-text/60 dark:text-white/60'>
                           {formatTime(apt.appointment_time)}

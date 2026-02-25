@@ -101,8 +101,30 @@ export async function POST(
       .single();
 
     if (existingPatient) {
-      // Patient exists - return the existing patient
-      // They can be used for appointments without re-inviting
+      // Patient exists - check if patient_clinics record exists for this clinic
+      const { data: existingPatientClinic } = await supabaseAdmin
+        .from('patient_clinics')
+        .select('id')
+        .eq('patient_id', existingPatient.id)
+        .eq('clinic_id', clinicId)
+        .single();
+
+      // Create patient_clinics record if it doesn't exist
+      if (!existingPatientClinic) {
+        const { error: patientClinicError } = await supabaseAdmin
+          .from('patient_clinics')
+          .insert({
+            patient_id: existingPatient.id,
+            clinic_id: clinicId,
+            is_primary: false,
+          });
+
+        if (patientClinicError) {
+          console.error('Failed to create patient_clinics record:', patientClinicError);
+          // Don't fail the request, just log the error
+        }
+      }
+
       return NextResponse.json(
         {
           message: 'Patient already exists',
@@ -168,6 +190,26 @@ export async function POST(
       console.error('Patient creation error:', patientError);
       return NextResponse.json(
         { error: 'Failed to create patient record' },
+        { status: 500 }
+      );
+    }
+
+    // Create patient_clinics record to establish the relationship
+    const { error: patientClinicError } = await supabaseAdmin
+      .from('patient_clinics')
+      .insert({
+        patient_id: newPatient.id,
+        clinic_id: clinicId,
+        is_primary: false, // Can be set manually later
+      });
+
+    if (patientClinicError) {
+      // Rollback: delete patient and auth user if patient_clinics creation fails
+      await supabaseAdmin.from('patients').delete().eq('id', newPatient.id);
+      await supabaseAdmin.auth.admin.deleteUser(invitedUser.user.id);
+      console.error('Patient clinics creation error:', patientClinicError);
+      return NextResponse.json(
+        { error: 'Failed to create patient-clinic relationship' },
         { status: 500 }
       );
     }

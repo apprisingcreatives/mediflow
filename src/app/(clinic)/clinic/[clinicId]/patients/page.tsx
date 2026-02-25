@@ -1,8 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Users,
   Plus,
@@ -11,48 +20,129 @@ import {
   Mail,
   Phone,
   MoreVertical,
+  Loader2,
+  CheckCircle2,
+  Clock,
+  UserX,
 } from 'lucide-react';
 import { useClinicContext } from '../layout';
+import { useGetPatients, type Patient } from '@/hooks';
+import { supabase } from '@/lib/supabase';
 
 export default function PatientsPage() {
+  const params = useParams();
+  const clinicId = params.clinicId as string;
   const { isTrialExpired } = useClinicContext();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Mock patients data
-  const patients = [
-    {
-      id: '1',
-      name: 'Maria Santos',
-      email: 'maria.santos@email.com',
-      phone: '+63 912 345 6789',
-      lastVisit: '2026-02-01',
-      totalVisits: 12,
-    },
-    {
-      id: '2',
-      name: 'Juan Dela Cruz',
-      email: 'juan.delacruz@email.com',
-      phone: '+63 923 456 7890',
-      lastVisit: '2026-01-28',
-      totalVisits: 8,
-    },
-    {
-      id: '3',
-      name: 'Anna Reyes',
-      email: 'anna.reyes@email.com',
-      phone: '+63 934 567 8901',
-      lastVisit: '2026-01-25',
-      totalVisits: 5,
-    },
-    {
-      id: '4',
-      name: 'Michael Lim',
-      email: 'michael.lim@email.com',
-      phone: '+63 945 678 9012',
-      lastVisit: '2026-01-20',
-      totalVisits: 3,
-    },
-  ];
+  // Form state
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+
+  const {
+    patients,
+    loading,
+    error,
+    fetchPatients,
+  } = useGetPatients();
+
+  // Fetch patients on mount
+  useEffect(() => {
+    if (clinicId) {
+      fetchPatients({ clinicId });
+    }
+  }, [clinicId, fetchPatients]);
+
+  // Filter patients by search query
+  const filteredPatients = patients.filter((patient) => {
+    if (!searchQuery.trim()) return true;
+    const search = searchQuery.toLowerCase();
+    const fullName = `${patient.first_name} ${patient.last_name}`.toLowerCase();
+    return (
+      fullName.includes(search) ||
+      patient.email?.toLowerCase().includes(search) ||
+      patient.phone?.toLowerCase().includes(search)
+    );
+  });
+
+  const resetForm = () => {
+    setFirstName('');
+    setLastName('');
+    setEmail('');
+    setPhone('');
+    setSubmitError(null);
+    setSubmitSuccess(false);
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    setIsAddDialogOpen(open);
+    if (!open) {
+      resetForm();
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
+      setSubmitError('Please fill in all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      // Get the current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`/api/clinic/${clinicId}/patients/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to invite patient');
+      }
+
+      setSubmitSuccess(true);
+      
+      // Refresh the patients list
+      await fetchPatients({ clinicId });
+
+      // Close dialog after a short delay
+      setTimeout(() => {
+        setIsAddDialogOpen(false);
+        resetForm();
+      }, 2000);
+    } catch (err) {
+      console.error('Error inviting patient:', err);
+      setSubmitError(err instanceof Error ? err.message : 'Failed to invite patient');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isTrialExpired) {
     return (
@@ -76,7 +166,10 @@ export default function PatientsPage() {
             Manage your patient records
           </p>
         </div>
-        <Button className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'>
+        <Button 
+          className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
+          onClick={() => setIsAddDialogOpen(true)}
+        >
           <Plus className='w-4 h-4 mr-2' />
           Add Patient
         </Button>
@@ -98,50 +191,232 @@ export default function PatientsPage() {
         </Button>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className='text-center py-12'>
+          <Loader2 className='w-8 h-8 text-clinic-teal animate-spin mx-auto mb-4' />
+          <p className='text-clinic-text/60'>Loading patients...</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className='text-center py-12'>
+          <p className='text-red-500'>{error}</p>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && filteredPatients.length === 0 && (
+        <div className='text-center py-12 bg-white dark:bg-slate-800 rounded-2xl shadow-glass'>
+          <Users className='w-12 h-12 text-clinic-text/20 mx-auto mb-4' />
+          <h3 className='text-lg font-semibold text-clinic-navy dark:text-white mb-2'>
+            No patients found
+          </h3>
+          <p className='text-clinic-text/60 dark:text-white/60 mb-4'>
+            {searchQuery
+              ? 'No patients match your search criteria'
+              : 'Get started by adding your first patient'}
+          </p>
+          {!searchQuery && (
+            <Button 
+              className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
+              onClick={() => setIsAddDialogOpen(true)}
+            >
+              <Plus className='w-4 h-4 mr-2' />
+              Add Patient
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Patients Grid */}
-      <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
-        {patients.map((patient) => (
-          <div
-            key={patient.id}
-            className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6 hover:shadow-lg transition-shadow'
-          >
-            <div className='flex items-start justify-between mb-4'>
-              <div className='flex items-center gap-3'>
-                <div className='w-12 h-12 rounded-full bg-clinic-teal/10 flex items-center justify-center'>
-                  <Users className='w-6 h-6 text-clinic-teal' />
-                </div>
-                <div>
-                  <h3 className='font-semibold text-clinic-navy dark:text-white'>
-                    {patient.name}
-                  </h3>
-                  <p className='text-xs text-clinic-text/60 dark:text-white/60'>
-                    {patient.totalVisits} visits
-                  </p>
-                </div>
-              </div>
-              <Button variant='ghost' size='icon'>
-                <MoreVertical className='w-4 h-4' />
-              </Button>
-            </div>
+      {!loading && !error && filteredPatients.length > 0 && (
+        <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
+          {filteredPatients.map((patient) => (
+            <PatientCard key={patient.id} patient={patient} />
+          ))}
+        </div>
+      )}
 
-            <div className='space-y-2'>
-              <div className='flex items-center gap-2 text-sm text-clinic-text/70 dark:text-white/70'>
-                <Mail className='w-4 h-4' />
-                {patient.email}
-              </div>
-              <div className='flex items-center gap-2 text-sm text-clinic-text/70 dark:text-white/70'>
-                <Phone className='w-4 h-4' />
-                {patient.phone}
-              </div>
-            </div>
+      {/* Add Patient Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={handleOpenChange}>
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <Users className='w-5 h-5 text-clinic-teal' />
+              Add New Patient
+            </DialogTitle>
+            <DialogDescription>
+              Send an invitation to a new patient. They will receive an email to complete their profile.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className='mt-4 pt-4 border-t border-clinic-navy/10 dark:border-white/10'>
-              <p className='text-xs text-clinic-text/50 dark:text-white/50'>
-                Last visit: {new Date(patient.lastVisit).toLocaleDateString()}
+          {submitSuccess ? (
+            <div className='py-8 text-center'>
+              <CheckCircle2 className='w-12 h-12 text-green-500 mx-auto mb-4' />
+              <h3 className='text-lg font-semibold text-clinic-navy mb-2'>
+                Invitation Sent!
+              </h3>
+              <p className='text-clinic-text/60'>
+                The patient will receive an email to complete their profile.
               </p>
             </div>
+          ) : (
+            <form onSubmit={handleSubmit} className='space-y-4'>
+              {submitError && (
+                <div className='p-3 bg-red-50 border border-red-200 rounded-lg'>
+                  <p className='text-sm text-red-600'>{submitError}</p>
+                </div>
+              )}
+
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='firstName'>First Name *</Label>
+                  <Input
+                    id='firstName'
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder='Juan'
+                    required
+                  />
+                </div>
+                <div className='space-y-2'>
+                  <Label htmlFor='lastName'>Last Name *</Label>
+                  <Input
+                    id='lastName'
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder='Dela Cruz'
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='email'>Email Address *</Label>
+                <Input
+                  id='email'
+                  type='email'
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder='patient@email.com'
+                  required
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label htmlFor='phone'>Phone Number *</Label>
+                <Input
+                  id='phone'
+                  type='tel'
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder='+63 912 345 6789'
+                  required
+                />
+              </div>
+
+              <div className='flex justify-end gap-3 pt-4'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => handleOpenChange(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type='submit'
+                  className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className='w-4 h-4 mr-2 animate-spin' />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className='w-4 h-4 mr-2' />
+                      Send Invitation
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function PatientCard({ patient }: { patient: Patient }) {
+  const getStatusBadge = () => {
+    if (patient.is_active && patient.onboarding_completed) {
+      return (
+        <span className='flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-100 text-green-700'>
+          <CheckCircle2 className='w-3 h-3' />
+          Active
+        </span>
+      );
+    }
+    if (patient.auth_user_id) {
+      return (
+        <span className='flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700'>
+          <Clock className='w-3 h-3' />
+          Pending Setup
+        </span>
+      );
+    }
+    return (
+      <span className='flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600'>
+        <UserX className='w-3 h-3' />
+        Inactive
+      </span>
+    );
+  };
+
+  return (
+    <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6 hover:shadow-lg transition-shadow'>
+      <div className='flex items-start justify-between mb-4'>
+        <div className='flex items-center gap-3'>
+          <div className='w-12 h-12 rounded-full bg-clinic-teal/10 flex items-center justify-center'>
+            <Users className='w-6 h-6 text-clinic-teal' />
           </div>
-        ))}
+          <div>
+            <h3 className='font-semibold text-clinic-navy dark:text-white'>
+              {patient.first_name} {patient.last_name}
+            </h3>
+            <p className='text-xs text-clinic-text/60 dark:text-white/60'>
+              Patient
+            </p>
+          </div>
+        </div>
+        <Button variant='ghost' size='icon'>
+          <MoreVertical className='w-4 h-4' />
+        </Button>
+      </div>
+
+      <div className='space-y-2'>
+        <div className='flex items-center gap-2 text-sm text-clinic-text/70 dark:text-white/70'>
+          <Mail className='w-4 h-4' />
+          <span className='truncate'>{patient.email}</span>
+        </div>
+        {patient.phone && (
+          <div className='flex items-center gap-2 text-sm text-clinic-text/70 dark:text-white/70'>
+            <Phone className='w-4 h-4' />
+            {patient.phone}
+          </div>
+        )}
+      </div>
+
+      <div className='mt-4 pt-4 border-t border-clinic-navy/10 dark:border-white/10 flex items-center justify-between'>
+        {getStatusBadge()}
+        <p className='text-xs text-clinic-text/50 dark:text-white/50'>
+          Added {new Date(patient.created_at).toLocaleDateString()}
+        </p>
       </div>
     </div>
   );

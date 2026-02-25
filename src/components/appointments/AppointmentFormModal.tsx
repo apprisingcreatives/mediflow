@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
 import { CalendarIcon, Clock, Loader2, UserPlus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +34,7 @@ import {
   APPOINTMENT_STATUSES,
 } from '@/hooks/useGetAppointments';
 import { Practitioner } from '@/hooks/useGetPractitioners';
-import { ClinicService, canPractitionerPerformService } from '@/hooks/useGetServices';
+import { ClinicService } from '@/hooks/useGetServices';
 import { Patient } from '@/hooks/useGetPatients';
 
 const MANILA_TZ = 'Asia/Manila';
@@ -56,7 +55,8 @@ interface AppointmentFormModalProps {
   getAvailableTimeSlots: (
     practitionerId: string,
     date: string,
-    durationMinutes: number
+    durationMinutes: number,
+    excludeAppointmentId?: string,
   ) => Promise<TimeSlot[]>;
   onInvitePatient: (data: NewPatientData) => Promise<Patient | null>;
   initialDate?: Date;
@@ -107,7 +107,7 @@ export function AppointmentFormModal({
   const [selectedPractitionerId, setSelectedPractitionerId] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    initialDate || new Date()
+    initialDate || new Date(),
   );
   const [selectedTime, setSelectedTime] = useState('');
   const [notes, setNotes] = useState('');
@@ -158,17 +158,6 @@ export function AppointmentFormModal({
     return services.find((s) => s.id === selectedServiceId);
   }, [services, selectedServiceId]);
 
-  // Filter services based on selected practitioner's specialization
-  const filteredServices = useMemo(() => {
-    if (!selectedPractitionerId) return services;
-
-    const practitioner = practitioners.find((p) => p.id === selectedPractitionerId);
-    if (!practitioner) return services;
-
-    return services.filter((service) =>
-      canPractitionerPerformService(practitioner.specialization, service.name)
-    );
-  }, [services, practitioners, selectedPractitionerId]);
 
   // Filter patients based on search
   const filteredPatients = useMemo(() => {
@@ -180,7 +169,7 @@ export function AppointmentFormModal({
         p.first_name.toLowerCase().includes(search) ||
         p.last_name.toLowerCase().includes(search) ||
         p.email.toLowerCase().includes(search) ||
-        p.phone?.includes(search)
+        p.phone?.includes(search),
     );
   }, [patients, patientSearch]);
 
@@ -195,19 +184,21 @@ export function AppointmentFormModal({
       setLoadingTimeSlots(true);
       try {
         const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        // Pass appointment ID when editing to exclude it from conflict check
         const slots = await getAvailableTimeSlots(
           selectedPractitionerId,
           dateStr,
-          selectedService.duration_minutes
+          selectedService.duration_minutes,
+          mode === 'edit' ? appointment?.id : undefined,
         );
         setTimeSlots(slots);
 
         // Clear selected time if it's no longer available
-        if (selectedTime && !slots.find((s) => s.time_slot === selectedTime && s.is_available)) {
-          // Keep time if editing and it's the same as original
-          if (!(mode === 'edit' && appointment?.appointment_time === selectedTime)) {
-            setSelectedTime('');
-          }
+        if (
+          selectedTime &&
+          !slots.find((s) => s.time_slot === selectedTime && s.is_available)
+        ) {
+          setSelectedTime('');
         }
       } catch (err) {
         console.error('Failed to fetch time slots:', err);
@@ -218,10 +209,23 @@ export function AppointmentFormModal({
     };
 
     fetchTimeSlots();
-  }, [selectedPractitionerId, selectedDate, selectedService, getAvailableTimeSlots, mode, appointment?.appointment_time, selectedTime]);
+  }, [
+    selectedPractitionerId,
+    selectedDate,
+    selectedService,
+    getAvailableTimeSlots,
+    mode,
+    appointment?.id,
+    selectedTime,
+  ]);
 
   const handleInviteNewPatient = async () => {
-    if (!newPatient.firstName || !newPatient.lastName || !newPatient.email || !newPatient.phone) {
+    if (
+      !newPatient.firstName ||
+      !newPatient.lastName ||
+      !newPatient.email ||
+      !newPatient.phone
+    ) {
       return;
     }
 
@@ -247,7 +251,13 @@ export function AppointmentFormModal({
       return;
     }
 
-    if (!selectedPatientId || !selectedPractitionerId || !selectedServiceId || !selectedDate || !selectedTime) {
+    if (
+      !selectedPatientId ||
+      !selectedPractitionerId ||
+      !selectedServiceId ||
+      !selectedDate ||
+      !selectedTime
+    ) {
       return;
     }
 
@@ -330,7 +340,11 @@ export function AppointmentFormModal({
                     variant={patientMode === 'existing' ? 'default' : 'outline'}
                     size='sm'
                     onClick={() => setPatientMode('existing')}
-                    className={patientMode === 'existing' ? 'bg-clinic-teal hover:bg-clinic-teal/90' : ''}
+                    className={
+                      patientMode === 'existing'
+                        ? 'bg-clinic-teal hover:bg-clinic-teal/90'
+                        : ''
+                    }
                   >
                     Existing
                   </Button>
@@ -339,7 +353,11 @@ export function AppointmentFormModal({
                     variant={patientMode === 'new' ? 'default' : 'outline'}
                     size='sm'
                     onClick={() => setPatientMode('new')}
-                    className={patientMode === 'new' ? 'bg-clinic-teal hover:bg-clinic-teal/90' : ''}
+                    className={
+                      patientMode === 'new'
+                        ? 'bg-clinic-teal hover:bg-clinic-teal/90'
+                        : ''
+                    }
                   >
                     <UserPlus className='w-3 h-3 mr-1' />
                     New
@@ -359,14 +377,18 @@ export function AppointmentFormModal({
                     className='pl-9'
                   />
                 </div>
-                <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
+                <Select
+                  value={selectedPatientId}
+                  onValueChange={setSelectedPatientId}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder='Select a patient' />
                   </SelectTrigger>
                   <SelectContent>
                     {filteredPatients.map((patient) => (
                       <SelectItem key={patient.id} value={patient.id}>
-                        {patient.first_name} {patient.last_name} - {patient.email}
+                        {patient.first_name} {patient.last_name} -{' '}
+                        {patient.email}
                       </SelectItem>
                     ))}
                     {filteredPatients.length === 0 && (
@@ -384,7 +406,10 @@ export function AppointmentFormModal({
                   <Input
                     value={newPatient.firstName}
                     onChange={(e) =>
-                      setNewPatient({ ...newPatient, firstName: e.target.value })
+                      setNewPatient({
+                        ...newPatient,
+                        firstName: e.target.value,
+                      })
                     }
                     placeholder='John'
                   />
@@ -421,7 +446,8 @@ export function AppointmentFormModal({
                   />
                 </div>
                 <div className='col-span-2 text-xs text-clinic-text/60 dark:text-white/60'>
-                  An invitation email will be sent to the patient to complete their account setup.
+                  An invitation email will be sent to the patient to complete
+                  their account setup.
                 </div>
               </div>
             )}
@@ -434,21 +460,7 @@ export function AppointmentFormModal({
             </Label>
             <Select
               value={selectedPractitionerId}
-              onValueChange={(value) => {
-                setSelectedPractitionerId(value);
-                // Reset service if it's not compatible with new practitioner
-                if (selectedServiceId) {
-                  const practitioner = practitioners.find((p) => p.id === value);
-                  const service = services.find((s) => s.id === selectedServiceId);
-                  if (
-                    practitioner &&
-                    service &&
-                    !canPractitionerPerformService(practitioner.specialization, service.name)
-                  ) {
-                    setSelectedServiceId('');
-                  }
-                }
-              }}
+              onValueChange={setSelectedPractitionerId}
             >
               <SelectTrigger>
                 <SelectValue placeholder='Select a practitioner' />
@@ -473,21 +485,23 @@ export function AppointmentFormModal({
             <Label className='text-sm font-medium text-clinic-navy dark:text-white'>
               Service
             </Label>
-            <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+            <Select
+              value={selectedServiceId}
+              onValueChange={setSelectedServiceId}
+            >
               <SelectTrigger>
                 <SelectValue placeholder='Select a service' />
               </SelectTrigger>
               <SelectContent>
-                {filteredServices.map((service) => (
+                {services.map((service) => (
                   <SelectItem key={service.id} value={service.id}>
-                    {service.name} - ₱{service.price.toLocaleString()} ({service.duration_minutes} min)
+                    {service.name} - ₱{service.price.toLocaleString()} (
+                    {service.duration_minutes} min)
                   </SelectItem>
                 ))}
-                {filteredServices.length === 0 && (
+                {services.length === 0 && (
                   <div className='p-2 text-sm text-clinic-text/60 text-center'>
-                    {selectedPractitionerId
-                      ? 'No services available for this practitioner'
-                      : 'Select a practitioner first'}
+                    No services available
                   </div>
                 )}
               </SelectContent>
@@ -499,26 +513,30 @@ export function AppointmentFormModal({
             <Label className='text-sm font-medium text-clinic-navy dark:text-white'>
               Date
             </Label>
-            <Popover>
+            <Popover modal={true}>
               <PopoverTrigger asChild>
                 <Button
+                  type='button'
                   variant='outline'
                   className={cn(
                     'w-full justify-start text-left font-normal',
-                    !selectedDate && 'text-muted-foreground'
+                    !selectedDate && 'text-muted-foreground',
                   )}
                 >
                   <CalendarIcon className='mr-2 h-4 w-4' />
                   {selectedDate ? format(selectedDate, 'PPP') : 'Pick a date'}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className='w-auto p-0' align='start'>
+              <PopoverContent className='w-auto p-0 z-[100]' align='start'>
                 <Calendar
                   mode='single'
                   selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  initialFocus
+                  onSelect={(date) => {
+                    setSelectedDate(date);
+                  }}
+                  disabled={(date) =>
+                    date < new Date(new Date().setHours(0, 0, 0, 0))
+                  }
                 />
               </PopoverContent>
             </Popover>
@@ -532,14 +550,14 @@ export function AppointmentFormModal({
             {loadingTimeSlots ? (
               <div className='flex items-center justify-center p-4 border rounded-lg'>
                 <Loader2 className='w-5 h-5 animate-spin text-clinic-teal mr-2' />
-                <span className='text-sm text-clinic-text/60'>Loading available times...</span>
+                <span className='text-sm text-clinic-text/60'>
+                  Loading available times...
+                </span>
               </div>
             ) : timeSlots.length > 0 ? (
               <div className='grid grid-cols-4 gap-2 max-h-[200px] overflow-y-auto p-1'>
                 {timeSlots.map((slot) => {
                   const isSelected = selectedTime === slot.time_slot;
-                  const isOriginalTime =
-                    mode === 'edit' && appointment?.appointment_time === slot.time_slot;
 
                   return (
                     <Button
@@ -547,12 +565,12 @@ export function AppointmentFormModal({
                       type='button'
                       variant={isSelected ? 'default' : 'outline'}
                       size='sm'
-                      disabled={!slot.is_available && !isOriginalTime}
+                      disabled={!slot.is_available}
                       onClick={() => setSelectedTime(slot.time_slot)}
                       className={cn(
                         'text-xs',
                         isSelected && 'bg-clinic-teal hover:bg-clinic-teal/90',
-                        !slot.is_available && !isOriginalTime && 'opacity-50 cursor-not-allowed'
+                        !slot.is_available && 'opacity-50 cursor-not-allowed',
                       )}
                     >
                       <Clock className='w-3 h-3 mr-1' />
@@ -576,14 +594,19 @@ export function AppointmentFormModal({
               <Label className='text-sm font-medium text-clinic-navy dark:text-white'>
                 Status
               </Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as AppointmentStatus)}>
+              <Select
+                value={status}
+                onValueChange={(v) => setStatus(v as AppointmentStatus)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {APPOINTMENT_STATUSES.map((s) => (
                     <SelectItem key={s.value} value={s.value}>
-                      <span className={cn('px-2 py-0.5 rounded text-xs', s.color)}>
+                      <span
+                        className={cn('px-2 py-0.5 rounded text-xs', s.color)}
+                      >
                         {s.label}
                       </span>
                     </SelectItem>

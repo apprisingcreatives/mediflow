@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Users,
@@ -11,10 +12,38 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useClinicContext } from '../layout';
+import { useGetAppointments } from '@/hooks';
+import { formatTimeToAMPM } from '@/lib/utils';
 
 export default function ClinicDashboardPage() {
-  const { clinicFeatures, featuresLoading, isTrialExpired } =
+  const { clinicFeatures, featuresLoading, isTrialExpired, clinic } =
     useClinicContext();
+
+  const {
+    appointments,
+    loading: apptsLoading,
+    error: apptsError,
+    fetchAppointments,
+    unsubscribe,
+  } = useGetAppointments({ enableRealtime: true });
+
+  useEffect(() => {
+    if (!clinic?.id) return;
+    // Get today's date in Manila (YYYY-MM-DD)
+    const manilaToday = new Date().toLocaleDateString('en-CA', {
+      timeZone: 'Asia/Manila',
+    });
+
+    fetchAppointments({
+      clinicId: clinic.id,
+      startDate: manilaToday,
+      endDate: manilaToday,
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [clinic?.id, fetchAppointments, unsubscribe]);
 
   const enabledFeatures = clinicFeatures.filter((f) => f.is_enabled);
   const disabledFeatures = clinicFeatures.filter((f) => !f.is_enabled);
@@ -174,62 +203,48 @@ export default function ClinicDashboardPage() {
           </div>
 
           <div className='space-y-4'>
-            {[
-              {
-                time: '9:00 AM',
-                patient: 'Maria Santos',
-                service: 'General Consultation',
-                status: 'completed',
-              },
-              {
-                time: '10:00 AM',
-                patient: 'Juan Dela Cruz',
-                service: 'Physical Exam',
-                status: 'in-progress',
-              },
-              {
-                time: '11:00 AM',
-                patient: 'Anna Reyes',
-                service: 'Vaccination',
-                status: 'upcoming',
-              },
-              {
-                time: '2:00 PM',
-                patient: 'Michael Lim',
-                service: 'Follow-up',
-                status: 'upcoming',
-              },
-            ].map((apt, index) => (
-              <div
-                key={index}
-                className='flex items-center justify-between p-3 border border-clinic-navy/10 dark:border-white/10 rounded-xl'
-              >
-                <div className='flex items-center gap-4'>
-                  <span className='text-sm font-medium text-clinic-navy dark:text-white w-20'>
-                    {apt.time}
-                  </span>
-                  <div>
-                    <p className='font-medium text-clinic-navy dark:text-white'>
-                      {apt.patient}
-                    </p>
-                    <p className='text-xs text-clinic-text/60 dark:text-white/60'>
-                      {apt.service}
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className={`text-xs px-2 py-1 rounded-full ${
-                    apt.status === 'completed'
-                      ? 'bg-green-100 text-green-700'
-                      : apt.status === 'in-progress'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {apt.status}
-                </span>
+            {apptsLoading ? (
+              <div className='space-y-3'>
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className='h-16 bg-clinic-navy/5 dark:bg-white/5 rounded-xl animate-pulse'
+                  />
+                ))}
               </div>
-            ))}
+            ) : apptsError ? (
+              <div className='text-sm text-red-600'>{apptsError}</div>
+            ) : appointments.length === 0 ? (
+              <div className='text-sm text-clinic-text/60'>
+                No appointments scheduled.
+              </div>
+            ) : (
+              appointments.map((apt) => (
+                <div
+                  key={apt.id}
+                  className='flex items-center justify-between p-3 border border-clinic-navy/10 dark:border-white/10 rounded-xl'
+                >
+                  <div className='flex items-center gap-4'>
+                    <span className='text-sm font-medium text-clinic-navy dark:text-white w-28'>
+                      {formatTimeToAMPM(apt.appointment_time)}
+                    </span>
+                    <div>
+                      <p className='font-medium text-clinic-navy dark:text-white'>
+                        {apt.patient
+                          ? `${apt.patient.first_name} ${apt.patient.last_name}`
+                          : 'Unknown Patient'}
+                      </p>
+                      <p className='text-xs text-clinic-text/60 dark:text-white/60'>
+                        {apt.service?.name ?? '—'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className='text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600'>
+                    {apt.status}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

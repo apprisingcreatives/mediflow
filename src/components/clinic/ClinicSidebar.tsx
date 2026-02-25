@@ -17,6 +17,7 @@ import {
   Globe,
   Lock,
   LucideIcon,
+  Stethoscope,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +39,7 @@ const NAV_CONFIG: NavItem[] = [
   { path: 'dashboard', label: 'Dashboard', icon: Building2, requiresSubscription: false },
   { path: 'appointments', label: 'Appointments', icon: Calendar, requiresSubscription: true },
   { path: 'patients', label: 'Patients', icon: Users, requiresSubscription: true },
+  { path: 'practitioners', label: 'Practitioners', icon: Stethoscope, requiresSubscription: true },
   { path: 'services', label: 'Services', icon: FileText, requiresSubscription: true },
   { path: 'ai-features', label: 'AI Features', icon: Sparkles, requiresSubscription: true },
   { path: 'billing', label: 'Billing', icon: CreditCard, requiresSubscription: false },

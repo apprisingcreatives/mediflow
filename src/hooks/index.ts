@@ -13,6 +13,13 @@ export { default as useGetPatients } from './useGetPatients';
 export { default as useCreateAppointment } from './useCreateAppointment';
 export { default as useUpdateAppointment } from './useUpdateAppointment';
 
+// Patient-related hooks
+export { default as usePatientClinics } from './usePatientClinics';
+export { default as usePatientBooking } from './usePatientBooking';
+
+// Service mutations
+export { default as useServiceMutations } from './useServiceMutations';
+
 // Re-export types
 export type { Appointment, AppointmentStatus } from './useGetAppointments';
 export { APPOINTMENT_STATUSES } from './useGetAppointments';

@@ -6,12 +6,14 @@ import { supabase } from '@/lib/supabase';
 export interface Practitioner {
   id: string;
   clinic_id: string;
+  auth_user_id: string | null;
   name: string;
   email: string | null;
   specialization: string | null;
   bio: string | null;
   image_url: string | null;
   is_active: boolean;
+  role: string | null;
   created_at: string;
   updated_at: string;
   // Joined relations
@@ -64,38 +66,46 @@ const useGetPractitioners = () => {
         setLoading(true);
         setError(null);
 
-        const selectQuery = includeWorkingHours
-          ? `
-            *,
-            working_hours:practitioner_working_hours (
-              id,
-              practitioner_id,
-              day_of_week,
-              start_time,
-              end_time,
-              is_available
-            )
-          `
-          : '*';
+        // Build query based on whether we need working hours
+        if (includeWorkingHours) {
+          let query = supabase
+            .from('practitioners')
+            .select('*, working_hours:practitioner_working_hours(id, practitioner_id, day_of_week, start_time, end_time, is_available)')
+            .eq('clinic_id', clinicId)
+            .order('name', { ascending: true });
 
-        let query = supabase
-          .from('practitioners')
-          .select(selectQuery)
-          .eq('clinic_id', clinicId)
-          .order('name', { ascending: true });
+          if (activeOnly) {
+            query = query.eq('is_active', true);
+          }
 
-        if (activeOnly) {
-          query = query.eq('is_active', true);
+          const { data, error: queryError } = await query;
+
+          if (queryError) {
+            throw queryError;
+          }
+
+          setPractitioners((data as Practitioner[]) ?? []);
+          return (data as Practitioner[]) ?? [];
+        } else {
+          let query = supabase
+            .from('practitioners')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .order('name', { ascending: true });
+
+          if (activeOnly) {
+            query = query.eq('is_active', true);
+          }
+
+          const { data, error: queryError } = await query;
+
+          if (queryError) {
+            throw queryError;
+          }
+
+          setPractitioners((data as Practitioner[]) ?? []);
+          return (data as Practitioner[]) ?? [];
         }
-
-        const { data, error: queryError } = await query;
-
-        if (queryError) {
-          throw queryError;
-        }
-
-        setPractitioners(data ?? []);
-        return data ?? [];
       } catch (err) {
         console.error('Failed to fetch practitioners:', err);
         const errorMessage =

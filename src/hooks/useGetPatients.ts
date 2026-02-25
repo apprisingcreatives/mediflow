@@ -20,6 +20,16 @@ export interface Patient {
   updated_at: string;
 }
 
+export interface PatientClinic {
+  id: string;
+  patient_id: string;
+  clinic_id: string;
+  created_at: string;
+  first_visit_at: string | null;
+  last_visit_at: string | null;
+  is_primary: boolean;
+}
+
 interface FetchPatientsParams {
   clinicId: string;
   searchQuery?: string;
@@ -41,21 +51,31 @@ const useGetPatients = () => {
         setLoading(true);
         setError(null);
 
-        // Fetch patients who have appointments at this clinic
-        // This is enforced by RLS policy
+        // Fetch patients through patient_clinics junction table
+        // This ensures we only get patients associated with this clinic
         let query = supabase
-          .from('patients')
-          .select('*')
-          .order('last_name', { ascending: true })
-          .order('first_name', { ascending: true });
-
-        // Apply search filter if provided
-        if (searchQuery && searchQuery.trim()) {
-          const search = searchQuery.trim().toLowerCase();
-          query = query.or(
-            `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
-          );
-        }
+          .from('patient_clinics')
+          .select(
+            `
+            patient:patients (
+              id,
+              auth_user_id,
+              email,
+              first_name,
+              last_name,
+              phone,
+              date_of_birth,
+              gender,
+              address,
+              city,
+              is_active,
+              onboarding_completed,
+              created_at,
+              updated_at
+            )
+          `
+          )
+          .eq('clinic_id', clinicId);
 
         const { data, error: queryError } = await query;
 
@@ -63,8 +83,34 @@ const useGetPatients = () => {
           throw queryError;
         }
 
-        setPatients(data ?? []);
-        return data ?? [];
+        // Extract patients from the nested structure and filter out nulls
+        // Supabase returns the joined table as an object (not array) for single relations
+        const extractedPatients = (data ?? [])
+          .map((item) => item.patient as unknown as Patient | null)
+          .filter((patient): patient is Patient => patient !== null);
+
+        // Sort by last_name, then first_name
+        extractedPatients.sort((a, b) => {
+          const lastNameCompare = a.last_name.localeCompare(b.last_name);
+          if (lastNameCompare !== 0) return lastNameCompare;
+          return a.first_name.localeCompare(b.first_name);
+        });
+
+        // Apply search filter if provided (client-side filtering)
+        let filteredPatients = extractedPatients;
+        if (searchQuery && searchQuery.trim()) {
+          const search = searchQuery.trim().toLowerCase();
+          filteredPatients = extractedPatients.filter(
+            (patient) =>
+              patient.first_name.toLowerCase().includes(search) ||
+              patient.last_name.toLowerCase().includes(search) ||
+              patient.email.toLowerCase().includes(search) ||
+              (patient.phone && patient.phone.toLowerCase().includes(search))
+          );
+        }
+
+        setPatients(filteredPatients);
+        return filteredPatients;
       } catch (err) {
         console.error('Failed to fetch patients:', err);
         const errorMessage =
