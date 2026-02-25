@@ -96,8 +96,7 @@ function BookingContent() {
   const { user, patient, isLoading: authLoading } = useAuth();
   const { user_metadata } = user || {};
   const { role, first_name, last_name, email } = user_metadata || {};
-  console.log(`@@@@@@@@@@@@user`, user);
-  console.log(`@@@@@@@@@@@@@@@@@patient`, patient);
+
   const clinicId = searchParams.get('clinic');
   const clinicName = searchParams.get('clinicName');
   const serviceId = searchParams.get('service');

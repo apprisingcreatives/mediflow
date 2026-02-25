@@ -56,8 +56,7 @@ const SPECIALIZATIONS = [
 ];
 
 export default function PractitionersPage() {
-  const {user} = useAuth();
-  console.log(`@@@@@@@@@@@@user`,user)
+  const { user } = useAuth();
   const params = useParams();
   const clinicId = params.clinicId as string;
   const { isTrialExpired } = useClinicContext();
@@ -72,12 +71,8 @@ export default function PractitionersPage() {
   const [email, setEmail] = useState('');
   const [specialization, setSpecialization] = useState('');
 
-  const {
-    practitioners,
-    loading,
-    error,
-    fetchPractitioners,
-  } = useGetPractitioners();
+  const { practitioners, loading, error, fetchPractitioners } =
+    useGetPractitioners();
 
   // Fetch practitioners on mount
   useEffect(() => {
@@ -114,7 +109,7 @@ export default function PractitionersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim() || !email.trim() || !specialization) {
       setSubmitError('Please fill in all required fields');
       return;
@@ -125,24 +120,29 @@ export default function PractitionersPage() {
 
     try {
       // Get the current session for authorization
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session?.access_token) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/clinic/${clinicId}/practitioners/invite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+      const response = await fetch(
+        `/api/clinic/${clinicId}/practitioners/invite`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            specialization,
+          }),
         },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          specialization,
-        }),
-      });
+      );
 
       const data = await response.json();
 
@@ -151,7 +151,7 @@ export default function PractitionersPage() {
       }
 
       setSubmitSuccess(true);
-      
+
       // Refresh the practitioners list
       await fetchPractitioners({ clinicId, activeOnly: false });
 
@@ -162,7 +162,9 @@ export default function PractitionersPage() {
       }, 2000);
     } catch (err) {
       console.error('Error inviting practitioner:', err);
-      setSubmitError(err instanceof Error ? err.message : 'Failed to invite practitioner');
+      setSubmitError(
+        err instanceof Error ? err.message : 'Failed to invite practitioner',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -190,7 +192,7 @@ export default function PractitionersPage() {
             Manage your clinic&apos;s medical staff
           </p>
         </div>
-        <Button 
+        <Button
           className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
           onClick={() => setIsAddDialogOpen(true)}
         >
@@ -243,7 +245,7 @@ export default function PractitionersPage() {
               : 'Get started by adding your first practitioner'}
           </p>
           {!searchQuery && (
-            <Button 
+            <Button
               className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
               onClick={() => setIsAddDialogOpen(true)}
             >
@@ -258,7 +260,10 @@ export default function PractitionersPage() {
       {!loading && !error && filteredPractitioners.length > 0 && (
         <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
           {filteredPractitioners.map((practitioner) => (
-            <PractitionerCard key={practitioner.id} practitioner={practitioner} />
+            <PractitionerCard
+              key={practitioner.id}
+              practitioner={practitioner}
+            />
           ))}
         </div>
       )}
@@ -272,7 +277,8 @@ export default function PractitionersPage() {
               Add New Practitioner
             </DialogTitle>
             <DialogDescription>
-              Send an invitation to a new practitioner. They will receive an email to set up their account.
+              Send an invitation to a new practitioner. They will receive an
+              email to set up their account.
             </DialogDescription>
           </DialogHeader>
 
@@ -319,7 +325,10 @@ export default function PractitionersPage() {
 
               <div className='space-y-2'>
                 <Label htmlFor='specialization'>Specialization *</Label>
-                <Select value={specialization} onValueChange={setSpecialization}>
+                <Select
+                  value={specialization}
+                  onValueChange={setSpecialization}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder='Select specialization' />
                   </SelectTrigger>
