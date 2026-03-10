@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -18,7 +18,19 @@ import {
   Building2,
 } from 'lucide-react';
 
-export default function SetupClinicAccount() {
+export default function SetupClinicAccountPage() {
+  return (
+    <Suspense fallback={
+      <div className='min-h-screen bg-gradient-to-br from-clinic-bg via-white to-clinic-teal/5 flex items-center justify-center'>
+        <Loader2 className='w-8 h-8 animate-spin text-clinic-teal' />
+      </div>
+    }>
+      <SetupClinicAccount />
+    </Suspense>
+  );
+}
+
+function SetupClinicAccount() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [password, setPassword] = useState('');
