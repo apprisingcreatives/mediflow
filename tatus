@@ -1,0 +1,123 @@
+[33mcommit 3dda40ebf5885bfa4e8b55d914f44d1f19f912e1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m, [m[1;31morigin/dev[m[33m)[m
+Author: gabriel gonzales <gentle_gabriel2002@yahoo.com>
+Date:   Wed Feb 4 20:00:37 2026 +0800
+
+    add clinic_admin pages
+
+[33mcommit f4ab13c8833104bd0d410cc202fddcf4838bdf3a[m
+Author: gabriel gonzales <gentle_gabriel2002@yahoo.com>
+Date:   Wed Feb 4 18:08:21 2026 +0800
+
+    adjust super admin to use supabase auth, removed unnecessary api routes and used client side fetching with RLS policies
+
+[33mcommit 0b530528cabcf1c4d109287ce727de440eeccd9e[m
+Author: gabriel gonzales <gentle_gabriel2002@yahoo.com>
+Date:   Thu Jan 29 12:45:26 2026 +0800
+
+    removed create-initial route
+
+[33mcommit 64137b33ec8c881677289872962124a2022a3b67[m
+Author: gabriel gonzales <gentle_gabriel2002@yahoo.com>
+Date:   Thu Jan 29 12:33:31 2026 +0800
+
+    fixed clinic admin logout not clearing local storage
+
+[33mcommit e8e426fc5c0ae703c9027941feeaaa2f2f9f36b5[m
+Author: gabriel gonzales <gentle_gabriel2002@yahoo.com>
+Date:   Thu Jan 29 12:30:32 2026 +0800
+
+    fixed authentication, used supabase auth, setup RLS policies, toggle feature not reflects client side in real time
+
+[33mcommit 455ece9780e018d8b50315c408a69590127b7030[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m
+Author: gabriel gonzales <gentle_gabriel2002@yahoo.com>
+Date:   Tue Jan 27 12:28:25 2026 +0800
+
+    commented out unused codes
+
+[33mcommit 0b9f31d78337aae98444d12f8f256038babe0936[m
+Author: gabriel gonzales <gentle_gabriel2002@yahoo.com>
+Date:   Mon Jan 26 16:29:10 2026 +0800
+
+    fixed patient onboarding stuck in loading. fixed feature toggle not reflecting client side. partner clinics now fetched from database
+
+[33mcommit 91e4b6d0fe37acecd30899add96a95ef2d4dc33a[m
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Thu Jan 15 11:07:57 2026 +0800
+
+    fixed sign in issues
+
+[33mcommit 1bf2fdde46998de04a38a0c6c8c0af4994c5508a[m
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Wed Jan 14 15:46:03 2026 +0800
+
+    fix patient profile-incomplete
+
+[33mcommit 2d8f674b54a4b70516a74417cda0b102f7c403e0[m
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Wed Jan 14 14:42:34 2026 +0800
+
+    added avatar for patient portfilio
+
+[33mcommit a6b732bb42459d5b6bb95f42f9e4d08c56370640[m
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Wed Jan 14 10:49:11 2026 +0800
+
+    fixed patient registration error
+
+[33mcommit 49beab1af92e61e45d0fce136a14a2898a348d34[m
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Wed Jan 14 10:12:54 2026 +0800
+
+    fixed clinic/dashboard error
+
+[33mcommit 4f0b2b7c966744d0f256f4ddcf18b58be4194a15[m
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Wed Jan 14 10:07:45 2026 +0800
+
+    added README.md contents
+
+[33mcommit 475fa262a310b40b6801afdbe94677fd1210eda2[m
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Wed Jan 14 10:02:23 2026 +0800
+
+    added signin features
+
+[33mcommit 88cffa3666982666f06e1429a8be50545102af45[m
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Tue Jan 13 18:05:47 2026 +0800
+
+    added new features-incomplete
+
+[33mcommit 528715a33e526227f446ddb7b9ab7272db554562[m
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Wed Dec 31 06:58:19 2025 +0800
+
+    added dashboards
+
+[33mcommit 5406a0279ec75f511e45d06b07dcbd9deb5af131[m
+Merge: c6bca8d d0d5c75
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Sun Dec 28 08:39:06 2025 +0800
+
+    Merge branch 'main' of https://github.com/apprisingcreatives/mediflow
+    added MediFlow name without AI
+
+[33mcommit c6bca8dd1fe6cf6ae2ea171507fde408cd41cca3[m
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Sun Dec 28 08:38:27 2025 +0800
+
+    added call functionality
+
+[33mcommit d0d5c75c3f16003c664aeb6098bd8ab41036b6cd[m
+Author: Ernest Siega <92575108+siegadevelopments@users.noreply.github.com>
+Date:   Sun Dec 28 08:06:44 2025 +0800
+
+    Initialize README with project details and setup
+    
+    Added detailed project description, features, tech stack, and setup instructions to README.
+
+[33mcommit 206b8f89a5a32821226a022612f6e909c2fd6b17[m
+Author: siegadevelopments <siegadevelopments@gmail.com>
+Date:   Sun Dec 28 08:04:01 2025 +0800
+
+    initial commit

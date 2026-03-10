@@ -35,6 +35,9 @@ import {
   Loader2,
   Stethoscope,
   CheckCircle,
+  Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
@@ -42,10 +45,11 @@ import { supabase } from '@/lib/supabase';
 import { PatientDocument } from '@/types/database';
 
 const steps = [
-  { id: 1, name: 'Personal Info', icon: User },
-  { id: 2, name: 'Health History', icon: Heart },
-  { id: 3, name: 'Documents', icon: FileText },
-  { id: 4, name: 'AI Analysis', icon: Brain },
+  { id: 1, name: 'Set Password', icon: Lock },
+  { id: 2, name: 'Personal Info', icon: User },
+  { id: 3, name: 'Health History', icon: Heart },
+  { id: 4, name: 'Documents', icon: FileText },
+  { id: 5, name: 'AI Analysis', icon: Brain },
 ];
 
 const bloodTypes = [
@@ -83,6 +87,13 @@ export default function PatientOnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Password setup state
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordSet, setPasswordSet] = useState(false);
+
   const [formData, setFormData] = useState({
     phone: '',
     dateOfBirth: '',
@@ -117,6 +128,22 @@ export default function PatientOnboardingPage() {
       router.push('/login?redirect=/patient/onboarding');
     }
   }, [user, authLoading, router]);
+
+  // Check if user already has a password set (signed up normally vs invited)
+  useEffect(() => {
+    if (user) {
+      // If user has identities with provider 'email', they signed up with password
+      // Check if they came from an invite link (recovery flow)
+      const isFromInvite = user.app_metadata?.provider === 'email' && 
+        user.user_metadata?.invited_at;
+      
+      // If they already have a password and didn't come from invite, skip password step
+      if (!isFromInvite && patient?.onboarding_completed === false) {
+        // User signed up normally, check if they need to set password
+        // For now, we'll show the password step for all new users
+      }
+    }
+  }, [user, patient]);
 
   useEffect(() => {
     if (patient) {
@@ -264,6 +291,54 @@ export default function PatientOnboardingPage() {
     }
   };
 
+  // Password validation
+  const validatePassword = (pwd: string): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    if (pwd.length < 8) errors.push('At least 8 characters');
+    if (!/[A-Z]/.test(pwd)) errors.push('One uppercase letter');
+    if (!/[a-z]/.test(pwd)) errors.push('One lowercase letter');
+    if (!/[0-9]/.test(pwd)) errors.push('One number');
+    return { valid: errors.length === 0, errors };
+  };
+
+  const passwordValidation = validatePassword(password);
+  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
+
+  const handleSetPassword = async () => {
+    if (!passwordValidation.valid) {
+      setError('Please meet all password requirements');
+      return;
+    }
+    if (!passwordsMatch) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password,
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Mark that password has been set
+      setPasswordSet(true);
+      
+      // Move to next step
+      setCurrentStep(2);
+    } catch (err) {
+      console.error('Password update error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to set password');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const analyzeDocuments = async () => {
     if (uploadedDocuments.length === 0) {
       // Skip analysis if no documents
@@ -356,7 +431,7 @@ export default function PatientOnboardingPage() {
           medical_notes: formData.medicalNotes || null,
           insurance_provider: formData.insuranceProvider || null,
           insurance_policy_number: formData.insurancePolicyNumber || null,
-          onboarding_completed: currentStep === 4,
+          onboarding_completed: currentStep === 5,
           updated_at: new Date().toISOString(),
         })
         .eq('id', patient.id)
@@ -383,10 +458,17 @@ export default function PatientOnboardingPage() {
   };
 
   const handleNext = async () => {
+    // Step 1 is password setup - handle separately
+    if (currentStep === 1) {
+      await handleSetPassword();
+      return;
+    }
+
     if (currentStep < steps.length) {
       try {
         await saveProgress();
-        if (currentStep === 3) {
+        if (currentStep === 4) {
+          // Documents step (was step 3, now step 4)
           await analyzeDocuments();
         }
         setCurrentStep((prev) => prev + 1);
@@ -398,7 +480,8 @@ export default function PatientOnboardingPage() {
   };
 
   const handlePrev = () => {
-    if (currentStep > 1) {
+    // Don't allow going back to password step once it's set
+    if (currentStep > 1 && (currentStep > 2 || !passwordSet)) {
       setCurrentStep((prev) => prev - 1);
     }
   };
@@ -525,8 +608,145 @@ export default function PatientOnboardingPage() {
 
           {/* Form Card */}
           <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-clinic-navy/10 dark:border-white/10 p-6 sm:p-8'>
-            {/* Step 1: Personal Info */}
+            {/* Step 1: Password Setup */}
             {currentStep === 1 && (
+              <div className='space-y-6'>
+                <div className='flex items-center gap-3 mb-6'>
+                  <div className='w-10 h-10 rounded-full bg-clinic-teal/10 flex items-center justify-center'>
+                    <Lock className='w-5 h-5 text-clinic-teal' />
+                  </div>
+                  <div>
+                    <h2 className='font-display text-lg font-bold text-clinic-navy dark:text-white'>
+                      Set Your Password
+                    </h2>
+                    <p className='text-sm text-clinic-text/60 dark:text-white/60'>
+                      Create a secure password for your account
+                    </p>
+                  </div>
+                </div>
+
+                {/* Welcome Message */}
+                <div className='bg-clinic-teal/5 dark:bg-clinic-teal/10 rounded-lg p-4 border border-clinic-teal/20'>
+                  <div className='flex items-start gap-3'>
+                    <Sparkles className='w-5 h-5 text-clinic-teal flex-shrink-0 mt-0.5' />
+                    <div>
+                      <p className='font-medium text-clinic-navy dark:text-white text-sm'>
+                        Welcome to MediFlow!
+                      </p>
+                      <p className='text-xs text-clinic-text/60 dark:text-white/60 mt-1'>
+                        {user?.email && (
+                          <>You're setting up your account for <strong>{user.email}</strong>. </>
+                        )}
+                        Please create a secure password to protect your health information.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className='space-y-4'>
+                  <div className='space-y-2'>
+                    <Label htmlFor='password'>New Password</Label>
+                    <div className='relative'>
+                      <Input
+                        id='password'
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder='Enter your password'
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className='pr-10'
+                      />
+                      <button
+                        type='button'
+                        onClick={() => setShowPassword(!showPassword)}
+                        className='absolute right-3 top-1/2 -translate-y-1/2 text-clinic-text/40 hover:text-clinic-text/60 dark:text-white/40 dark:hover:text-white/60'
+                      >
+                        {showPassword ? (
+                          <EyeOff className='w-4 h-4' />
+                        ) : (
+                          <Eye className='w-4 h-4' />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='confirmPassword'>Confirm Password</Label>
+                    <div className='relative'>
+                      <Input
+                        id='confirmPassword'
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        placeholder='Confirm your password'
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className='pr-10'
+                      />
+                      <button
+                        type='button'
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className='absolute right-3 top-1/2 -translate-y-1/2 text-clinic-text/40 hover:text-clinic-text/60 dark:text-white/40 dark:hover:text-white/60'
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className='w-4 h-4' />
+                        ) : (
+                          <Eye className='w-4 h-4' />
+                        )}
+                      </button>
+                    </div>
+                    {confirmPassword && !passwordsMatch && (
+                      <p className='text-xs text-red-500'>Passwords do not match</p>
+                    )}
+                    {passwordsMatch && (
+                      <p className='text-xs text-green-500 flex items-center gap-1'>
+                        <Check className='w-3 h-3' /> Passwords match
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Password Requirements */}
+                <div className='bg-clinic-navy/5 dark:bg-white/5 rounded-lg p-4'>
+                  <p className='text-sm font-medium text-clinic-navy dark:text-white mb-3'>
+                    Password Requirements
+                  </p>
+                  <div className='grid grid-cols-2 gap-2'>
+                    {[
+                      { label: 'At least 8 characters', met: password.length >= 8 },
+                      { label: 'One uppercase letter', met: /[A-Z]/.test(password) },
+                      { label: 'One lowercase letter', met: /[a-z]/.test(password) },
+                      { label: 'One number', met: /[0-9]/.test(password) },
+                    ].map((req) => (
+                      <div
+                        key={req.label}
+                        className={cn(
+                          'flex items-center gap-2 text-xs',
+                          req.met
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-clinic-text/50 dark:text-white/50'
+                        )}
+                      >
+                        {req.met ? (
+                          <CheckCircle className='w-3.5 h-3.5' />
+                        ) : (
+                          <div className='w-3.5 h-3.5 rounded-full border border-current' />
+                        )}
+                        {req.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Security Note */}
+                <div className='flex items-start gap-3 text-xs text-clinic-text/50 dark:text-white/50'>
+                  <Shield className='w-4 h-4 flex-shrink-0 mt-0.5' />
+                  <p>
+                    Your password is encrypted and stored securely. We never have access to your plain text password.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Personal Info */}
+            {currentStep === 2 && (
               <div className='space-y-6'>
                 <div className='flex items-center gap-3 mb-6'>
                   <div className='w-10 h-10 rounded-full bg-clinic-teal/10 flex items-center justify-center'>
@@ -655,8 +875,8 @@ export default function PatientOnboardingPage() {
               </div>
             )}
 
-            {/* Step 2: Health History */}
-            {currentStep === 2 && (
+            {/* Step 3: Health History */}
+            {currentStep === 3 && (
               <div className='space-y-6'>
                 <div className='flex items-center gap-3 mb-6'>
                   <div className='w-10 h-10 rounded-full bg-clinic-teal/10 flex items-center justify-center'>
@@ -815,8 +1035,8 @@ export default function PatientOnboardingPage() {
               </div>
             )}
 
-            {/* Step 3: Document Upload */}
-            {currentStep === 3 && (
+            {/* Step 4: Document Upload */}
+            {currentStep === 4 && (
               <div className='space-y-6'>
                 <div className='flex items-center gap-3 mb-6'>
                   <div className='w-10 h-10 rounded-full bg-clinic-teal/10 flex items-center justify-center'>
@@ -919,8 +1139,8 @@ export default function PatientOnboardingPage() {
               </div>
             )}
 
-            {/* Step 4: AI Analysis Results */}
-            {currentStep === 4 && (
+            {/* Step 5: AI Analysis Results */}
+            {currentStep === 5 && (
               <div className='space-y-6'>
                 <div className='flex items-center gap-3 mb-6'>
                   <div className='w-10 h-10 rounded-full bg-clinic-ai/10 flex items-center justify-center'>
@@ -1022,7 +1242,7 @@ export default function PatientOnboardingPage() {
               <Button
                 variant='ghost'
                 onClick={handlePrev}
-                disabled={currentStep === 1 || isLoading}
+                disabled={currentStep === 1 || (currentStep === 2 && passwordSet) || isLoading}
               >
                 <ArrowLeft className='w-4 h-4 mr-2' />
                 Back
@@ -1043,6 +1263,24 @@ export default function PatientOnboardingPage() {
                     <>
                       Complete Setup
                       <Check className='w-4 h-4 ml-2' />
+                    </>
+                  )}
+                </Button>
+              ) : currentStep === 1 ? (
+                <Button
+                  onClick={handleNext}
+                  disabled={isLoading || !passwordValidation.valid || !passwordsMatch}
+                  className='bg-clinic-teal hover:bg-clinic-teal/90'
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className='w-4 h-4 mr-2 animate-spin' />
+                      Setting Password...
+                    </>
+                  ) : (
+                    <>
+                      Set Password & Continue
+                      <ArrowRight className='w-4 h-4 ml-2' />
                     </>
                   )}
                 </Button>

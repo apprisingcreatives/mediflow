@@ -179,9 +179,9 @@ export function PartnerClinicsSection() {
     );
   }
 
-  if (clinics.length === 0) {
-    return null;
-  }
+  // if (clinics.length === 0) {
+  //   return null;
+  // }
 
   return (
     <section
@@ -320,7 +320,7 @@ export function PartnerClinicsSection() {
                   </>
                   {/* CTA */}
                   <Link
-                    href={`/clinics/${generateSlug(clinic.name)}-${clinic.id.slice(0, 8)}`}
+                    href={`/clinics/${clinic.id}`}
                   >
                     <Button className='w-full bg-clinic-navy hover:bg-clinic-navy/90 text-white group/btn'>
                       View Clinic

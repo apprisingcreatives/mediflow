@@ -1,42 +1,71 @@
-import { ClinicWithDetails } from '@/types/database';
-import axios from 'axios';
 import { useState } from 'react';
+import { AIFeature, Clinic, ClinicAIFeature, ClinicService, Practitioner } from '@/types/database';
+import { supabase } from '@/lib/supabase';
+
+export type PublicClinicWithDetails = Pick<
+  Clinic,
+  | 'id'
+  | 'name'
+  | 'email'
+  | 'phone'
+  | 'address'
+  | 'city'
+  | 'logo_url'
+  | 'description'
+  | 'is_active'
+  | 'subscription_plan'
+> & {
+  clinic_services?: ClinicService[];
+  practitioners?: Practitioner[];
+  clinic_ai_features?: ClinicAIFeature[];
+
+};
 
 const useGetClinics = () => {
-  const [clinics, setClinics] = useState<ClinicWithDetails[]>([]);
+  const [clinics, setClinics] = useState<PublicClinicWithDetails[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sendRequest = async () => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
     try {
       setLoading(true);
-      const { data } = await axios.get('/api/clinics', {
-        signal: controller.signal,
-        headers: {
-          'Cache-Control': 'no-store',
-        },
-      });
-      clearTimeout(timeoutId);
+      setError(null);
 
-      if (data.clinics && data.clinics.length > 0) {
-        setClinics(data.clinics);
+      const { data, error } = await supabase
+        .from('clinics')
+        .select(
+          `
+          id,
+          name,
+          email,
+          phone,
+          address,
+          city,
+          logo_url,
+          description,
+          is_active,
+          subscription_plan,
+          clinic_services (*),
+          practitioners (*),
+          clinic_ai_features (*)
+        `,
+        )
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+      if (error) {
+        throw error;
       }
-    } catch (error) {
-      if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
-      } else {
-        console.error('Failed to fetch clinics:', error);
-        setError(
-          error instanceof Error ? error.message : 'Failed to fetch clinics',
-        );
-      }
+
+      setClinics(data ?? []);
+    } catch (err) {
+      console.error('Failed to fetch clinics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch clinics');
     } finally {
       setLoading(false);
     }
   };
+
   return { clinics, loading, error, sendRequest };
 };
 
