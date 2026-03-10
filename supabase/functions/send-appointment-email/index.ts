@@ -47,7 +47,11 @@ interface AppointmentData {
   checkin_token?: string;
 }
 
-type NotificationType = 'appointment_created' | 'appointment_updated' | 'appointment_reminder_24hr' | 'appointment_start';
+type NotificationType =
+  | 'appointment_created'
+  | 'appointment_updated'
+  | 'appointment_reminder_24hr'
+  | 'appointment_start';
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -67,10 +71,13 @@ function formatTime(timeStr: string): string {
   return `${hour12}:${minutes} ${ampm}`;
 }
 
-function getEmailSubject(type: NotificationType, appointment: AppointmentData): string {
+function getEmailSubject(
+  type: NotificationType,
+  appointment: AppointmentData,
+): string {
   const clinicName = appointment.clinic.name;
   const date = formatDate(appointment.appointment_date);
-  
+
   switch (type) {
     case 'appointment_created':
       return `Appointment Confirmed - ${clinicName}`;
@@ -85,30 +92,37 @@ function getEmailSubject(type: NotificationType, appointment: AppointmentData): 
   }
 }
 
-function getEmailContent(type: NotificationType, appointment: AppointmentData): { heading: string; message: string; showCheckinButton: boolean } {
+function getEmailContent(
+  type: NotificationType,
+  appointment: AppointmentData,
+): { heading: string; message: string; showCheckinButton: boolean } {
   switch (type) {
     case 'appointment_created':
       return {
         heading: 'Your Appointment is Confirmed',
-        message: 'Your appointment has been successfully scheduled. Please find the details below.',
+        message:
+          'Your appointment has been successfully scheduled. Please find the details below.',
         showCheckinButton: false,
       };
     case 'appointment_updated':
       return {
         heading: 'Your Appointment Has Been Updated',
-        message: 'Your appointment details have been changed. Please review the updated information below.',
+        message:
+          'Your appointment details have been changed. Please review the updated information below.',
         showCheckinButton: false,
       };
     case 'appointment_reminder_24hr':
       return {
         heading: 'Appointment Reminder',
-        message: 'This is a friendly reminder that you have an appointment scheduled for tomorrow. Please review the details below.',
+        message:
+          'This is a friendly reminder that you have an appointment scheduled for tomorrow. Please review the details below.',
         showCheckinButton: false,
       };
     case 'appointment_start':
       return {
         heading: 'Your Appointment is Starting',
-        message: 'Your appointment is about to begin. Click the button below to check in and let us know you\'re ready.',
+        message:
+          "Your appointment is about to begin. Click the button below to check in and let us know you're ready.",
         showCheckinButton: true,
       };
     default:
@@ -120,10 +134,16 @@ function getEmailContent(type: NotificationType, appointment: AppointmentData): 
   }
 }
 
-function generateEmailHtml(type: NotificationType, appointment: AppointmentData): string {
-  const { heading, message, showCheckinButton } = getEmailContent(type, appointment);
+function generateEmailHtml(
+  type: NotificationType,
+  appointment: AppointmentData,
+): string {
+  const { heading, message, showCheckinButton } = getEmailContent(
+    type,
+    appointment,
+  );
   const checkinUrl = `${APP_URL}/api/appointments/${appointment.id}/checkin?token=${appointment.checkin_token}`;
-  
+
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -192,20 +212,26 @@ function generateEmailHtml(type: NotificationType, appointment: AppointmentData)
                           ${appointment.clinic.phone ? `<p style="margin: 4px 0 0; color: ${BRAND_COLORS.textLight}; font-size: 14px;">Phone: ${appointment.clinic.phone}</p>` : ''}
                         </td>
                       </tr>
-                      ${appointment.notes ? `
+                      ${
+                        appointment.notes
+                          ? `
                       <tr>
                         <td style="padding: 8px 0; border-top: 1px solid #e5e7eb;">
                           <p style="margin: 0; color: ${BRAND_COLORS.textLight}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Notes</p>
                           <p style="margin: 4px 0 0; color: ${BRAND_COLORS.text}; font-size: 14px;">${appointment.notes}</p>
                         </td>
                       </tr>
-                      ` : ''}
+                      `
+                          : ''
+                      }
                     </table>
                   </td>
                 </tr>
               </table>
               
-              ${showCheckinButton ? `
+              ${
+                showCheckinButton
+                  ? `
               <!-- Check-in Button -->
               <table role="presentation" style="width: 100%; border-collapse: collapse;">
                 <tr>
@@ -224,7 +250,9 @@ function generateEmailHtml(type: NotificationType, appointment: AppointmentData)
               <p style="margin: 8px 0 0; padding: 12px; background-color: ${BRAND_COLORS.background}; border-radius: 4px; word-break: break-all;">
                 <a href="${checkinUrl}" style="color: ${BRAND_COLORS.primary}; font-size: 12px; text-decoration: underline;">${checkinUrl}</a>
               </p>
-              ` : ''}
+              `
+                  : ''
+              }
               
               <p style="margin: 24px 0 0; color: ${BRAND_COLORS.textLight}; font-size: 14px; line-height: 1.6;">
                 If you need to reschedule or cancel your appointment, please contact the clinic directly or log in to your patient portal.
@@ -252,10 +280,16 @@ function generateEmailHtml(type: NotificationType, appointment: AppointmentData)
   `.trim();
 }
 
-function generatePlainText(type: NotificationType, appointment: AppointmentData): string {
-  const { heading, message, showCheckinButton } = getEmailContent(type, appointment);
+function generatePlainText(
+  type: NotificationType,
+  appointment: AppointmentData,
+): string {
+  const { heading, message, showCheckinButton } = getEmailContent(
+    type,
+    appointment,
+  );
   const checkinUrl = `${APP_URL}/api/appointments/${appointment.id}/checkin?token=${appointment.checkin_token}`;
-  
+
   let text = `
 ${heading}
 
@@ -295,7 +329,7 @@ async function sendEmail(
   subject: string,
   html: string,
   text: string,
-  fromName: string
+  fromName: string,
 ): Promise<{ success: boolean; error?: string }> {
   if (!RESEND_API_KEY) {
     console.error('RESEND_API_KEY is not set');
@@ -310,7 +344,7 @@ async function sendEmail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${fromName} <noreply@mediflow.app>`,
+        from: `${fromName} <noreply@mediflow.apprisingcreatives.com>`,
         to: [to],
         subject,
         html,
@@ -321,7 +355,10 @@ async function sendEmail(
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Resend API error:', errorData);
-      return { success: false, error: errorData.message || 'Failed to send email' };
+      return {
+        success: false,
+        error: errorData.message || 'Failed to send email',
+      };
     }
 
     const data = await response.json();
@@ -329,7 +366,10 @@ async function sendEmail(
     return { success: true };
   } catch (error) {
     console.error('Error sending email:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
 }
 
@@ -353,44 +393,46 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { appointment_id, notification_type } = await req.json() as {
+    const { appointment_id, notification_type } = (await req.json()) as {
       appointment_id: string;
       notification_type: NotificationType;
     };
 
     if (!appointment_id || !notification_type) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: appointment_id, notification_type' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: 'Missing required fields: appointment_id, notification_type',
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }
 
     // Initialize Supabase client with service role
-    const supabase = createClient(
-      SUPABASE_URL!,
-      SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { persistSession: false } }
-    );
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: { persistSession: false },
+    });
 
     // Fetch appointment with all related data
     const { data: appointment, error: fetchError } = await supabase
       .from('appointments')
-      .select(`
+      .select(
+        `
         *,
         patient:patients (id, first_name, last_name, email),
         practitioner:practitioners (id, name, specialization),
         service:clinic_services (id, name, duration_minutes),
         clinic:clinics (id, name, address, phone)
-      `)
+      `,
+      )
       .eq('id', appointment_id)
       .single();
 
     if (fetchError || !appointment) {
       console.error('Failed to fetch appointment:', fetchError);
-      return new Response(
-        JSON.stringify({ error: 'Appointment not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Appointment not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Generate check-in token for appointment_start notifications
@@ -418,7 +460,7 @@ Deno.serve(async (req) => {
       subject,
       html,
       text,
-      appointment.clinic.name
+      appointment.clinic.name,
     );
 
     // Log notification in database
@@ -458,13 +500,13 @@ Deno.serve(async (req) => {
       {
         status: success ? 200 : 500,
         headers: { 'Content-Type': 'application/json' },
-      }
+      },
     );
   } catch (error) {
     console.error('Unexpected error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 });
