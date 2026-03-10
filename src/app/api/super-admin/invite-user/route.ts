@@ -104,9 +104,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // ✅ Create super_admins record using authenticated client with RLS
-    // RLS policy "Active super admins can manage other super admins" allows INSERT
-    const { data: newSuperAdmin, error: dbError } = await supabaseWithAuth
+    // Create super_admins record using service role
+    // The requester has already been verified as an active super admin above
+    const { data: newSuperAdmin, error: dbError } = await supabaseAdmin
       .from('super_admins')
       .insert({
         auth_user_id: invitedUser.user.id,
