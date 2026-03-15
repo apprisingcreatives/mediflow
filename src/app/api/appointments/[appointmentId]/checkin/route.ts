@@ -91,13 +91,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Redirect to success page with appointment details
+
+    const successUrl = new URL('/checkin/success', request.url);
+    successUrl.searchParams.set('appointmentId', appointmentId);
     const clinic = Array.isArray(appointment.clinic) ? appointment.clinic[0] : appointment.clinic;
     const practitioner = Array.isArray(appointment.practitioner) ? appointment.practitioner[0] : appointment.practitioner;
     const service = Array.isArray(appointment.service) ? appointment.service[0] : appointment.service;
     const patient = Array.isArray(appointment.patient) ? appointment.patient[0] : appointment.patient;
 
-    const successUrl = new URL('/checkin/success', request.url);
-    successUrl.searchParams.set('appointmentId', appointmentId);
     successUrl.searchParams.set('clinicName', clinic?.name || '');
     successUrl.searchParams.set('practitionerName', practitioner?.name || '');
     successUrl.searchParams.set('serviceName', service?.name || '');
