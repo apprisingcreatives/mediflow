@@ -133,7 +133,7 @@ const usePractitionerDashboard = (options: UsePractitionerDashboardOptions = {})
       .from('appointments')
       .select(`
         *,
-        patient:patients (id, first_name, last_name, email, phone),
+        patient:patients (id, first_name, last_name, email, phone, date_of_birth, gender, blood_type, allergies, chronic_conditions, current_medications, medical_notes, insurance_provider, insurance_policy_number),
         practitioner:practitioners (id, name, specialization),
         service:clinic_services (id, name, duration_minutes, price),
         clinic:clinics (id, name, address)
@@ -270,7 +270,7 @@ const usePractitionerDashboard = (options: UsePractitionerDashboardOptions = {})
           .from('appointments')
           .select(`
             *,
-            patient:patients (id, first_name, last_name, email, phone),
+            patient:patients (id, first_name, last_name, email, phone, date_of_birth, gender, blood_type, allergies, chronic_conditions, current_medications, medical_notes, insurance_provider, insurance_policy_number),
             practitioner:practitioners (id, name, specialization),
             service:clinic_services (id, name, duration_minutes, price),
             clinic:clinics (id, name, address)

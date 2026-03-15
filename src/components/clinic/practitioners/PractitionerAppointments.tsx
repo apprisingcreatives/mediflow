@@ -26,6 +26,12 @@ import {
   Mail,
   FileText,
   Loader2,
+  Heart,
+  Droplets,
+  AlertTriangle,
+  Pill,
+  Calendar,
+  Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -420,7 +426,7 @@ export function PractitionerAppointments({
 
       {/* Appointment Detail Modal */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-clinic-navy dark:text-white">
               Appointment Details
@@ -454,6 +460,139 @@ export function PractitionerAppointments({
                   )}
                 </div>
               </div>
+
+              {/* Medical Information */}
+              {selectedAppointment.patient && (
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-clinic-navy dark:text-white flex items-center gap-2">
+                    <Heart className="w-4 h-4" />
+                    Medical Information
+                  </h4>
+                  <div className="bg-clinic-navy/5 dark:bg-white/5 rounded-lg p-4 space-y-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      {selectedAppointment.patient.date_of_birth && (
+                        <div>
+                          <p className="text-xs text-clinic-text/60 dark:text-white/60 flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            Date of Birth
+                          </p>
+                          <p className="text-sm text-clinic-navy dark:text-white">
+                            {format(parseISO(selectedAppointment.patient.date_of_birth), 'MMM d, yyyy')}
+                          </p>
+                        </div>
+                      )}
+                      {selectedAppointment.patient.gender && (
+                        <div>
+                          <p className="text-xs text-clinic-text/60 dark:text-white/60">Gender</p>
+                          <p className="text-sm text-clinic-navy dark:text-white">
+                            {selectedAppointment.patient.gender}
+                          </p>
+                        </div>
+                      )}
+                      {selectedAppointment.patient.blood_type && (
+                        <div>
+                          <p className="text-xs text-clinic-text/60 dark:text-white/60 flex items-center gap-1">
+                            <Droplets className="w-3 h-3" />
+                            Blood Type
+                          </p>
+                          <p className="text-sm text-clinic-navy dark:text-white font-medium">
+                            {selectedAppointment.patient.blood_type}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedAppointment.patient.allergies && selectedAppointment.patient.allergies.length > 0 && (
+                      <div>
+                        <p className="text-xs text-clinic-text/60 dark:text-white/60 flex items-center gap-1 mb-1.5">
+                          <AlertTriangle className="w-3 h-3" />
+                          Allergies
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedAppointment.patient.allergies.map((allergy, i) => (
+                            <span
+                              key={i}
+                              className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs"
+                            >
+                              {allergy}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedAppointment.patient.chronic_conditions && selectedAppointment.patient.chronic_conditions.length > 0 && (
+                      <div>
+                        <p className="text-xs text-clinic-text/60 dark:text-white/60 mb-1.5">
+                          Chronic Conditions
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedAppointment.patient.chronic_conditions.map((condition, i) => (
+                            <span
+                              key={i}
+                              className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded text-xs"
+                            >
+                              {condition}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedAppointment.patient.current_medications && (
+                      <div>
+                        <p className="text-xs text-clinic-text/60 dark:text-white/60 flex items-center gap-1 mb-1">
+                          <Pill className="w-3 h-3" />
+                          Current Medications
+                        </p>
+                        <p className="text-sm text-clinic-navy dark:text-white">
+                          {selectedAppointment.patient.current_medications}
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedAppointment.patient.medical_notes && (
+                      <div>
+                        <p className="text-xs text-clinic-text/60 dark:text-white/60 mb-1">
+                          Medical Notes
+                        </p>
+                        <p className="text-sm text-clinic-navy dark:text-white">
+                          {selectedAppointment.patient.medical_notes}
+                        </p>
+                      </div>
+                    )}
+
+                    {(selectedAppointment.patient.insurance_provider || selectedAppointment.patient.insurance_policy_number) && (
+                      <div className="pt-2 border-t border-clinic-navy/10 dark:border-white/10">
+                        <p className="text-xs text-clinic-text/60 dark:text-white/60 flex items-center gap-1 mb-1">
+                          <Shield className="w-3 h-3" />
+                          Insurance
+                        </p>
+                        <p className="text-sm text-clinic-navy dark:text-white">
+                          {selectedAppointment.patient.insurance_provider}
+                          {selectedAppointment.patient.insurance_policy_number && (
+                            <span className="text-clinic-text/60 dark:text-white/60">
+                              {' '}· {selectedAppointment.patient.insurance_policy_number}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    )}
+
+                    {!selectedAppointment.patient.date_of_birth &&
+                      !selectedAppointment.patient.gender &&
+                      !selectedAppointment.patient.blood_type &&
+                      (!selectedAppointment.patient.allergies || selectedAppointment.patient.allergies.length === 0) &&
+                      (!selectedAppointment.patient.chronic_conditions || selectedAppointment.patient.chronic_conditions.length === 0) &&
+                      !selectedAppointment.patient.current_medications &&
+                      !selectedAppointment.patient.medical_notes && (
+                        <p className="text-sm text-clinic-text/50 dark:text-white/50 italic">
+                          No medical information on file. Patient has not completed onboarding.
+                        </p>
+                      )}
+                  </div>
+                </div>
+              )}
 
               {/* Appointment Info */}
               <div className="space-y-3">
