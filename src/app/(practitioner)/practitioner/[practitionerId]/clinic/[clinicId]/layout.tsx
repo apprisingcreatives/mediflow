@@ -29,7 +29,7 @@ export default function PractitionerClinicLayout({
   const practitionerId = params.practitionerId as string;
   const clinicId = params.clinicId as string;
 
-  const { session, loading: authLoading } = useAuth();
+  const { session, isLoading: authLoading } = useAuth();
   const { profile, profileLoading, fetchProfile } = usePractitionerDashboard();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
