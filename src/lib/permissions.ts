@@ -1,5 +1,5 @@
 export const isSuperAdmin = (role: string) => {
-  return role === 'super_admin';
+  return role === "super_admin";
 };
 
 export const isClinicAdmin = ({
@@ -14,9 +14,13 @@ export const isClinicAdmin = ({
   if (clinicId !== userClinicId) {
     return false;
   }
-  return role === 'clinic_admin';
+  return role === "clinic_admin";
+};
+
+export const isClinicStaff = ({ role }: { role: string }) => {
+  return role === "clinic_practitioner";
 };
 
 export const isPatient = (role: string) => {
-  return role === 'patient';
+  return role === "patient";
 };

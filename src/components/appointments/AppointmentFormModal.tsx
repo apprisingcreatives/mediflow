@@ -1,43 +1,44 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { format } from 'date-fns';
-import { CalendarIcon, Clock, Loader2, UserPlus, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { useState, useEffect, useMemo } from "react";
+import { format } from "date-fns";
+import { CalendarIcon, Clock, Loader2, UserPlus, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import {
   Appointment,
   AppointmentStatus,
   APPOINTMENT_STATUSES,
-} from '@/hooks/useGetAppointments';
-import { Practitioner } from '@/hooks/useGetPractitioners';
-import { ClinicService } from '@/hooks/useGetServices';
-import { Patient } from '@/hooks/useGetPatients';
+} from "@/hooks/useGetAppointments";
+import { Practitioner } from "@/hooks/useGetPractitioners";
+import { ClinicService } from "@/hooks/useGetServices";
+import { Patient } from "@/hooks/useGetPatients";
+import useGetTimeSlots from "@/hooks/useGetTimeSlots";
 
-const MANILA_TZ = 'Asia/Manila';
+const MANILA_TZ = "Asia/Manila";
 
 interface TimeSlot {
   time_slot: string;
@@ -81,8 +82,8 @@ export interface NewPatientData {
   phone: string;
 }
 
-type FormMode = 'create' | 'edit';
-type PatientMode = 'existing' | 'new';
+type FormMode = "create" | "edit";
+type PatientMode = "existing" | "new";
 
 export function AppointmentFormModal({
   isOpen,
@@ -98,32 +99,45 @@ export function AppointmentFormModal({
   isLoading = false,
   error,
 }: AppointmentFormModalProps) {
-  const mode: FormMode = appointment ? 'edit' : 'create';
-  const [patientMode, setPatientMode] = useState<PatientMode>('existing');
-  const [patientSearch, setPatientSearch] = useState('');
+  const mode: FormMode = appointment ? "edit" : "create";
+  const [patientMode, setPatientMode] = useState<PatientMode>("existing");
+  const [patientSearch, setPatientSearch] = useState("");
 
   // Form state
-  const [selectedPatientId, setSelectedPatientId] = useState('');
-  const [selectedPractitionerId, setSelectedPractitionerId] = useState('');
-  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [selectedPractitionerId, setSelectedPractitionerId] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     initialDate || new Date(),
   );
-  const [selectedTime, setSelectedTime] = useState('');
-  const [notes, setNotes] = useState('');
-  const [status, setStatus] = useState<AppointmentStatus>('scheduled');
+  const [selectedTime, setSelectedTime] = useState("");
+  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState<AppointmentStatus>("scheduled");
 
   // New patient form state
   const [newPatient, setNewPatient] = useState<NewPatientData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
   });
 
-  // Time slots state
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  // Get selected service duration
+  const selectedService = useMemo(() => {
+    return services.find((s) => s.id === selectedServiceId);
+  }, [services, selectedServiceId]);
+
+  // Time slots (via hook)
+  const { timeSlots, loading: loadingTimeSlots } = useGetTimeSlots({
+    practitionerId: selectedPractitionerId,
+    date: selectedDate,
+    service: selectedService,
+    selectedTime,
+    mode,
+    appointmentId: appointment?.id,
+    getAvailableTimeSlots,
+    onSelectedTimeUnavailable: () => setSelectedTime(""),
+  });
 
   // Inviting patient state
   const [invitingPatient, setInvitingPatient] = useState(false);
@@ -131,33 +145,27 @@ export function AppointmentFormModal({
   // Initialize form when editing
   useEffect(() => {
     if (appointment) {
-      setSelectedPatientId(appointment.patient_id || '');
-      setSelectedPractitionerId(appointment.practitioner_id || '');
-      setSelectedServiceId(appointment.service_id || '');
+      setSelectedPatientId(appointment.patient_id || "");
+      setSelectedPractitionerId(appointment.practitioner_id || "");
+      setSelectedServiceId(appointment.service_id || "");
       setSelectedDate(new Date(appointment.appointment_date));
       setSelectedTime(appointment.appointment_time);
-      setNotes(appointment.notes || '');
+      setNotes(appointment.notes || "");
       setStatus(appointment.status);
-      setPatientMode('existing');
+      setPatientMode("existing");
     } else {
       // Reset form for new appointment
-      setSelectedPatientId('');
-      setSelectedPractitionerId('');
-      setSelectedServiceId('');
+      setSelectedPatientId("");
+      setSelectedPractitionerId("");
+      setSelectedServiceId("");
       setSelectedDate(initialDate || new Date());
-      setSelectedTime('');
-      setNotes('');
-      setStatus('scheduled');
-      setPatientMode('existing');
-      setNewPatient({ firstName: '', lastName: '', email: '', phone: '' });
+      setSelectedTime("");
+      setNotes("");
+      setStatus("scheduled");
+      setPatientMode("existing");
+      setNewPatient({ firstName: "", lastName: "", email: "", phone: "" });
     }
   }, [appointment, initialDate, isOpen]);
-
-  // Get selected service duration
-  const selectedService = useMemo(() => {
-    return services.find((s) => s.id === selectedServiceId);
-  }, [services, selectedServiceId]);
-
 
   // Filter patients based on search
   const filteredPatients = useMemo(() => {
@@ -173,51 +181,7 @@ export function AppointmentFormModal({
     );
   }, [patients, patientSearch]);
 
-  // Fetch time slots when practitioner, date, or service changes
-  useEffect(() => {
-    const fetchTimeSlots = async () => {
-      if (!selectedPractitionerId || !selectedDate || !selectedService) {
-        setTimeSlots([]);
-        return;
-      }
-
-      setLoadingTimeSlots(true);
-      try {
-        const dateStr = format(selectedDate, 'yyyy-MM-dd');
-        // Pass appointment ID when editing to exclude it from conflict check
-        const slots = await getAvailableTimeSlots(
-          selectedPractitionerId,
-          dateStr,
-          selectedService.duration_minutes,
-          mode === 'edit' ? appointment?.id : undefined,
-        );
-        setTimeSlots(slots);
-
-        // Clear selected time if it's no longer available
-        if (
-          selectedTime &&
-          !slots.find((s) => s.time_slot === selectedTime && s.is_available)
-        ) {
-          setSelectedTime('');
-        }
-      } catch (err) {
-        console.error('Failed to fetch time slots:', err);
-        setTimeSlots([]);
-      } finally {
-        setLoadingTimeSlots(false);
-      }
-    };
-
-    fetchTimeSlots();
-  }, [
-    selectedPractitionerId,
-    selectedDate,
-    selectedService,
-    getAvailableTimeSlots,
-    mode,
-    appointment?.id,
-    selectedTime,
-  ]);
+  // (Hook handles fetching time slots and clearing selected time if unavailable)
 
   const handleInviteNewPatient = async () => {
     if (
@@ -234,18 +198,18 @@ export function AppointmentFormModal({
       const patient = await onInvitePatient(newPatient);
       if (patient) {
         setSelectedPatientId(patient.id);
-        setPatientMode('existing');
-        setNewPatient({ firstName: '', lastName: '', email: '', phone: '' });
+        setPatientMode("existing");
+        setNewPatient({ firstName: "", lastName: "", email: "", phone: "" });
       }
     } catch (err) {
-      console.error('Failed to invite patient:', err);
+      console.error("Failed to invite patient:", err);
     } finally {
       setInvitingPatient(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (patientMode === 'new') {
+    if (patientMode === "new") {
       // First invite the patient
       await handleInviteNewPatient();
       return;
@@ -265,23 +229,23 @@ export function AppointmentFormModal({
       patientId: selectedPatientId,
       practitionerId: selectedPractitionerId,
       serviceId: selectedServiceId,
-      appointmentDate: format(selectedDate, 'yyyy-MM-dd'),
+      appointmentDate: format(selectedDate, "yyyy-MM-dd"),
       appointmentTime: selectedTime,
       notes: notes || undefined,
-      status: mode === 'edit' ? status : 'scheduled',
+      status: mode === "edit" ? status : "scheduled",
     });
   };
 
   const formatTimeSlot = (time: string) => {
-    const [hours, minutes] = time.split(':');
+    const [hours, minutes] = time.split(":");
     const hour = parseInt(hours, 10);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const ampm = hour >= 12 ? "PM" : "AM";
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minutes} ${ampm}`;
   };
 
   const isFormValid = useMemo(() => {
-    if (patientMode === 'new') {
+    if (patientMode === "new") {
       return (
         newPatient.firstName &&
         newPatient.lastName &&
@@ -311,12 +275,12 @@ export function AppointmentFormModal({
       <DialogContent className='sm:max-w-[600px] bg-white dark:bg-slate-800 border-clinic-navy/10 dark:border-white/10 max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle className='text-xl font-display font-bold text-clinic-navy dark:text-white'>
-            {mode === 'edit' ? 'Edit Appointment' : 'New Appointment'}
+            {mode === "edit" ? "Edit Appointment" : "New Appointment"}
           </DialogTitle>
           <DialogDescription className='text-clinic-text/60 dark:text-white/60'>
-            {mode === 'edit'
-              ? 'Update the appointment details below.'
-              : 'Fill in the details to schedule a new appointment.'}
+            {mode === "edit"
+              ? "Update the appointment details below."
+              : "Fill in the details to schedule a new appointment."}
           </DialogDescription>
         </DialogHeader>
 
@@ -333,30 +297,30 @@ export function AppointmentFormModal({
               <Label className='text-sm font-medium text-clinic-navy dark:text-white'>
                 Patient
               </Label>
-              {mode === 'create' && (
+              {mode === "create" && (
                 <div className='flex gap-2'>
                   <Button
                     type='button'
-                    variant={patientMode === 'existing' ? 'default' : 'outline'}
+                    variant={patientMode === "existing" ? "default" : "outline"}
                     size='sm'
-                    onClick={() => setPatientMode('existing')}
+                    onClick={() => setPatientMode("existing")}
                     className={
-                      patientMode === 'existing'
-                        ? 'bg-clinic-teal hover:bg-clinic-teal/90'
-                        : ''
+                      patientMode === "existing"
+                        ? "bg-clinic-teal hover:bg-clinic-teal/90"
+                        : ""
                     }
                   >
                     Existing
                   </Button>
                   <Button
                     type='button'
-                    variant={patientMode === 'new' ? 'default' : 'outline'}
+                    variant={patientMode === "new" ? "default" : "outline"}
                     size='sm'
-                    onClick={() => setPatientMode('new')}
+                    onClick={() => setPatientMode("new")}
                     className={
-                      patientMode === 'new'
-                        ? 'bg-clinic-teal hover:bg-clinic-teal/90'
-                        : ''
+                      patientMode === "new"
+                        ? "bg-clinic-teal hover:bg-clinic-teal/90"
+                        : ""
                     }
                   >
                     <UserPlus className='w-3 h-3 mr-1' />
@@ -366,7 +330,7 @@ export function AppointmentFormModal({
               )}
             </div>
 
-            {patientMode === 'existing' ? (
+            {patientMode === "existing" ? (
               <div className='space-y-2'>
                 <div className='relative'>
                   <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-clinic-text/40' />
@@ -387,7 +351,7 @@ export function AppointmentFormModal({
                   <SelectContent>
                     {filteredPatients.map((patient) => (
                       <SelectItem key={patient.id} value={patient.id}>
-                        {patient.first_name} {patient.last_name} -{' '}
+                        {patient.first_name} {patient.last_name} -{" "}
                         {patient.email}
                       </SelectItem>
                     ))}
@@ -519,12 +483,12 @@ export function AppointmentFormModal({
                   type='button'
                   variant='outline'
                   className={cn(
-                    'w-full justify-start text-left font-normal',
-                    !selectedDate && 'text-muted-foreground',
+                    "w-full justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground",
                   )}
                 >
                   <CalendarIcon className='mr-2 h-4 w-4' />
-                  {selectedDate ? format(selectedDate, 'PPP') : 'Pick a date'}
+                  {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className='w-auto p-0 z-[100]' align='start'>
@@ -563,14 +527,14 @@ export function AppointmentFormModal({
                     <Button
                       key={slot.time_slot}
                       type='button'
-                      variant={isSelected ? 'default' : 'outline'}
+                      variant={isSelected ? "default" : "outline"}
                       size='sm'
                       disabled={!slot.is_available}
                       onClick={() => setSelectedTime(slot.time_slot)}
                       className={cn(
-                        'text-xs',
-                        isSelected && 'bg-clinic-teal hover:bg-clinic-teal/90',
-                        !slot.is_available && 'opacity-50 cursor-not-allowed',
+                        "text-xs",
+                        isSelected && "bg-clinic-teal hover:bg-clinic-teal/90",
+                        !slot.is_available && "opacity-50 cursor-not-allowed",
                       )}
                     >
                       <Clock className='w-3 h-3 mr-1' />
@@ -582,14 +546,14 @@ export function AppointmentFormModal({
             ) : (
               <div className='p-4 border rounded-lg text-center text-sm text-clinic-text/60'>
                 {!selectedPractitionerId || !selectedServiceId || !selectedDate
-                  ? 'Select practitioner, service, and date to see available times'
-                  : 'No available time slots for this date'}
+                  ? "Select practitioner, service, and date to see available times"
+                  : "No available time slots for this date"}
               </div>
             )}
           </div>
 
           {/* Status (Edit mode only) */}
-          {mode === 'edit' && (
+          {mode === "edit" && (
             <div className='space-y-2'>
               <Label className='text-sm font-medium text-clinic-navy dark:text-white'>
                 Status
@@ -605,7 +569,7 @@ export function AppointmentFormModal({
                   {APPOINTMENT_STATUSES.map((s) => (
                     <SelectItem key={s.value} value={s.value}>
                       <span
-                        className={cn('px-2 py-0.5 rounded text-xs', s.color)}
+                        className={cn("px-2 py-0.5 rounded text-xs", s.color)}
                       >
                         {s.label}
                       </span>
@@ -643,14 +607,14 @@ export function AppointmentFormModal({
             {isLoading || invitingPatient ? (
               <>
                 <Loader2 className='w-4 h-4 mr-2 animate-spin' />
-                {patientMode === 'new' ? 'Inviting Patient...' : 'Saving...'}
+                {patientMode === "new" ? "Inviting Patient..." : "Saving..."}
               </>
-            ) : patientMode === 'new' ? (
-              'Invite & Continue'
-            ) : mode === 'edit' ? (
-              'Update Appointment'
+            ) : patientMode === "new" ? (
+              "Invite & Continue"
+            ) : mode === "edit" ? (
+              "Update Appointment"
             ) : (
-              'Create Appointment'
+              "Create Appointment"
             )}
           </Button>
         </div>

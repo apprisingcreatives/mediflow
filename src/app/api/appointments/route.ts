@@ -68,6 +68,28 @@ export async function POST(request: Request) {
       );
     }
 
+    // Ensure patient_clinics record exists (for clinic-patient relationship)
+    if (clinic_id) {
+      const { error: patientClinicError } = await supabase
+        .from('patient_clinics')
+        .upsert(
+          {
+            patient_id: patient.id,
+            clinic_id: clinic_id,
+            is_primary: false,
+          },
+          {
+            onConflict: 'patient_id,clinic_id',
+            ignoreDuplicates: true,
+          }
+        );
+
+      if (patientClinicError) {
+        console.error('Failed to create patient_clinics record:', patientClinicError);
+        // Continue - the relationship might already exist
+      }
+    }
+
     // Create appointment
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')

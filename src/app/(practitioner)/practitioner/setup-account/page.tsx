@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Activity,
   Lock,
@@ -19,20 +19,20 @@ import {
   Stethoscope,
   User,
   FileText,
-} from 'lucide-react';
+} from "lucide-react";
 
 export default function SetupPractitionerAccount() {
   const router = useRouter();
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [clinicName, setClinicName] = useState('');
-  const [practitionerName, setPractitionerName] = useState('');
-  const [specialization, setSpecialization] = useState('');
-  const [bio, setBio] = useState('');
+  const [error, setError] = useState("");
+  const [clinicName, setClinicName] = useState("");
+  const [practitionerName, setPractitionerName] = useState("");
+  const [specialization, setSpecialization] = useState("");
+  const [bio, setBio] = useState("");
 
   // Password strength indicators
   const hasMinLength = password.length >= 8;
@@ -42,10 +42,13 @@ export default function SetupPractitionerAccount() {
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
   const passwordsMatch = password === confirmPassword && password.length > 0;
 
-  const passwordStrength =
-    [hasMinLength, hasUpperCase, hasLowerCase, hasNumber, hasSpecialChar].filter(
-      Boolean,
-    ).length;
+  const passwordStrength = [
+    hasMinLength,
+    hasUpperCase,
+    hasLowerCase,
+    hasNumber,
+    hasSpecialChar,
+  ].filter(Boolean).length;
 
   const isPasswordValid =
     hasMinLength &&
@@ -63,9 +66,9 @@ export default function SetupPractitionerAccount() {
       } = await supabase.auth.getUser();
 
       if (user?.user_metadata) {
-        setClinicName(user.user_metadata.clinic_name || '');
-        setPractitionerName(user.user_metadata.name || '');
-        setSpecialization(user.user_metadata.specialization || '');
+        setClinicName(user.user_metadata.clinic_name || "");
+        setPractitionerName(user.user_metadata.name || "");
+        setSpecialization(user.user_metadata.specialization || "");
       }
     };
 
@@ -75,12 +78,12 @@ export default function SetupPractitionerAccount() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isPasswordValid) {
-      setError('Please meet all password requirements');
+      setError("Please meet all password requirements");
       return;
     }
 
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       // Update user password
@@ -95,37 +98,37 @@ export default function SetupPractitionerAccount() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) throw new Error('No user found');
+      if (!user) throw new Error("No user found");
 
       // Update practitioner record to mark as active and update bio
       const { error: updateError } = await supabase
-        .from('practitioners')
-        .update({ 
+        .from("practitioners")
+        .update({
           is_active: true,
           bio: bio || null,
         })
-        .eq('auth_user_id', user.id);
+        .eq("auth_user_id", user.id);
 
       if (updateError) throw updateError;
 
       // Get the practitioner's clinic_id for redirect
       const { data: practitioner } = await supabase
-        .from('practitioners')
-        .select('clinic_id')
-        .eq('auth_user_id', user.id)
+        .from("practitioners")
+        .select("clinic_id, id")
+        .eq("auth_user_id", user.id)
         .single();
 
       // Redirect to practitioner dashboard (or clinic page for now)
       if (practitioner?.clinic_id) {
-        router.push(`/practitioner/dashboard`);
+        router.push(
+          `/practitioner/${practitioner?.id}/clinic/${practitioner?.clinic_id}/dashboard`,
+        );
       } else {
-        router.push('/');
+        router.push("/");
       }
     } catch (err) {
-      console.error('Setup error:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to set up account',
-      );
+      console.error("Setup error:", err);
+      setError(err instanceof Error ? err.message : "Failed to set up account");
       setIsLoading(false);
     }
   };
@@ -153,11 +156,14 @@ export default function SetupPractitionerAccount() {
               Welcome, Dr. {practitionerName}!
             </h1>
             <p className='text-clinic-text/60'>
-              You&apos;ve been invited to join{' '}
-              <span className='font-medium text-clinic-navy'>{clinicName || 'the clinic'}</span>
+              You&apos;ve been invited to join{" "}
+              <span className='font-medium text-clinic-navy'>
+                {clinicName || "the clinic"}
+              </span>
               {specialization && (
                 <span className='block text-sm mt-1'>
-                  as a <span className='font-medium'>{specialization}</span> specialist
+                  as a <span className='font-medium'>{specialization}</span>{" "}
+                  specialist
                 </span>
               )}
             </p>
@@ -172,7 +178,10 @@ export default function SetupPractitionerAccount() {
 
             {/* Bio (optional) */}
             <div className='space-y-2'>
-              <Label htmlFor='bio' className='text-clinic-navy flex items-center gap-2'>
+              <Label
+                htmlFor='bio'
+                className='text-clinic-navy flex items-center gap-2'
+              >
                 <FileText className='w-4 h-4' />
                 Professional Bio (optional)
               </Label>
@@ -194,7 +203,7 @@ export default function SetupPractitionerAccount() {
                 <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-clinic-text/40' />
                 <Input
                   id='password'
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder='Enter your password'
@@ -224,7 +233,7 @@ export default function SetupPractitionerAccount() {
                 <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-clinic-text/40' />
                 <Input
                   id='confirmPassword'
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder='Confirm your password'
@@ -284,27 +293,27 @@ export default function SetupPractitionerAccount() {
                     <span
                       className={`text-xs font-medium ${
                         passwordStrength <= 2
-                          ? 'text-red-500'
+                          ? "text-red-500"
                           : passwordStrength === 3 || passwordStrength === 4
-                            ? 'text-yellow-500'
-                            : 'text-green-500'
+                            ? "text-yellow-500"
+                            : "text-green-500"
                       }`}
                     >
                       {passwordStrength <= 2
-                        ? 'Weak'
+                        ? "Weak"
                         : passwordStrength === 3 || passwordStrength === 4
-                          ? 'Medium'
-                          : 'Strong'}
+                          ? "Medium"
+                          : "Strong"}
                     </span>
                   </div>
                   <div className='h-2 bg-clinic-navy/10 rounded-full overflow-hidden'>
                     <div
                       className={`h-full transition-all duration-300 ${
                         passwordStrength <= 2
-                          ? 'bg-red-500'
+                          ? "bg-red-500"
                           : passwordStrength === 3 || passwordStrength === 4
-                            ? 'bg-yellow-500'
-                            : 'bg-green-500'
+                            ? "bg-yellow-500"
+                            : "bg-green-500"
                       }`}
                       style={{ width: `${(passwordStrength / 6) * 100}%` }}
                     />
@@ -324,13 +333,13 @@ export default function SetupPractitionerAccount() {
                   Setting up...
                 </>
               ) : (
-                'Complete Setup'
+                "Complete Setup"
               )}
             </Button>
           </form>
 
           <p className='text-center text-sm text-clinic-text/60 mt-6'>
-            Need help?{' '}
+            Need help?{" "}
             <Link
               href='/support'
               className='text-clinic-teal hover:underline font-medium'
@@ -353,7 +362,7 @@ function RequirementItem({ met, text }: { met: boolean; text: string }) {
         <XCircle className='w-4 h-4 text-clinic-text/30' />
       )}
       <span
-        className={`text-xs ${met ? 'text-green-600 font-medium' : 'text-clinic-text/60'}`}
+        className={`text-xs ${met ? "text-green-600 font-medium" : "text-clinic-text/60"}`}
       >
         {text}
       </span>
