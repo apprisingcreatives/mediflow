@@ -41,3 +41,7 @@ export { default as useGetOnboardingStatus } from './useGetOnboardingStatus';
 // Subscription plan hooks
 export { default as useGetSubscriptionPlans } from './useGetSubscriptionPlans';
 export { default as useSubscriptionPlanMutations } from './useSubscriptionPlanMutations';
+
+// Help guide hooks
+export { default as useGetHelpGuides } from './useGetHelpGuides';
+export { default as useHelpGuideMutations } from './useHelpGuideMutations';
