@@ -35,3 +35,5 @@ export {default as useBookingForm} from "./useBookingForm"
 // Practitioner dashboard
 export { default as usePractitionerDashboard } from './usePractitionerDashboard';
 export type { PractitionerProfile } from './usePractitionerDashboard';
+
+export { default as useGetOnboardingStatus } from './useGetOnboardingStatus';
