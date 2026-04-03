@@ -74,7 +74,7 @@ export default function SuperAdminDashboard() {
     const fetchAll = async () => {
       setLoading(true);
 
-      const [clinicsRes, practitionersRes, patientsRes, reportsRes, onboardingRes] =
+      const [clinicsRes, practitionersRes, patientsRes, reportsRes, onboardingClinicsRes] =
         await Promise.all([
           supabase
             .from('clinics')
@@ -91,8 +91,14 @@ export default function SuperAdminDashboard() {
             .order('created_at', { ascending: false })
             .limit(5),
           supabase
-            .from('clinic_onboarding')
-            .select('status', { count: 'exact' }),
+            .from('clinics')
+            .select(`
+              id, updated_at,
+              clinic_admins(id, auth_user_id),
+              clinic_services(id),
+              practitioners(id),
+              patient_clinics(id)
+            `),
         ]);
 
       const clinics: ClinicRow[] = clinicsRes.data ?? [];
@@ -131,17 +137,22 @@ export default function SuperAdminDashboard() {
         )
         .slice(0, 5);
 
-      // Onboarding summary
-      const onboardingRows: Array<{ status: string }> =
-        onboardingRes.data ?? [];
-      const onboardingSummary = {
-        pending: onboardingRows.filter((r) => r.status === 'pending').length,
-        in_progress: onboardingRows.filter((r) => r.status === 'in_progress')
-          .length,
-        completed: onboardingRows.filter((r) => r.status === 'completed')
-          .length,
-        stalled: onboardingRows.filter((r) => r.status === 'stalled').length,
-      };
+      // Onboarding summary (computed from related data)
+      const STALE_DAYS = 7;
+      const staleThreshold = new Date(Date.now() - STALE_DAYS * 24 * 60 * 60 * 1000);
+      const onboardingSummary = { pending: 0, in_progress: 0, completed: 0, stalled: 0 };
+      for (const c of (onboardingClinicsRes.data ?? []) as any[]) {
+        const hasAdmin = (c.clinic_admins || []).some((a: any) => a.auth_user_id !== null);
+        const hasServices = (c.clinic_services || []).length > 0;
+        const hasPractitioners = (c.practitioners || []).length > 0;
+        const hasPatient = (c.patient_clinics || []).length > 0;
+        const allComplete = hasAdmin && hasServices && hasPractitioners && hasPatient;
+        const isStale = new Date(c.updated_at) < staleThreshold;
+        if (allComplete) onboardingSummary.completed++;
+        else if (!allComplete && isStale) onboardingSummary.stalled++;
+        else if (hasServices || hasPractitioners || hasPatient) onboardingSummary.in_progress++;
+        else onboardingSummary.pending++;
+      }
 
       // Pending reports count
       const pendingReportsCount = reports.filter(
