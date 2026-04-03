@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { KeyRound, Save, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { useSuperAdminContext } from '../layout';
+import { useSuperAdminContext } from '../super-admin-context';
 
 export default function SuperAdminSettings() {
   const { admin } = useSuperAdminContext();

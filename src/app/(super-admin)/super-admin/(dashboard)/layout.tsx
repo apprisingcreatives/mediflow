@@ -1,29 +1,12 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity } from 'lucide-react';
 import { SuperAdminSidebar } from '@/components/super-admin/SuperAdminSidebar';
 import { requireSuperAdmin } from '@/lib/admin-auth';
 import { supabase } from '@/lib/supabase';
-
-interface SuperAdmin {
-  id: string;
-  email: string;
-  name: string;
-  status: string;
-  auth_user_id: string;
-}
-
-interface SuperAdminContextType {
-  admin: SuperAdmin | null;
-}
-
-const SuperAdminContext = createContext<SuperAdminContextType>({
-  admin: null,
-});
-
-export const useSuperAdminContext = () => useContext(SuperAdminContext);
+import { SuperAdminContext, type SuperAdmin } from './super-admin-context';
 
 export default function SuperAdminDashboardLayout({
   children,
