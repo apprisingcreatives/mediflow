@@ -19,6 +19,7 @@ export { default as usePatientBooking } from './usePatientBooking';
 
 // Service mutations
 export { default as useServiceMutations } from './useServiceMutations';
+export { default as useFeatureMutations } from './useFeatureMutations';
 
 // Re-export types
 export type { Appointment, AppointmentStatus } from './useGetAppointments';
