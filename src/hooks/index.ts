@@ -37,3 +37,7 @@ export { default as usePractitionerDashboard } from './usePractitionerDashboard'
 export type { PractitionerProfile } from './usePractitionerDashboard';
 
 export { default as useGetOnboardingStatus } from './useGetOnboardingStatus';
+
+// Subscription plan hooks
+export { default as useGetSubscriptionPlans } from './useGetSubscriptionPlans';
+export { default as useSubscriptionPlanMutations } from './useSubscriptionPlanMutations';
