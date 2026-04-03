@@ -150,12 +150,20 @@ export default function SuperAdminLoginPage() {
             </div>
 
             <div className='space-y-2'>
-              <Label
-                htmlFor='password'
-                className='text-clinic-navy dark:text-white'
-              >
-                Password
-              </Label>
+              <div className='flex items-center justify-between'>
+                <Label
+                  htmlFor='password'
+                  className='text-clinic-navy dark:text-white'
+                >
+                  Password
+                </Label>
+                <Link
+                  href='/super-admin/forgot-password'
+                  className='text-sm text-clinic-teal hover:underline'
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className='relative'>
                 <Lock className='absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-clinic-text/40' />
                 <Input
