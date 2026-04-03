@@ -92,7 +92,8 @@ CREATE INDEX IF NOT EXISTS idx_clinic_documents_active ON clinic_required_docume
 CREATE INDEX IF NOT EXISTS idx_patient_responses_patient ON patient_question_responses(patient_id);
 CREATE INDEX IF NOT EXISTS idx_patient_responses_clinic ON patient_question_responses(clinic_id);
 CREATE INDEX IF NOT EXISTS idx_patient_documents_patient ON patient_documents(patient_id);
-CREATE INDEX IF NOT EXISTS idx_patient_documents_clinic ON patient_documents(clinic_id);
+-- Skipped: patient_documents does not have a clinic_id column
+-- CREATE INDEX IF NOT EXISTS idx_patient_documents_clinic ON patient_documents(clinic_id);
 CREATE INDEX IF NOT EXISTS idx_ai_predictions_patient ON ai_treatment_predictions(patient_id);
 CREATE INDEX IF NOT EXISTS idx_ai_predictions_clinic ON ai_treatment_predictions(clinic_id);
 
