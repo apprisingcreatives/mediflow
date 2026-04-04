@@ -195,7 +195,7 @@ function AppointmentCard({ appointment }: AppointmentCardProps) {
             <CheckCircle className="w-4 h-4 mr-1" />
             Checked In
           </Button>
-        ) : ['scheduled', 'confirmed'].includes(appointment.status) ? (
+        ) : appointment.status === 'confirmed' ? (
           <Button
             size="sm"
             className="bg-clinic-teal hover:bg-clinic-teal/90 text-white"

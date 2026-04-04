@@ -570,6 +570,7 @@ export function AppointmentFormModal({
                   appointment={appointment}
                   viewerRole="clinic_admin"
                   layout="row"
+                  onStatusChange={onClose}
                 />
               </div>
             </div>

@@ -64,6 +64,7 @@ interface RawAppointment {
   appointment_date: string;
   appointment_time: string;
   status: AppointmentStatus;
+  booked_by: 'patient' | 'clinic_admin';
   notes: string | null;
   ai_recommended: boolean;
   ai_recommendation_reason: string | null;
