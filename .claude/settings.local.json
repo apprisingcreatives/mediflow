@@ -4,9 +4,27 @@
       "Bash(npx tsc:*)",
       "Bash(wc:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(mv 006_per_clinic_database_setup.sql 0061_per_clinic_database_setup.sql)",
+      "Bash(mv 007_allow_patient_self_activate_rls.sql 0071_allow_patient_self_activate_rls.sql)",
+      "Bash(supabase stop:*)",
+      "Bash(supabase start:*)",
+      "Bash(mv 0061_per_clinic_database_setup.sql 006b_per_clinic_database_setup.sql)",
+      "Bash(mv 0071_allow_patient_self_activate_rls.sql 007b_allow_patient_self_activate_rls.sql)",
+      "Bash(mv 001_clinic_system.sql 20260101_clinic_system.sql)",
+      "Bash(mv 002_patients_and_documents.sql 20260102_patients_and_documents.sql)",
+      "Bash(mv 003_clinic_trial_and_payments.sql 20260103_clinic_trial_and_payments.sql)",
+      "Bash(mv 004_clinic_specific_patients.sql 20260104_clinic_specific_patients.sql)",
+      "Bash(mv 005_patient_onboarding_system.sql 20260105_patient_onboarding_system.sql)",
+      "mcp__supabase__execute_sql",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f supabase/migrations/20260405000002_appointment_status_flow.sql)",
+      "Bash(cd /d \"D:\\\\Gabriel\\\\Projects\\\\appointment-system\\\\mediflow\")"
     ]
   },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
   "enabledPlugins": {
     "supabase@claude-plugins-official": true
   }
