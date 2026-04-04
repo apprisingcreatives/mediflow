@@ -67,7 +67,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if appointment is in a valid status for check-in
-    if (!['scheduled', 'confirmed'].includes(appointment.status)) {
+    if (appointment.status !== 'confirmed') {
       return NextResponse.redirect(
         new URL(`/checkin/error?reason=invalid_status&status=${appointment.status}`, request.url)
       );
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check status
-    if (!['scheduled', 'confirmed'].includes(appointment.status)) {
+    if (appointment.status !== 'confirmed') {
       return NextResponse.json(
         { error: 'Appointment cannot be checked in', status: appointment.status },
         { status: 400 }
