@@ -634,7 +634,10 @@ export function PractitionerAppointments({
                     appointment={selectedAppointment}
                     viewerRole="practitioner"
                     layout="row"
-                    onStatusChange={() => setSelectedAppointment(null)}
+                    onStatusChange={() => {
+                      setIsDetailOpen(false);
+                      setSelectedAppointment(null);
+                    }}
                   />
                 </div>
               </div>
