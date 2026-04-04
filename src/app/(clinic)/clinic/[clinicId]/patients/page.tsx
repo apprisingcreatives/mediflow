@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Users,
   Plus,
@@ -24,7 +38,12 @@ import {
   CheckCircle2,
   Clock,
   UserX,
+  LayoutGrid,
+  List,
+  FileText,
+  MessageSquare,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useClinicContext } from '../layout';
 import { useGetPatients, type Patient } from '@/hooks';
 import { supabase } from '@/lib/supabase';
@@ -38,6 +57,7 @@ export default function PatientsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -89,7 +109,7 @@ export default function PatientsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) {
       setSubmitError('Please fill in all required fields');
       return;
@@ -101,7 +121,7 @@ export default function PatientsPage() {
     try {
       // Get the current session for authorization
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session?.access_token) {
         throw new Error('Not authenticated');
       }
@@ -127,7 +147,7 @@ export default function PatientsPage() {
       }
 
       setSubmitSuccess(true);
-      
+
       // Refresh the patients list
       await fetchPatients({ clinicId });
 
@@ -166,7 +186,7 @@ export default function PatientsPage() {
             Manage your patient records
           </p>
         </div>
-        <Button 
+        <Button
           className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
           onClick={() => setIsAddDialogOpen(true)}
         >
@@ -185,6 +205,28 @@ export default function PatientsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className='pl-10 border-clinic-navy/10'
           />
+        </div>
+        <div className="flex bg-white dark:bg-slate-800 border border-clinic-navy/10 dark:border-white/10 rounded-lg overflow-hidden">
+          <button
+            className={cn(
+              'p-2 transition-colors',
+              viewMode === 'card' ? 'bg-clinic-teal text-white' : 'text-clinic-text/50 hover:bg-clinic-bg'
+            )}
+            onClick={() => setViewMode('card')}
+            title="Card view"
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+          <button
+            className={cn(
+              'p-2 transition-colors',
+              viewMode === 'list' ? 'bg-clinic-teal text-white' : 'text-clinic-text/50 hover:bg-clinic-bg'
+            )}
+            onClick={() => setViewMode('list')}
+            title="List view"
+          >
+            <List className="w-4 h-4" />
+          </button>
         </div>
         <Button variant='outline' size='icon'>
           <Filter className='w-4 h-4' />
@@ -219,7 +261,7 @@ export default function PatientsPage() {
               : 'Get started by adding your first patient'}
           </p>
           {!searchQuery && (
-            <Button 
+            <Button
               className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
               onClick={() => setIsAddDialogOpen(true)}
             >
@@ -230,13 +272,35 @@ export default function PatientsPage() {
         </div>
       )}
 
-      {/* Patients Grid */}
+      {/* Patients Grid / List */}
       {!loading && !error && filteredPatients.length > 0 && (
-        <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
-          {filteredPatients.map((patient) => (
-            <PatientCard key={patient.id} patient={patient} />
-          ))}
-        </div>
+        viewMode === 'card' ? (
+          <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
+            {filteredPatients.map((patient) => (
+              <PatientCard key={patient.id} patient={patient} clinicId={clinicId} />
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Patient</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Added</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredPatients.map((patient) => (
+                  <PatientRow key={patient.id} patient={patient} clinicId={clinicId} />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )
       )}
 
       {/* Add Patient Dialog */}
@@ -352,7 +416,9 @@ export default function PatientsPage() {
   );
 }
 
-function PatientCard({ patient }: { patient: Patient }) {
+function PatientCard({ patient, clinicId }: { patient: Patient; clinicId: string }) {
+  const router = useRouter();
+
   const getStatusBadge = () => {
     if (patient.is_active && patient.onboarding_completed) {
       return (
@@ -394,9 +460,23 @@ function PatientCard({ patient }: { patient: Patient }) {
             </p>
           </div>
         </div>
-        <Button variant='ghost' size='icon'>
-          <MoreVertical className='w-4 h-4' />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant='ghost' size='icon'>
+              <MoreVertical className='w-4 h-4' />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => router.push(`/clinic/${clinicId}/patients/${patient.id}/history`)}>
+              <FileText className="w-4 h-4 mr-2 text-clinic-teal" />
+              Visit History
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled>
+              <MessageSquare className="w-4 h-4 mr-2 text-clinic-teal" />
+              Message
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className='space-y-2'>
@@ -419,5 +499,71 @@ function PatientCard({ patient }: { patient: Patient }) {
         </p>
       </div>
     </div>
+  );
+}
+
+function PatientRow({ patient, clinicId }: { patient: Patient; clinicId: string }) {
+  const router = useRouter();
+
+  const getStatusBadge = () => {
+    if (patient.is_active && patient.onboarding_completed) {
+      return (
+        <span className='flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-100 text-green-700'>
+          <CheckCircle2 className='w-3 h-3' />Active
+        </span>
+      );
+    }
+    if (patient.auth_user_id) {
+      return (
+        <span className='flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700'>
+          <Clock className='w-3 h-3' />Pending
+        </span>
+      );
+    }
+    return (
+      <span className='flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600'>
+        <UserX className='w-3 h-3' />Inactive
+      </span>
+    );
+  };
+
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-clinic-teal/10 flex items-center justify-center shrink-0">
+            <Users className="w-4 h-4 text-clinic-teal" />
+          </div>
+          <span className="font-semibold text-clinic-navy dark:text-white">
+            {patient.first_name} {patient.last_name}
+          </span>
+        </div>
+      </TableCell>
+      <TableCell className="text-clinic-text/70 dark:text-white/70">{patient.email}</TableCell>
+      <TableCell className="text-clinic-text/70 dark:text-white/70">{patient.phone || '—'}</TableCell>
+      <TableCell>{getStatusBadge()}</TableCell>
+      <TableCell className="text-clinic-text/50 dark:text-white/50 text-sm">
+        {new Date(patient.created_at).toLocaleDateString()}
+      </TableCell>
+      <TableCell>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant='ghost' size='icon'>
+              <MoreVertical className='w-4 h-4' />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => router.push(`/clinic/${clinicId}/patients/${patient.id}/history`)}>
+              <FileText className="w-4 h-4 mr-2 text-clinic-teal" />
+              Visit History
+            </DropdownMenuItem>
+            <DropdownMenuItem disabled>
+              <MessageSquare className="w-4 h-4 mr-2 text-clinic-teal" />
+              Message
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
   );
 }
