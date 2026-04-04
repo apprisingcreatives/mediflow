@@ -33,12 +33,18 @@ import {
   AppointmentStatus,
   APPOINTMENT_STATUSES,
 } from "@/hooks/useGetAppointments";
+import { AppointmentActions } from "./AppointmentActions";
 import { Practitioner } from "@/hooks/useGetPractitioners";
 import { ClinicService } from "@/hooks/useGetServices";
 import { Patient } from "@/hooks/useGetPatients";
 import useGetTimeSlots from "@/hooks/useGetTimeSlots";
 
 const MANILA_TZ = "Asia/Manila";
+
+const getStatusColor = (status: string): string => {
+  const statusConfig = APPOINTMENT_STATUSES.find((s) => s.value === status);
+  return statusConfig?.color || "bg-gray-100 text-gray-600";
+};
 
 interface TimeSlot {
   time_slot: string;
@@ -112,7 +118,6 @@ export function AppointmentFormModal({
   );
   const [selectedTime, setSelectedTime] = useState("");
   const [notes, setNotes] = useState("");
-  const [status, setStatus] = useState<AppointmentStatus>("scheduled");
 
   // New patient form state
   const [newPatient, setNewPatient] = useState<NewPatientData>({
@@ -151,7 +156,6 @@ export function AppointmentFormModal({
       setSelectedDate(new Date(appointment.appointment_date));
       setSelectedTime(appointment.appointment_time);
       setNotes(appointment.notes || "");
-      setStatus(appointment.status);
       setPatientMode("existing");
     } else {
       // Reset form for new appointment
@@ -161,7 +165,6 @@ export function AppointmentFormModal({
       setSelectedDate(initialDate || new Date());
       setSelectedTime("");
       setNotes("");
-      setStatus("scheduled");
       setPatientMode("existing");
       setNewPatient({ firstName: "", lastName: "", email: "", phone: "" });
     }
@@ -232,7 +235,6 @@ export function AppointmentFormModal({
       appointmentDate: format(selectedDate, "yyyy-MM-dd"),
       appointmentTime: selectedTime,
       notes: notes || undefined,
-      status: mode === "edit" ? status : "scheduled",
     });
   };
 
@@ -552,31 +554,25 @@ export function AppointmentFormModal({
             )}
           </div>
 
-          {/* Status (Edit mode only) */}
-          {mode === "edit" && (
+          {/* Status Actions (Edit mode only) */}
+          {mode === "edit" && appointment && (
             <div className='space-y-2'>
               <Label className='text-sm font-medium text-clinic-navy dark:text-white'>
                 Status
               </Label>
-              <Select
-                value={status}
-                onValueChange={(v) => setStatus(v as AppointmentStatus)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {APPOINTMENT_STATUSES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      <span
-                        className={cn("px-2 py-0.5 rounded text-xs", s.color)}
-                      >
-                        {s.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className='flex items-center gap-3'>
+                <span
+                  className={cn("px-2.5 py-1 rounded-full text-xs font-medium", getStatusColor(appointment.status))}
+                >
+                  {appointment.status}
+                </span>
+                <AppointmentActions
+                  appointment={appointment}
+                  viewerRole="clinic_admin"
+                  layout="row"
+                  onStatusChange={onClose}
+                />
+              </div>
             </div>
           )}
 

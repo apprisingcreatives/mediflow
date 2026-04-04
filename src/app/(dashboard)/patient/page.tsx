@@ -19,6 +19,7 @@ import {
   OnboardingBanner,
   BookingModal,
   PatientInfo,
+  RecentVisitsCard,
 } from '@/components/patient/dashboard';
 
 export default function PatientPortal() {
@@ -151,6 +152,10 @@ export default function PatientPortal() {
               loading={appointmentsLoading}
               onBookAppointment={booking.openModal}
               canBookAppointment={canBookAppointment}
+            />
+            <RecentVisitsCard
+              appointments={appointments}
+              loading={appointmentsLoading}
             />
             <HealthSummary patient={patientInfo} />
           </div>

@@ -57,5 +57,7 @@ docs/
 
 CLAUDE.md
 
-.claude/
+.claude/*
 tatus.md
+.mcp.json
+.superpowers/*

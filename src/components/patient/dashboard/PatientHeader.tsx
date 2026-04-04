@@ -110,9 +110,11 @@ export function PatientHeader({ patient, onSignOut }: PatientHeaderProps) {
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
+                <DropdownMenuItem asChild>
+                  <Link href="/patient/settings">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Bell className="w-4 h-4 mr-2" />

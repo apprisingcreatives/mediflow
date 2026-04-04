@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   ChevronLeft,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -58,6 +59,11 @@ export function PractitionerSidebar({
       label: 'Profile',
       href: `${basePath}/profile`,
       icon: User,
+    },
+    {
+      label: 'Settings',
+      href: `${basePath}/settings`,
+      icon: Settings,
     },
   ];
 

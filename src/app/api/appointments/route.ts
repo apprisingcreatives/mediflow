@@ -102,6 +102,7 @@ export async function POST(request: Request) {
         appointment_time,
         status: 'scheduled',
         notes: notes || null,
+        booked_by: 'patient',
       })
       .select()
       .single();
@@ -145,6 +146,23 @@ export async function POST(request: Request) {
         .single();
       practitionerName = practitioner?.name || '';
     }
+
+    // Log activity
+    await supabase.from('activity_logs').insert({
+      patient_id: patient.id,
+      clinic_id: clinic_id || null,
+      actor_id: user.id,
+      actor_role: 'patient',
+      action_type: 'appointment_created',
+      entity_type: 'appointment',
+      entity_id: appointment.id,
+      metadata: {
+        practitioner_name: practitionerName,
+        service_name: serviceName,
+        date: appointment_date,
+        time: appointment_time,
+      },
+    });
 
     // Queue confirmation email
     await supabase.from('email_notifications').insert({

@@ -207,9 +207,34 @@ const usePatientBooking = () => {
           appointment_time: selectedTime,
           notes: notes || null,
           status: 'scheduled',
+          booked_by: 'patient',
         });
 
         if (insertError) throw insertError;
+
+        // Log activity
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const service = services.find((s) => s.id === selectedServiceId);
+          const practitioner = practitioners.find((p) => p.id === selectedPractitionerId);
+          await supabase.from('activity_logs').insert({
+            patient_id: patientId,
+            clinic_id: selectedClinicId,
+            actor_id: user.id,
+            actor_role: 'patient',
+            action_type: 'appointment_created',
+            entity_type: 'appointment',
+            entity_id: null,
+            metadata: {
+              practitioner_name: practitioner?.name || '',
+              service_name: service?.name || '',
+              date: format(selectedDate!, 'yyyy-MM-dd'),
+              time: selectedTime,
+            },
+          }).then(({ error: logError }) => {
+            if (logError) console.error('Failed to log activity:', logError);
+          });
+        }
 
         return true;
       } catch (err) {

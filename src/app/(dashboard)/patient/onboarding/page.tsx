@@ -778,6 +778,7 @@ export default function PatientOnboardingPage() {
                   <div className='space-y-2'>
                     <Label htmlFor='dob'>Date of Birth</Label>
                     <Input
+                    required
                       id='dob'
                       type='date'
                       value={formData.dateOfBirth}

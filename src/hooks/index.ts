@@ -19,6 +19,7 @@ export { default as usePatientBooking } from './usePatientBooking';
 
 // Service mutations
 export { default as useServiceMutations } from './useServiceMutations';
+export { default as useFeatureMutations } from './useFeatureMutations';
 
 // Re-export types
 export type { Appointment, AppointmentStatus } from './useGetAppointments';
@@ -34,3 +35,21 @@ export {default as useBookingForm} from "./useBookingForm"
 // Practitioner dashboard
 export { default as usePractitionerDashboard } from './usePractitionerDashboard';
 export type { PractitionerProfile } from './usePractitionerDashboard';
+
+export { default as useGetOnboardingStatus } from './useGetOnboardingStatus';
+
+// Subscription plan hooks
+export { default as useGetSubscriptionPlans } from './useGetSubscriptionPlans';
+export { default as useSubscriptionPlanMutations } from './useSubscriptionPlanMutations';
+
+// Help guide hooks
+export { default as useGetHelpGuides } from './useGetHelpGuides';
+export { default as useHelpGuideMutations } from './useHelpGuideMutations';
+
+// Reports hooks
+export { default as useGetUserReports } from './useGetUserReports';
+export { default as useReportMutations } from './useReportMutations';
+
+// Activity log hooks
+export { default as useActivityLogs } from './useActivityLogs';
+export type { ActivityLog, ActivityActionType } from './useActivityLogs';

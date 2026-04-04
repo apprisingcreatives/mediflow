@@ -115,6 +115,13 @@ const useUpdateAppointment = () => {
         setLoading(true);
         setError(null);
 
+        // Get current appointment for logging
+        const { data: currentAppointment } = await supabase
+          .from('appointments')
+          .select('appointment_date, appointment_time, patient_id, clinic_id')
+          .eq('id', appointmentId)
+          .single();
+
         // Check availability (excluding current appointment)
         const { data: isAvailable, error: rpcError } = await supabase.rpc(
           'check_appointment_availability',
@@ -175,6 +182,28 @@ const useUpdateAppointment = () => {
 
         if (updateError) {
           throw updateError;
+        }
+
+        // Log activity
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && data) {
+          await supabase.from('activity_logs').insert({
+            patient_id: currentAppointment?.patient_id || data.patient_id,
+            clinic_id: currentAppointment?.clinic_id || data.clinic_id,
+            actor_id: user.id,
+            actor_role: 'patient',
+            action_type: 'appointment_rescheduled',
+            entity_type: 'appointment',
+            entity_id: appointmentId,
+            metadata: {
+              old_date: currentAppointment?.appointment_date || '',
+              old_time: currentAppointment?.appointment_time || '',
+              new_date: newDate,
+              new_time: newTime,
+            },
+          }).then(({ error: logError }) => {
+            if (logError) console.error('Failed to log activity:', logError);
+          });
         }
 
         return data;

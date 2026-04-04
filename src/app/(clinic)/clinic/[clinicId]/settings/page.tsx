@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +19,7 @@ import { useClinicContext } from '../layout';
 
 export default function SettingsPage() {
   const { clinic, admin } = useClinicContext();
+  const clinicId = clinic?.id;
   const [isSaving, setIsSaving] = useState(false);
 
   // Form state
@@ -198,7 +200,9 @@ export default function SettingsPage() {
         </div>
 
         <div className='space-y-4'>
-          <Button variant='outline'>Change Password</Button>
+          <Link href={`/clinic/${clinicId}/settings/change-password`}>
+            <Button variant='outline'>Change Password</Button>
+          </Link>
           <Button variant='outline'>Enable Two-Factor Authentication</Button>
         </div>
       </div>

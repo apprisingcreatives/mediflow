@@ -1,14 +1,18 @@
 'use client';
 
-import { format, parseISO } from 'date-fns';
-import { Calendar, Clock, MapPin, ChevronRight, Plus, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { format, parseISO, isToday } from 'date-fns';
+import { Calendar, Clock, MapPin, ChevronRight, Plus, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Appointment } from '@/hooks/useGetAppointments';
+import { supabase } from '@/lib/supabase';
+import { RescheduleModal } from './RescheduleModal';
 import { formatTime, getStatusColor } from './utils';
+import { AppointmentActions } from '@/components/appointments/AppointmentActions';
 
 interface UpcomingAppointmentsProps {
   appointments: Appointment[];
@@ -80,11 +84,80 @@ function EmptyState({ onBookAppointment, canBookAppointment }: EmptyStateProps) 
   );
 }
 
+/**
+ * Check if it's currently within the check-in window for an appointment.
+ * Patients can check in starting 15 minutes before the appointment time,
+ * and up to 30 minutes after.
+ */
+function isWithinCheckInWindow(appointmentDate: string, appointmentTime: string): boolean {
+  const date = parseISO(appointmentDate);
+  if (!isToday(date)) return false;
+
+  const now = new Date();
+  const [hours, minutes] = appointmentTime.split(':').map(Number);
+  const appointmentDateTime = new Date();
+  appointmentDateTime.setHours(hours, minutes, 0, 0);
+
+  const windowStart = new Date(appointmentDateTime);
+  windowStart.setMinutes(windowStart.getMinutes() - 15);
+
+  const windowEnd = new Date(appointmentDateTime);
+  windowEnd.setMinutes(windowEnd.getMinutes() + 30);
+
+  return now >= windowStart && now <= windowEnd;
+}
+
 interface AppointmentCardProps {
   appointment: Appointment;
 }
 
 function AppointmentCard({ appointment }: AppointmentCardProps) {
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+
+  const canCheckIn =
+    appointment.status === 'confirmed' &&
+    isWithinCheckInWindow(appointment.appointment_date, appointment.appointment_time);
+
+  const isCheckedIn = appointment.status === 'in-progress';
+
+  const handleCheckIn = async () => {
+    setCheckingIn(true);
+    setCheckInError(null);
+
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'in-progress' })
+        .eq('id', appointment.id);
+
+      if (error) throw error;
+
+      // Log activity
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('activity_logs').insert({
+          patient_id: appointment.patient_id,
+          clinic_id: appointment.clinic_id,
+          actor_id: user.id,
+          actor_role: 'patient',
+          action_type: 'appointment_checked_in',
+          entity_type: 'appointment',
+          entity_id: appointment.id,
+          metadata: {},
+        }).then(({ error: logError }) => {
+          if (logError) console.error('Failed to log activity:', logError);
+        });
+      }
+    } catch (err) {
+      console.error('Check-in failed:', err);
+      setCheckInError('Failed to check in. Please try again.');
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
   return (
     <div className="flex items-start gap-4 p-4 rounded-xl bg-clinic-bg/50 dark:bg-slate-700/50">
       <Avatar className="w-12 h-12">
@@ -128,15 +201,60 @@ function AppointmentCard({ appointment }: AppointmentCardProps) {
             {appointment.clinic.name}
           </p>
         )}
+        {checkInError && (
+          <p className="text-xs text-red-500 mt-1">{checkInError}</p>
+        )}
       </div>
       <div className="flex flex-col gap-2">
-        <Button size="sm" className="bg-clinic-teal hover:bg-clinic-teal/90 text-white">
-          Check In
-        </Button>
-        <Button variant="outline" size="sm">
-          Reschedule
-        </Button>
+        {/* Check In button - patient only, time-gated */}
+        {isCheckedIn ? (
+          <Button size="sm" disabled className="bg-green-500 text-white">
+            <CheckCircle className="w-4 h-4 mr-1" />
+            Checked In
+          </Button>
+        ) : appointment.status === 'confirmed' ? (
+          <Button
+            size="sm"
+            className="bg-clinic-teal hover:bg-clinic-teal/90 text-white"
+            disabled={!canCheckIn || checkingIn}
+            onClick={handleCheckIn}
+            title={
+              !isWithinCheckInWindow(appointment.appointment_date, appointment.appointment_time)
+                ? 'Check-in opens 15 minutes before your appointment'
+                : undefined
+            }
+          >
+            {checkingIn ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              'Check In'
+            )}
+          </Button>
+        ) : null}
+
+        {/* Context-aware action buttons (Confirm, Cancel) */}
+        <AppointmentActions
+          appointment={appointment}
+          viewerRole="patient"
+        />
+
+        {/* Reschedule - only for scheduled/confirmed */}
+        {['scheduled', 'confirmed'].includes(appointment.status) && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setRescheduleOpen(true)}
+          >
+            Reschedule
+          </Button>
+        )}
       </div>
+
+      <RescheduleModal
+        appointment={appointment}
+        isOpen={rescheduleOpen}
+        onClose={() => setRescheduleOpen(false)}
+      />
     </div>
   );
 }

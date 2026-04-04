@@ -4,7 +4,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "tc": "tsc -b --noEmit"
+    "tc": "tsc -b --noEmit",
+    "supabase:start": "docker rm -f supabase_vector_mediflow || true && npx supabase stop --no-backup && npx supabase start && bash scripts/seed-super-admin.sh",
+    "supabase:restart": "docker rm -f supabase_vector_mediflow || true && npx supabase stop --no-backup && npx supabase start && bash scripts/seed-super-admin.sh",
+    "seed:admin": "bash scripts/seed-super-admin.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

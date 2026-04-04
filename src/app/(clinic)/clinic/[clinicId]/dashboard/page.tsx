@@ -1,18 +1,19 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Users,
   Calendar,
   Sparkles,
   TrendingUp,
-  Clock,
   CheckCircle,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { useClinicContext } from '../layout';
 import { useGetAppointments } from '@/hooks';
+import { supabase } from '@/lib/supabase';
 import { formatTimeToAMPM } from '@/lib/utils';
 
 export default function ClinicDashboardPage() {
@@ -26,6 +27,10 @@ export default function ClinicDashboardPage() {
     fetchAppointments,
     unsubscribe,
   } = useGetAppointments({ enableRealtime: true });
+
+  const [patientCount, setPatientCount] = useState<number | null>(null);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<number | null>(null);
+  const [completedThisMonth, setCompletedThisMonth] = useState<number | null>(null);
 
   useEffect(() => {
     if (!clinic?.id) return;
@@ -45,8 +50,51 @@ export default function ClinicDashboardPage() {
     };
   }, [clinic?.id, fetchAppointments, unsubscribe]);
 
+  // Fetch patient count and monthly revenue
+  useEffect(() => {
+    if (!clinic?.id) return;
+
+    const fetchStats = async () => {
+      // Patient count
+      const { count } = await supabase
+        .from('patient_clinics')
+        .select('id', { count: 'exact', head: true })
+        .eq('clinic_id', clinic.id);
+      setPatientCount(count ?? 0);
+
+      // Monthly revenue: sum service prices for completed appointments this month
+      const now = new Date();
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+        .toISOString()
+        .split('T')[0];
+      const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        .toISOString()
+        .split('T')[0];
+
+      const { data: monthAppts } = await supabase
+        .from('appointments')
+        .select('id, status, service:clinic_services (price)')
+        .eq('clinic_id', clinic.id)
+        .gte('appointment_date', firstOfMonth)
+        .lte('appointment_date', lastOfMonth)
+        .eq('status', 'completed');
+
+      const revenue = (monthAppts ?? []).reduce((sum, apt) => {
+        const price = (apt.service as unknown as { price: number })?.price ?? 0;
+        return sum + price;
+      }, 0);
+      setMonthlyRevenue(revenue);
+      setCompletedThisMonth(monthAppts?.length ?? 0);
+    };
+
+    fetchStats();
+  }, [clinic?.id]);
+
   const enabledFeatures = clinicFeatures.filter((f) => f.is_enabled);
   const disabledFeatures = clinicFeatures.filter((f) => !f.is_enabled);
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(amount);
 
   return (
     <>
@@ -54,66 +102,52 @@ export default function ClinicDashboardPage() {
       <div
         className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 ${isTrialExpired ? 'opacity-50 pointer-events-none' : ''}`}
       >
-        <div className='p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass'>
-          <div className='flex items-center gap-4'>
-            <div className='w-12 h-12 rounded-xl bg-clinic-teal/10 flex items-center justify-center'>
-              <Calendar className='w-6 h-6 text-clinic-teal' />
-            </div>
-            <div>
-              <p className='text-sm text-clinic-text/60 dark:text-white/60'>
-                Today's Appointments
-              </p>
-              <p className='text-2xl font-display font-bold text-clinic-navy dark:text-white'>
-                12
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className='p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass'>
-          <div className='flex items-center gap-4'>
-            <div className='w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center'>
-              <Users className='w-6 h-6 text-green-500' />
-            </div>
-            <div>
-              <p className='text-sm text-clinic-text/60 dark:text-white/60'>
-                Total Patients
-              </p>
-              <p className='text-2xl font-display font-bold text-clinic-navy dark:text-white'>
-                248
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className='p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass'>
-          <div className='flex items-center gap-4'>
-            <div className='w-12 h-12 rounded-xl bg-clinic-ai/10 flex items-center justify-center'>
-              <TrendingUp className='w-6 h-6 text-clinic-ai' />
-            </div>
-            <div>
-              <p className='text-sm text-clinic-text/60 dark:text-white/60'>
-                This Month Revenue
-              </p>
-              <p className='text-2xl font-display font-bold text-clinic-navy dark:text-white'>
-                ₱45,200
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className='p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass'>
-          <div className='flex items-center gap-4'>
-            <div className='w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center'>
-              <Clock className='w-6 h-6 text-yellow-500' />
-            </div>
-            <div>
-              <p className='text-sm text-clinic-text/60 dark:text-white/60'>
-                Avg. Wait Time
-              </p>
-              <p className='text-2xl font-display font-bold text-clinic-navy dark:text-white'>
-                8 min
-              </p>
+        {[
+          {
+            label: "Today's Appointments",
+            value: apptsLoading ? null : appointments.length,
+            icon: Calendar,
+            iconBg: 'bg-clinic-teal/10',
+            iconColor: 'text-clinic-teal',
+          },
+          {
+            label: 'Total Patients',
+            value: patientCount,
+            icon: Users,
+            iconBg: 'bg-green-500/10',
+            iconColor: 'text-green-500',
+          },
+          {
+            label: 'This Month Revenue',
+            value: monthlyRevenue === null ? null : formatCurrency(monthlyRevenue),
+            icon: TrendingUp,
+            iconBg: 'bg-clinic-ai/10',
+            iconColor: 'text-clinic-ai',
+          },
+          {
+            label: 'Completed This Month',
+            value: completedThisMonth,
+            icon: CheckCircle,
+            iconBg: 'bg-yellow-500/10',
+            iconColor: 'text-yellow-500',
+          },
+        ].map((stat) => (
+          <div key={stat.label} className='p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass'>
+            <div className='flex items-center gap-4'>
+              <div className={`w-12 h-12 rounded-xl ${stat.iconBg} flex items-center justify-center shrink-0`}>
+                <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
+              </div>
+              <div className='min-w-0'>
+                <p className='text-sm text-clinic-text/60 dark:text-white/60 truncate'>
+                  {stat.label}
+                </p>
+                <p className='text-2xl font-display font-bold text-clinic-navy dark:text-white'>
+                  {stat.value === null ? <Loader2 className='w-5 h-5 animate-spin' /> : stat.value}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
       <div className='grid lg:grid-cols-2 gap-8'>

@@ -13,6 +13,7 @@ export interface Appointment {
   appointment_date: string;
   appointment_time: string;
   status: AppointmentStatus;
+  booked_by: 'patient' | 'clinic_admin';
   notes: string | null;
   ai_recommended: boolean;
   ai_recommendation_reason: string | null;
@@ -25,6 +26,15 @@ export interface Appointment {
     last_name: string;
     email: string;
     phone: string | null;
+    date_of_birth: string | null;
+    gender: string | null;
+    blood_type: string | null;
+    allergies: string[] | null;
+    chronic_conditions: string[] | null;
+    current_medications: string | null;
+    medical_notes: string | null;
+    insurance_provider: string | null;
+    insurance_policy_number: string | null;
   } | null;
   practitioner?: {
     id: string;
@@ -54,6 +64,7 @@ interface RawAppointment {
   appointment_date: string;
   appointment_time: string;
   status: AppointmentStatus;
+  booked_by: 'patient' | 'clinic_admin';
   notes: string | null;
   ai_recommended: boolean;
   ai_recommendation_reason: string | null;
@@ -128,7 +139,7 @@ const useGetAppointments = (options: UseGetAppointmentsOptions = {}) => {
       .from('appointments')
       .select(`
         *,
-        patient:patients (id, first_name, last_name, email, phone),
+        patient:patients (id, first_name, last_name, email, phone, date_of_birth, gender, blood_type, allergies, chronic_conditions, current_medications, medical_notes, insurance_provider, insurance_policy_number),
         practitioner:practitioners (id, name, specialization),
         service:clinic_services (id, name, duration_minutes, price),
         clinic:clinics (id, name, address)
@@ -334,7 +345,7 @@ const useGetAppointments = (options: UseGetAppointmentsOptions = {}) => {
           .from('appointments')
           .select(`
             *,
-            patient:patients (id, first_name, last_name, email, phone),
+            patient:patients (id, first_name, last_name, email, phone, date_of_birth, gender, blood_type, allergies, chronic_conditions, current_medications, medical_notes, insurance_provider, insurance_policy_number),
             practitioner:practitioners (id, name, specialization),
             service:clinic_services (id, name, duration_minutes, price),
             clinic:clinics (id, name, address)

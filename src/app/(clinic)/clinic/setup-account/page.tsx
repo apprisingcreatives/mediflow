@@ -103,16 +103,18 @@ function SetupClinicAccount() {
 
       if (!user) throw new Error('No user found');
 
-      // Update clinic_admin record to mark as active
-      const { error: updateError } = await supabase
+      // Update clinic_admin record to mark as active and get clinic_id
+      const { data: adminData, error: updateError } = await supabase
         .from('clinic_admins')
         .update({ is_active: true })
-        .eq('auth_user_id', user.id);
+        .eq('auth_user_id', user.id)
+        .select('clinic_id')
+        .single();
 
       if (updateError) throw updateError;
 
       // Redirect to clinic dashboard
-      router.push('/clinic/dashboard');
+      router.push(`/clinic/${adminData.clinic_id}/dashboard`);
     } catch (err) {
       console.error('Setup error:', err);
       setError(
