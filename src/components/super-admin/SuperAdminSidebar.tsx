@@ -34,9 +34,24 @@ const NAV_CONFIG: NavItem[] = [
   { path: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, group: '' },
   { path: 'clinics', label: 'Clinics', icon: Building2, group: 'Management' },
   { path: 'features', label: 'Features', icon: Sparkles, group: 'Management' },
-  { path: 'onboarding', label: 'Onboarding', icon: ClipboardList, group: 'Management' },
-  { path: 'subscription-plans', label: 'Subscription Plans', icon: CreditCard, group: 'Platform' },
-  { path: 'help-guide', label: 'Help Guide', icon: BookOpen, group: 'Platform' },
+  {
+    path: 'onboarding',
+    label: 'Onboarding',
+    icon: ClipboardList,
+    group: 'Management',
+  },
+  {
+    path: 'subscription-plans',
+    label: 'Subscription Plans',
+    icon: CreditCard,
+    group: 'Platform',
+  },
+  {
+    path: 'help-guide',
+    label: 'Help Guide',
+    icon: BookOpen,
+    group: 'Platform',
+  },
   { path: 'reports', label: 'Reports', icon: Flag, group: 'Platform' },
   { path: 'settings', label: 'Settings', icon: Settings, group: 'Account' },
 ];
@@ -58,7 +73,7 @@ export function SuperAdminSidebar({ onLogout }: SuperAdminSidebarProps) {
   // Group items for rendering with section labels
   const groups = useMemo(() => {
     const result: { label: string; items: typeof navItems }[] = [];
-    let currentGroup = '';
+    let currentGroup: string | null = null;
 
     navItems.forEach((item) => {
       if (item.group !== currentGroup) {
@@ -107,10 +122,10 @@ export function SuperAdminSidebar({ onLogout }: SuperAdminSidebarProps) {
                   href={href}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-xl transition-colors',
+                    'flex items-center gap-3 px-4 py-3 my-2 rounded-xl transition-colors',
                     isActive
                       ? 'bg-clinic-teal/10 text-clinic-teal font-medium'
-                      : 'text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5'
+                      : 'text-clinic-text/70 dark:text-white/70 hover:bg-clinic-navy/5 dark:hover:bg-white/5',
                   )}
                 >
                   <Icon className='w-5 h-5 flex-shrink-0' />
