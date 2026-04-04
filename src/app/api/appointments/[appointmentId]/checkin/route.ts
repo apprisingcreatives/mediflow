@@ -99,6 +99,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const service = Array.isArray(appointment.service) ? appointment.service[0] : appointment.service;
     const patient = Array.isArray(appointment.patient) ? appointment.patient[0] : appointment.patient;
 
+    // Log activity
+    await supabase.from('activity_logs').insert({
+      patient_id: patient?.id || null,
+      clinic_id: clinic?.id || null,
+      actor_id: patient?.id || null,
+      actor_role: 'patient',
+      action_type: 'appointment_checked_in',
+      entity_type: 'appointment',
+      entity_id: appointment.id,
+      metadata: {},
+    });
+
     successUrl.searchParams.set('clinicName', clinic?.name || '');
     successUrl.searchParams.set('practitionerName', practitioner?.name || '');
     successUrl.searchParams.set('serviceName', service?.name || '');
@@ -130,7 +142,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Verify the token and get appointment
     const { data: appointment, error: fetchError } = await supabase
       .from('appointments')
-      .select('id, status, checkin_token, checkin_token_expires_at')
+      .select('id, status, checkin_token, checkin_token_expires_at, patient_id, clinic_id')
       .eq('id', appointmentId)
       .single();
 
@@ -184,6 +196,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 500 }
       );
     }
+
+    // Log activity
+    await supabase.from('activity_logs').insert({
+      patient_id: appointment.patient_id,
+      clinic_id: appointment.clinic_id,
+      actor_id: appointment.patient_id,
+      actor_role: 'patient',
+      action_type: 'appointment_checked_in',
+      entity_type: 'appointment',
+      entity_id: appointment.id,
+      metadata: {},
+    });
 
     return NextResponse.json({
       success: true,

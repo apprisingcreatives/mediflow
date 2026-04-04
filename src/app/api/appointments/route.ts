@@ -147,6 +147,23 @@ export async function POST(request: Request) {
       practitionerName = practitioner?.name || '';
     }
 
+    // Log activity
+    await supabase.from('activity_logs').insert({
+      patient_id: patient.id,
+      clinic_id: clinic_id || null,
+      actor_id: user.id,
+      actor_role: 'patient',
+      action_type: 'appointment_created',
+      entity_type: 'appointment',
+      entity_id: appointment.id,
+      metadata: {
+        practitioner_name: practitionerName,
+        service_name: serviceName,
+        date: appointment_date,
+        time: appointment_time,
+      },
+    });
+
     // Queue confirmation email
     await supabase.from('email_notifications').insert({
       recipient_email: patient.email,

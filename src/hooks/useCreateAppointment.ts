@@ -207,6 +207,28 @@ const useCreateAppointment = () => {
           throw insertError;
         }
 
+        // Log activity
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && data) {
+          await supabase.from('activity_logs').insert({
+            patient_id: patientId,
+            clinic_id: clinicId,
+            actor_id: user.id,
+            actor_role: bookedBy === 'patient' ? 'patient' : 'clinic_admin',
+            action_type: 'appointment_created',
+            entity_type: 'appointment',
+            entity_id: data.id,
+            metadata: {
+              practitioner_name: data.practitioner?.name || '',
+              service_name: data.service?.name || '',
+              date: appointmentDate,
+              time: appointmentTime,
+            },
+          }).then(({ error: logError }) => {
+            if (logError) console.error('Failed to log activity:', logError);
+          });
+        }
+
         return data;
       } catch (err) {
         console.error('Failed to create appointment:', err);

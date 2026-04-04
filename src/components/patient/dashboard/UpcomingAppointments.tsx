@@ -133,6 +133,23 @@ function AppointmentCard({ appointment }: AppointmentCardProps) {
         .eq('id', appointment.id);
 
       if (error) throw error;
+
+      // Log activity
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('activity_logs').insert({
+          patient_id: appointment.patient_id,
+          clinic_id: appointment.clinic_id,
+          actor_id: user.id,
+          actor_role: 'patient',
+          action_type: 'appointment_checked_in',
+          entity_type: 'appointment',
+          entity_id: appointment.id,
+          metadata: {},
+        }).then(({ error: logError }) => {
+          if (logError) console.error('Failed to log activity:', logError);
+        });
+      }
     } catch (err) {
       console.error('Check-in failed:', err);
       setCheckInError('Failed to check in. Please try again.');

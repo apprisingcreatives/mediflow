@@ -65,6 +65,39 @@ export function AppointmentActions({
         .eq('id', appointment.id);
 
       if (updateError) throw updateError;
+
+      // Log activity
+      const actionMap: Record<string, string> = {
+        confirmed: 'appointment_confirmed',
+        completed: 'appointment_completed',
+        'no-show': 'appointment_no_show',
+        cancelled: 'appointment_cancelled',
+      };
+      const actionType = actionMap[newStatus];
+      if (actionType) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const metadata: Record<string, string> = {};
+          if (newStatus === 'confirmed') metadata.confirmed_by = viewerRole;
+          if (newStatus === 'completed') metadata.completed_by = viewerRole;
+          if (newStatus === 'cancelled') metadata.cancelled_by = viewerRole;
+          if (newStatus === 'no-show') metadata.source = 'manual';
+
+          await supabase.from('activity_logs').insert({
+            patient_id: appointment.patient_id,
+            clinic_id: appointment.clinic_id,
+            actor_id: user.id,
+            actor_role: viewerRole,
+            action_type: actionType,
+            entity_type: 'appointment',
+            entity_id: appointment.id,
+            metadata,
+          }).then(({ error: logError }) => {
+            if (logError) console.error('Failed to log activity:', logError);
+          });
+        }
+      }
+
       onStatusChange?.();
     } catch (err) {
       console.error(`Failed to update status to ${newStatus}:`, err);

@@ -94,6 +94,31 @@ export function ChangePasswordForm({ backHref }: ChangePasswordFormProps) {
       // Invalidate all other sessions
       await supabase.auth.signOut({ scope: 'others' });
 
+      // Log activity
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        const { data: patientRecord } = await supabase
+          .from('patients')
+          .select('id')
+          .eq('auth_user_id', currentUser.id)
+          .single();
+
+        if (patientRecord) {
+          await supabase.from('activity_logs').insert({
+            patient_id: patientRecord.id,
+            clinic_id: null,
+            actor_id: currentUser.id,
+            actor_role: 'patient',
+            action_type: 'password_changed',
+            entity_type: 'account',
+            entity_id: null,
+            metadata: {},
+          }).then(({ error: logError }) => {
+            if (logError) console.error('Failed to log activity:', logError);
+          });
+        }
+      }
+
       setIsSuccess(true);
       toast.success('Password changed successfully!');
     } catch (err) {
