@@ -49,3 +49,7 @@ export { default as useHelpGuideMutations } from './useHelpGuideMutations';
 // Reports hooks
 export { default as useGetUserReports } from './useGetUserReports';
 export { default as useReportMutations } from './useReportMutations';
+
+// Activity log hooks
+export { default as useActivityLogs } from './useActivityLogs';
+export type { ActivityLog, ActivityActionType } from './useActivityLogs';
