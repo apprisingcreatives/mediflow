@@ -54,6 +54,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Appointment, APPOINTMENT_STATUSES, AppointmentStatus } from '@/hooks/useGetAppointments';
+import { AppointmentActions } from '@/components/appointments/AppointmentActions';
 
 interface PractitionerAppointmentsProps {
   appointments: Appointment[];
@@ -145,16 +146,6 @@ export function PractitionerAppointments({
     setSelectedAppointment(apt);
     setEditingNotes(apt.notes || '');
     setIsDetailOpen(true);
-  };
-
-  const handleStatusUpdate = async (status: AppointmentStatus) => {
-    if (!selectedAppointment) return;
-    setIsSaving(true);
-    const success = await onStatusChange(selectedAppointment.id, status);
-    if (success) {
-      setSelectedAppointment((prev) => (prev ? { ...prev, status } : null));
-    }
-    setIsSaving(false);
   };
 
   const handleNotesUpdate = async () => {
@@ -628,29 +619,23 @@ export function PractitionerAppointments({
                 </div>
               </div>
 
-              {/* Status Update */}
+              {/* Status Actions */}
               <div className="space-y-3">
                 <h4 className="font-semibold text-clinic-navy dark:text-white">
-                  Update Status
+                  Status
                 </h4>
-                <Select
-                  value={selectedAppointment.status}
-                  onValueChange={(value) => handleStatusUpdate(value as AppointmentStatus)}
-                  disabled={isSaving}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {APPOINTMENT_STATUSES.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>
-                        <span className={cn('px-2 py-0.5 rounded text-xs', status.color)}>
-                          {status.label}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={cn("px-2.5 py-1 rounded-full text-xs font-medium", getStatusColor(selectedAppointment.status))}
+                  >
+                    {selectedAppointment.status}
+                  </span>
+                  <AppointmentActions
+                    appointment={selectedAppointment}
+                    viewerRole="practitioner"
+                    layout="row"
+                  />
+                </div>
               </div>
 
               {/* Notes */}
