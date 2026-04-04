@@ -207,6 +207,7 @@ const usePatientBooking = () => {
           appointment_time: selectedTime,
           notes: notes || null,
           status: 'scheduled',
+          booked_by: 'patient',
         });
 
         if (insertError) throw insertError;

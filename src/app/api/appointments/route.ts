@@ -102,6 +102,7 @@ export async function POST(request: Request) {
         appointment_time,
         status: 'scheduled',
         notes: notes || null,
+        booked_by: 'patient',
       })
       .select()
       .single();

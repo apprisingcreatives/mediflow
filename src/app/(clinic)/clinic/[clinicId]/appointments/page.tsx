@@ -210,6 +210,7 @@ export default function AppointmentsPage() {
           appointmentDate: data.appointmentDate,
           appointmentTime: data.appointmentTime,
           notes: data.notes,
+          bookedBy: 'clinic_admin',
         });
       }
 

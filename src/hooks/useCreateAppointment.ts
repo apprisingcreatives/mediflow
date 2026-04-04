@@ -18,6 +18,7 @@ interface CreateAppointmentParams {
   appointmentTime: string; // HH:MM:SS or HH:MM
   notes?: string;
   status?: AppointmentStatus;
+  bookedBy?: 'patient' | 'clinic_admin';
 }
 
 interface CheckAvailabilityParams {
@@ -112,6 +113,7 @@ const useCreateAppointment = () => {
       appointmentTime,
       notes,
       status = 'scheduled',
+      bookedBy = 'patient',
     }: CreateAppointmentParams): Promise<Appointment | null> => {
       try {
         setLoading(true);
@@ -174,6 +176,7 @@ const useCreateAppointment = () => {
             appointment_time: appointmentTime,
             notes: notes || null,
             status,
+            booked_by: bookedBy,
           })
           .select(
             `
