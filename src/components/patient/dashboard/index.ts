@@ -8,6 +8,7 @@ export { MessagesCard } from './MessagesCard';
 export { ContactCard } from './ContactCard';
 export { OnboardingBanner } from './OnboardingBanner';
 export { BookingModal } from './BookingModal';
+export { RecentVisitsCard } from './RecentVisitsCard';
 
 // Types
 export type {
