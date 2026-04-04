@@ -80,6 +80,6 @@ export function formatActivityMessage(
     }
 
     default:
-      return log.action_type.replace(/_/g, ' ');
+      return (log.action_type as string).replace(/_/g, ' ');
   }
 }

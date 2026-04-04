@@ -11,7 +11,7 @@ import { Appointment } from '@/hooks/useGetAppointments';
 import { ActivityLog } from '@/hooks/useActivityLogs';
 import { VisitHistoryCard } from '@/components/activity/VisitHistoryCard';
 import { ActivityTimeline } from '@/components/activity/ActivityTimeline';
-import { useClinicContext } from '../../../../layout';
+
 
 interface PatientInfo {
   id: string;
@@ -24,7 +24,7 @@ interface PatientInfo {
 export default function PatientHistoryPage() {
   const params = useParams();
   const router = useRouter();
-  const { clinicId } = useClinicContext();
+  const clinicId = params.clinicId as string;
   const patientId = params.patientId as string;
 
   const [patient, setPatient] = useState<PatientInfo | null>(null);
