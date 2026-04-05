@@ -52,8 +52,6 @@ const useGetClinic = () => {
       setLoading(true);
       setError(null);
 
-      console.log('Fetching clinic with ID:', clinicId);
-
       const { data, error: queryError } = await supabase
         .from('clinics')
         .select(
@@ -93,8 +91,6 @@ const useGetClinic = () => {
         )
         .eq('id', clinicId)
         .single();
-
-      console.log('Supabase response:', { data, error: queryError });
 
       if (queryError) {
         console.error('Supabase query error:', queryError);

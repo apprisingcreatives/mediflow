@@ -19,8 +19,6 @@ function useBookingForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, patient, isLoading: authLoading } = useAuth();
-  console.log(`@@@@@@@@@@@@patient`, patient);
-  console.log(`@@@@@@@@@@@@user`, user);
   // URL parameters
   const clinicId = searchParams.get('clinic');
   const clinicName = searchParams.get('clinicName');

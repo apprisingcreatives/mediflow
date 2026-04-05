@@ -295,10 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clinicId?: string,
   ) => {
     try {
-      console.log('Starting signup process for:', email);
-
       // Use regular signup - ensure email confirmation is disabled in Supabase dashboard
-      console.log('Attempting regular signup...');
       const redirectTo =
         typeof window !== 'undefined'
           ? `${window.location.origin}/auth/email-verified`
@@ -332,10 +329,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: new Error('Failed to create user account') };
       }
 
-      console.log('User created successfully:', data.user.id);
-
       // Ensure clinic_id column exists in patients table
-      console.log('Checking if clinic_id column exists...');
       try {
         // Try to run a query that would fail if clinic_id column doesn't exist
         const { error: columnCheckError } = await supabase
@@ -348,10 +342,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           columnCheckError.message?.includes('column') &&
           columnCheckError.message?.includes('clinic_id')
         ) {
-          console.log(
-            'clinic_id column does not exist, attempting to add it...',
-          );
-
           // Try to add the column using a direct SQL query (this might not work with RLS)
           // If this fails, we'll fall back to creating patient without clinic_id
           try {
@@ -363,8 +353,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } catch (alterError) {
             console.warn('Could not add clinic_id column:', alterError);
           }
-        } else {
-          console.log('clinic_id column exists');
         }
       } catch (checkError) {
         console.warn('Error checking clinic_id column:', checkError);
@@ -384,10 +372,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let insertData = { ...patientData };
       if (clinicId) {
         insertData.clinic_id = clinicId;
-        console.log('Including clinic_id in patient data:', clinicId);
       }
 
-      console.log('Creating patient record...');
       let { error: patientError } = await supabase
         .from('patients')
         .insert(insertData);
@@ -420,7 +406,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
       }
 
-      console.log('Signup process completed successfully');
       return { error: null };
     } catch (err) {
       console.error('Unexpected error during signup:', err);

@@ -408,8 +408,6 @@ export default function PatientOnboardingPage() {
     setError(null);
 
     try {
-      console.log('Saving patient data...', patient.id);
-
       const { error, data: updatedPatientData } = await supabase
         .from('patients')
         .update({
@@ -442,9 +440,7 @@ export default function PatientOnboardingPage() {
         throw error;
       }
 
-      console.log('Save successful, refreshing patient...');
       await refreshPatient();
-      console.log('Patient refreshed');
     } catch (err) {
       console.error('Save error:', err);
       setError(
