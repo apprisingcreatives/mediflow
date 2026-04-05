@@ -130,20 +130,19 @@ export default function PatientOnboardingPage() {
   }, [user, authLoading, router]);
 
   // Check if user already has a password set (signed up normally vs invited)
+  // Invited patients come through a recovery/invite link and need to set their password.
+  // Self-registered patients already have a password, so skip step 1.
+  const isFromInvite = user?.user_metadata?.invited_at != null;
+
   useEffect(() => {
-    if (user) {
-      // If user has identities with provider 'email', they signed up with password
-      // Check if they came from an invite link (recovery flow)
-      const isFromInvite = user.app_metadata?.provider === 'email' && 
-        user.user_metadata?.invited_at;
-      
-      // If they already have a password and didn't come from invite, skip password step
-      if (!isFromInvite && patient?.onboarding_completed === false) {
-        // User signed up normally, check if they need to set password
-        // For now, we'll show the password step for all new users
+    if (user && !isFromInvite) {
+      // User signed up normally — skip the password step
+      setPasswordSet(true);
+      if (currentStep === 1) {
+        setCurrentStep(2);
       }
     }
-  }, [user, patient]);
+  }, [user, isFromInvite]);
 
   useEffect(() => {
     if (patient) {

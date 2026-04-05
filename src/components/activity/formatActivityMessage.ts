@@ -1,6 +1,16 @@
+import { format, parseISO } from 'date-fns';
 import { ActivityLog } from '@/hooks/useActivityLogs';
 
 type Perspective = 'patient' | 'clinic_admin' | 'practitioner';
+
+function formatDate(dateStr: string | undefined): string {
+  if (!dateStr) return '';
+  try {
+    return format(parseISO(dateStr), 'MMM d, yyyy');
+  } catch {
+    return dateStr;
+  }
+}
 
 const ACTION_COLORS: Record<string, string> = {
   appointment_completed: 'bg-green-500',
@@ -32,7 +42,8 @@ export function formatActivityMessage(
       const details = [
         meta.service_name,
         meta.practitioner_name ? `with ${meta.practitioner_name}` : null,
-        meta.date,
+        meta.clinic_name ? `at ${meta.clinic_name}` : null,
+        formatDate(meta.date),
       ].filter(Boolean).join(' ');
       if (log.actor_role === 'patient') {
         return isPatient
@@ -56,8 +67,8 @@ export function formatActivityMessage(
 
     case 'appointment_rescheduled':
       return isPatient
-        ? `You rescheduled — moved from ${meta.old_date} ${meta.old_time} to ${meta.new_date} ${meta.new_time}`
-        : `${subject} rescheduled — moved from ${meta.old_date} ${meta.old_time} to ${meta.new_date} ${meta.new_time}`;
+        ? `You rescheduled — moved from ${formatDate(meta.old_date)} ${meta.old_time} to ${formatDate(meta.new_date)} ${meta.new_time}`
+        : `${subject} rescheduled — moved from ${formatDate(meta.old_date)} ${meta.old_time} to ${formatDate(meta.new_date)} ${meta.new_time}`;
 
     case 'appointment_checked_in':
       return isPatient ? 'You checked in' : `${subject} checked in`;

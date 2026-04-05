@@ -1,6 +1,13 @@
-import { formatTime } from "@/components/patient/dashboard";
 import { format } from "date-fns";
 import { AppointmentStepProps } from "../types";
+
+function formatTimeSlot(time: string) {
+  const [hours, minutes] = time.split(":");
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
+}
 
 interface BookingSummaryProps {
   selectedService: AppointmentStepProps["selectedService"];
@@ -41,7 +48,7 @@ function BookingSummary({
         )}
         {time && (
           <p className='text-clinic-text/70 dark:text-white/70'>
-            <span className='font-medium'>Time:</span> {formatTime(time)}
+            <span className='font-medium'>Time:</span> {formatTimeSlot(time)}
           </p>
         )}
         {selectedService && (

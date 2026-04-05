@@ -1,27 +1,31 @@
-"use client";
+'use client';
 
-import { useState, useCallback, useMemo, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/lib/supabase";
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/lib/supabase';
 import {
   useCreateAppointment,
   useGetPractitioners,
   useGetServices,
-} from "@/hooks";
-import useGetTimeSlots from "@/hooks/useGetTimeSlots";
-import { BookingFormData, INITIAL_FORM_DATA } from "../components/appointments/patientBooking/types";
+} from '@/hooks';
+import useGetTimeSlots from '@/hooks/useGetTimeSlots';
+import {
+  BookingFormData,
+  INITIAL_FORM_DATA,
+} from '../components/appointments/patientBooking/types';
 
- function useBookingForm() {
+function useBookingForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, patient, isLoading: authLoading } = useAuth();
-
+  console.log(`@@@@@@@@@@@@patient`, patient);
+  console.log(`@@@@@@@@@@@@user`, user);
   // URL parameters
-  const clinicId = searchParams.get("clinic");
-  const clinicName = searchParams.get("clinicName");
-  const preSelectedServiceId = searchParams.get("service");
-  const preSelectedPractitionerId = searchParams.get("practitioner");
+  const clinicId = searchParams.get('clinic');
+  const clinicName = searchParams.get('clinicName');
+  const preSelectedServiceId = searchParams.get('service');
+  const preSelectedPractitionerId = searchParams.get('practitioner');
 
   // Hooks for data fetching
   const {
@@ -30,15 +34,19 @@ import { BookingFormData, INITIAL_FORM_DATA } from "../components/appointments/p
     loading: isLoadingPractitioners,
   } = useGetPractitioners();
 
-  const { services, fetchServices, loading: isLoadingServices } = useGetServices();
+  const {
+    services,
+    fetchServices,
+    loading: isLoadingServices,
+  } = useGetServices();
 
   const { getAvailableTimeSlots } = useCreateAppointment();
 
   // Form state
   const [formData, setFormData] = useState<BookingFormData>({
     ...INITIAL_FORM_DATA,
-    selectedPractitionerId: preSelectedPractitionerId || "",
-    selectedServiceId: preSelectedServiceId || "",
+    selectedPractitionerId: preSelectedPractitionerId || '',
+    selectedServiceId: preSelectedServiceId || '',
   });
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -48,12 +56,12 @@ import { BookingFormData, INITIAL_FORM_DATA } from "../components/appointments/p
   // Memoized selected entities
   const selectedService = useMemo(
     () => services.find((s) => s.id === formData.selectedServiceId),
-    [services, formData.selectedServiceId]
+    [services, formData.selectedServiceId],
   );
 
   const selectedPractitioner = useMemo(
     () => practitioners.find((p) => p.id === formData.selectedPractitionerId),
-    [practitioners, formData.selectedPractitionerId]
+    [practitioners, formData.selectedPractitionerId],
   );
 
   // Time slots hook
@@ -63,11 +71,11 @@ import { BookingFormData, INITIAL_FORM_DATA } from "../components/appointments/p
       date: formData.date ? new Date(formData.date) : undefined,
       service: selectedService,
       selectedTime: formData.time,
-      mode: "create",
+      mode: 'create',
       appointmentId: undefined,
       getAvailableTimeSlots,
       onSelectedTimeUnavailable: () =>
-        setFormData((prev) => ({ ...prev, time: "" })),
+        setFormData((prev) => ({ ...prev, time: '' })),
     });
 
   // Fetch practitioners and services when clinicId is available
@@ -93,9 +101,20 @@ import { BookingFormData, INITIAL_FORM_DATA } from "../components/appointments/p
         phone: patient.phone || prev.phone,
         dateOfBirth: patient.date_of_birth || prev.dateOfBirth,
         gender: patient.gender || prev.gender,
+        address: patient.address || prev.address,
+        city: patient.city || prev.city,
+        emergencyContactName:
+          patient.emergency_contact_name || prev.emergencyContactName,
+        emergencyContactPhone:
+          patient.emergency_contact_phone || prev.emergencyContactPhone,
+        bloodType: patient.blood_type || prev.bloodType,
         medications: patient.current_medications || prev.medications,
-        allergies: (patient.allergies || []).join(", ") || prev.allergies,
+        allergies: (patient.allergies || []).join(', ') || prev.allergies,
         conditions: patient.chronic_conditions || prev.conditions,
+        medicalNotes: patient.medical_notes || prev.medicalNotes,
+        insuranceProvider: patient.insurance_provider || prev.insuranceProvider,
+        insurancePolicyNumber:
+          patient.insurance_policy_number || prev.insurancePolicyNumber,
       }));
     }
   }, [patient]);
@@ -136,7 +155,7 @@ import { BookingFormData, INITIAL_FORM_DATA } from "../components/appointments/p
     if (patient && !patient.onboarding_completed) {
       const currentUrl = window.location.href;
       router.push(
-        `/patient/onboarding?redirect=${encodeURIComponent(currentUrl)}`
+        `/patient/onboarding?redirect=${encodeURIComponent(currentUrl)}`,
       );
       return false;
     }
@@ -163,17 +182,17 @@ import { BookingFormData, INITIAL_FORM_DATA } from "../components/appointments/p
 
   // Form validation
   const validateForm = useCallback((): string | null => {
-    if (!user || !patient) {
-      return "Please log in to complete your booking.";
+    if (!user) {
+      return 'Please log in to complete your booking.';
     }
     if (!formData.selectedPractitionerId) {
-      return "Please select a practitioner.";
+      return 'Please select a practitioner.';
     }
     if (!formData.selectedServiceId) {
-      return "Please select a service.";
+      return 'Please select a service.';
     }
     if (!formData.date || !formData.time) {
-      return "Please select both a date and time for your appointment.";
+      return 'Please select both a date and time for your appointment.';
     }
     return null;
   }, [user, patient, formData]);
@@ -195,13 +214,13 @@ import { BookingFormData, INITIAL_FORM_DATA } from "../components/appointments/p
       } = await supabase.auth.getSession();
 
       if (!session) {
-        throw new Error("No active session");
+        throw new Error('No active session');
       }
 
-      const response = await fetch("/api/appointments", {
-        method: "POST",
+      const response = await fetch('/api/appointments', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
@@ -211,22 +230,46 @@ import { BookingFormData, INITIAL_FORM_DATA } from "../components/appointments/p
           appointment_date: formData.date,
           appointment_time: formData.time,
           notes: formData.symptoms || null,
+          patient_info: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            phone: formData.phone,
+            date_of_birth: formData.dateOfBirth || null,
+            gender: formData.gender || null,
+            address: formData.address || null,
+            city: formData.city || null,
+            emergency_contact_name: formData.emergencyContactName || null,
+            emergency_contact_phone: formData.emergencyContactPhone || null,
+            blood_type: formData.bloodType || null,
+            current_medications: formData.medications || null,
+            allergies: formData.allergies
+              ? formData.allergies
+                  .split(',')
+                  .map((a) => a.trim())
+                  .filter(Boolean)
+              : null,
+            chronic_conditions:
+              formData.conditions.length > 0 ? formData.conditions : null,
+            medical_notes: formData.medicalNotes || null,
+            insurance_provider: formData.insuranceProvider || null,
+            insurance_policy_number: formData.insurancePolicyNumber || null,
+          },
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create appointment");
+        throw new Error(data.error || 'Failed to create appointment');
       }
 
       setCurrentStep(4);
     } catch (err) {
-      console.error("Booking error:", err);
+      console.error('Booking error:', err);
       setSubmitError(
         err instanceof Error
           ? err.message
-          : "Failed to complete booking. Please try again."
+          : 'Failed to complete booking. Please try again.',
       );
     } finally {
       setIsSubmitting(false);
@@ -282,5 +325,4 @@ import { BookingFormData, INITIAL_FORM_DATA } from "../components/appointments/p
   };
 }
 
-
-export default useBookingForm
+export default useBookingForm;

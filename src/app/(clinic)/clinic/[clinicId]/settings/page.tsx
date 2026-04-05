@@ -1,19 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
-  Settings,
   Building2,
   Bell,
   Shield,
-  Palette,
   Save,
   Loader2,
+  CheckCircle,
+  AlertCircle,
 } from 'lucide-react';
 import { useClinicContext } from '../layout';
 
@@ -21,22 +21,60 @@ export default function SettingsPage() {
   const { clinic, admin } = useClinicContext();
   const clinicId = clinic?.id;
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Form state
-  const [clinicName, setClinicName] = useState(clinic?.name || '');
-  const [clinicEmail, setClinicEmail] = useState(clinic?.email || '');
-  const [notifications, setNotifications] = useState({
-    email: true,
-    sms: false,
-    appointmentReminders: true,
-    marketingEmails: false,
-  });
+  const [clinicName, setClinicName] = useState('');
+  const [clinicEmail, setClinicEmail] = useState('');
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [appointmentReminders, setAppointmentReminders] = useState(true);
+
+  // Initialize form from clinic data
+  useEffect(() => {
+    if (clinic) {
+      setClinicName(clinic.name || '');
+      setClinicEmail(clinic.email || '');
+      setEmailNotifications(clinic.email_notifications_enabled ?? true);
+      setAppointmentReminders(clinic.appointment_reminders_enabled ?? true);
+    }
+  }, [clinic]);
+
+  const handleEmailToggle = (checked: boolean) => {
+    setEmailNotifications(checked);
+    if (!checked) {
+      setAppointmentReminders(false);
+    }
+  };
 
   const handleSave = async () => {
+    if (!clinicId) return;
     setIsSaving(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsSaving(false);
+    setSaveStatus('idle');
+
+    try {
+      const res = await fetch(`/api/clinic/${clinicId}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: clinicName,
+          email: clinicEmail,
+          email_notifications_enabled: emailNotifications,
+          appointment_reminders_enabled: appointmentReminders,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to save settings');
+      }
+
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -101,7 +139,7 @@ export default function SettingsPage() {
               Notifications
             </h3>
             <p className='text-sm text-clinic-text/60 dark:text-white/60'>
-              Configure how you receive notifications
+              Configure email notifications sent to patients
             </p>
           </div>
         </div>
@@ -113,71 +151,28 @@ export default function SettingsPage() {
                 Email Notifications
               </p>
               <p className='text-sm text-clinic-text/60 dark:text-white/60'>
-                Receive notifications via email
+                Send confirmation and update emails to patients when appointments are created or changed
               </p>
             </div>
             <Switch
-              checked={notifications.email}
-              onCheckedChange={(checked) =>
-                setNotifications((prev) => ({ ...prev, email: checked }))
-              }
+              checked={emailNotifications}
+              onCheckedChange={handleEmailToggle}
             />
           </div>
 
           <div className='flex items-center justify-between'>
-            <div>
-              <p className='font-medium text-clinic-navy dark:text-white'>
-                SMS Notifications
-              </p>
-              <p className='text-sm text-clinic-text/60 dark:text-white/60'>
-                Receive notifications via SMS
-              </p>
-            </div>
-            <Switch
-              checked={notifications.sms}
-              onCheckedChange={(checked) =>
-                setNotifications((prev) => ({ ...prev, sms: checked }))
-              }
-            />
-          </div>
-
-          <div className='flex items-center justify-between'>
-            <div>
+            <div className={!emailNotifications ? 'opacity-50' : ''}>
               <p className='font-medium text-clinic-navy dark:text-white'>
                 Appointment Reminders
               </p>
               <p className='text-sm text-clinic-text/60 dark:text-white/60'>
-                Send reminders to patients before appointments
+                Send reminder emails to patients 24 hours before and at appointment start time
               </p>
             </div>
             <Switch
-              checked={notifications.appointmentReminders}
-              onCheckedChange={(checked) =>
-                setNotifications((prev) => ({
-                  ...prev,
-                  appointmentReminders: checked,
-                }))
-              }
-            />
-          </div>
-
-          <div className='flex items-center justify-between'>
-            <div>
-              <p className='font-medium text-clinic-navy dark:text-white'>
-                Marketing Emails
-              </p>
-              <p className='text-sm text-clinic-text/60 dark:text-white/60'>
-                Receive updates about new features and promotions
-              </p>
-            </div>
-            <Switch
-              checked={notifications.marketingEmails}
-              onCheckedChange={(checked) =>
-                setNotifications((prev) => ({
-                  ...prev,
-                  marketingEmails: checked,
-                }))
-              }
+              checked={appointmentReminders}
+              onCheckedChange={setAppointmentReminders}
+              disabled={!emailNotifications}
             />
           </div>
         </div>
@@ -199,7 +194,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className='space-y-4'>
+        <div className='space-y-4 space-x-2'>
           <Link href={`/clinic/${clinicId}/settings/change-password`}>
             <Button variant='outline'>Change Password</Button>
           </Link>
@@ -208,7 +203,19 @@ export default function SettingsPage() {
       </div>
 
       {/* Save Button */}
-      <div className='flex justify-end'>
+      <div className='flex items-center justify-end gap-3'>
+        {saveStatus === 'success' && (
+          <span className='flex items-center gap-1 text-sm text-green-600 dark:text-green-400'>
+            <CheckCircle className='w-4 h-4' />
+            Settings saved
+          </span>
+        )}
+        {saveStatus === 'error' && (
+          <span className='flex items-center gap-1 text-sm text-red-600 dark:text-red-400'>
+            <AlertCircle className='w-4 h-4' />
+            Failed to save
+          </span>
+        )}
         <Button
           onClick={handleSave}
           disabled={isSaving}

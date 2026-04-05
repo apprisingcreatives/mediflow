@@ -106,23 +106,23 @@ export function PatientHeader({ patient, onSignOut }: PatientHeaderProps) {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="w-4 h-4 mr-2" />
-                  Profile
+                <DropdownMenuItem asChild>
+                  <Link href="/patient">
+                    <User className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/patient/history">
+                    <FileText className="w-4 h-4 mr-2" />
+                    Visit History
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/patient/settings">
                     <Settings className="w-4 h-4 mr-2" />
                     Settings
                   </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Bell className="w-4 h-4 mr-2" />
-                  Notifications
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Medical Records
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onSignOut} className="text-red-500">

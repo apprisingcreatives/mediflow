@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   createContext,
@@ -6,11 +6,11 @@ import {
   useEffect,
   useState,
   ReactNode,
-} from "react";
-import { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
-import { Patient } from "@/types/database";
-import { isClinicStaff } from "@/lib/permissions";
+} from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { Patient } from '@/types/database';
+import { isClinicStaff } from '@/lib/permissions';
 
 interface Practitioner {
   id: string;
@@ -61,44 +61,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchPatient = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from("patients")
-        .select("*")
-        .eq("auth_user_id", userId)
+        .from('patients')
+        .select('*')
+        .eq('auth_user_id', userId)
         .single();
 
-      if (error && error.code !== "PGRST116") {
-        console.error("Error fetching patient:", error);
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching patient:', error);
       }
       setPatient(data);
     } catch (err) {
-      console.error("Failed to fetch patient:", err);
+      console.error('Failed to fetch patient:', err);
     }
   };
 
-  const fetchPractitioner = async (userId: string): Promise<Practitioner | null> => {
+  const fetchPractitioner = async (
+    userId: string,
+  ): Promise<Practitioner | null> => {
     try {
       // Practitioners can belong to multiple clinics, get the first active one
       const { data, error } = await supabase
-        .from("practitioners")
-        .select("id, clinic_id, auth_user_id, name, email, specialization, is_active, role")
-        .eq("auth_user_id", userId)
-        .eq("is_active", true)
+        .from('practitioners')
+        .select(
+          'id, clinic_id, auth_user_id, name, email, specialization, is_active, role',
+        )
+        .eq('auth_user_id', userId)
+        .eq('is_active', true)
         .limit(1)
         .single();
 
-      if (error && error.code !== "PGRST116") {
-        console.error("Error fetching practitioner:", error);
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching practitioner:', error);
       }
       setPractitioner(data);
       return data;
     } catch (err) {
-      console.error("Failed to fetch practitioner:", err);
+      console.error('Failed to fetch practitioner:', err);
       return null;
     }
   };
 
   const refreshPatient = async () => {
-    if (user) {
+    const role = user?.user_metadata?.role;
+    if (user && (!role || role === 'patient')) {
       await fetchPatient(user.id);
     }
   };
@@ -116,8 +121,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
 
-      if (session?.user.user_metadata.role === "patient") {
-        await fetchPatient(session.user.id);
+      const role = session?.user.user_metadata?.role;
+      if (!role || role === 'patient') {
+        await fetchPatient(`${session?.user.id}`);
       }
 
       setIsLoading(false);
@@ -131,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!isMounted) return;
 
       // Only handle meaningful auth events, not token refreshes
-      if (event === "TOKEN_REFRESHED") {
+      if (event === 'TOKEN_REFRESHED') {
         // Token refresh doesn't need to trigger state updates
         // unless the user actually changed
         if (session?.user?.id === user?.id) {
@@ -144,10 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (session?.user) {
         // Only fetch patient if user changed
-        if (
-          session.user.id !== user?.id &&
-          session.user.user_metadata.role === "patient"
-        ) {
+        const role = session.user.user_metadata?.role;
+        if (session.user.id !== user?.id && (!role || role === 'patient')) {
           await fetchPatient(session.user.id);
         }
       } else {
@@ -156,9 +160,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Don't reset loading state on every auth event
       if (
-        event === "SIGNED_IN" ||
-        event === "SIGNED_OUT" ||
-        event === "INITIAL_SESSION"
+        event === 'SIGNED_IN' ||
+        event === 'SIGNED_OUT' ||
+        event === 'INITIAL_SESSION'
       ) {
         setIsLoading(false);
       }
@@ -170,7 +174,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user?.id]);
 
-  const signIn = async (email: string, password: string): Promise<SignInResult> => {
+  const signIn = async (
+    email: string,
+    password: string,
+  ): Promise<SignInResult> => {
     try {
       // First, authenticate with Supabase Auth
       const { data: authData, error: authError } =
@@ -188,12 +195,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (authData.user) {
         const role = authData.user.user_metadata.role;
 
-        if (role === "patient") {
+        if (role === 'patient') {
           // Fetch patient data
           const { data: patientData, error: patientError } = await supabase
-            .from("patients")
-            .select("*")
-            .eq("auth_user_id", authData.user.id)
+            .from('patients')
+            .select('*')
+            .eq('auth_user_id', authData.user.id)
             .single();
 
           // If patient record not found or query failed, allow login (might be clinic-specific patient)
@@ -203,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await supabase.auth.signOut();
             return {
               error: new Error(
-                "This account is not yet activated, please check your email.",
+                'This account is not yet activated, please check your email.',
               ),
             };
           }
@@ -213,36 +220,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setPatient(patientData);
           }
 
-          return { error: null, redirectTo: "/patient" };
-        } else if (role === "clinic_practitioner" || isClinicStaff({ role })) {
+          return { error: null, redirectTo: '/patient' };
+        } else if (role === 'clinic_practitioner' || isClinicStaff({ role })) {
           // Fetch practitioner data - get first active practitioner record
-          const { data: practitionerData, error: practitionerError } = await supabase
-            .from("practitioners")
-            .select("id, clinic_id, auth_user_id, name, email, specialization, is_active, role")
-            .eq("auth_user_id", authData.user.id)
-            .eq("is_active", true)
-            .limit(1)
-            .single();
+          const { data: practitionerData, error: practitionerError } =
+            await supabase
+              .from('practitioners')
+              .select(
+                'id, clinic_id, auth_user_id, name, email, specialization, is_active, role',
+              )
+              .eq('auth_user_id', authData.user.id)
+              .eq('is_active', true)
+              .limit(1)
+              .single();
 
           // Check if practitioner exists and is active
           if (practitionerError) {
-            if (practitionerError.code === "PGRST116") {
+            if (practitionerError.code === 'PGRST116') {
               // No practitioner record found
               await supabase.auth.signOut();
               return {
                 error: new Error(
-                  "No active practitioner account found. Please contact your clinic administrator.",
+                  'No active practitioner account found. Please contact your clinic administrator.',
                 ),
               };
             }
-            console.error("Error fetching practitioner:", practitionerError);
+            console.error('Error fetching practitioner:', practitionerError);
           }
 
           if (!practitionerData) {
             await supabase.auth.signOut();
             return {
               error: new Error(
-                "No active practitioner account found. Please contact your clinic administrator.",
+                'No active practitioner account found. Please contact your clinic administrator.',
               ),
             };
           }
@@ -252,7 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await supabase.auth.signOut();
             return {
               error: new Error(
-                "This account is not yet activated, please check your email.",
+                'This account is not yet activated, please check your email.',
               ),
             };
           }
@@ -265,15 +275,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             error: null,
             redirectTo: `/practitioner/${practitionerData.id}/clinic/${practitionerData.clinic_id}/dashboard`,
           };
-        } else if (role === "clinic_admin") {
+        } else if (role === 'clinic_admin') {
           // Clinic admins go to their clinic dashboard
-          return { error: null, redirectTo: "/clinic" };
+          return { error: null, redirectTo: '/clinic' };
         }
       }
 
       return { error: null };
     } catch (err) {
-      return { error: new Error("An unexpected error occurred during login") };
+      return { error: new Error('An unexpected error occurred during login') };
     }
   };
 
@@ -285,12 +295,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clinicId?: string,
   ) => {
     try {
-      console.log("Starting signup process for:", email);
+      console.log('Starting signup process for:', email);
 
       // Use regular signup - ensure email confirmation is disabled in Supabase dashboard
-      console.log("Attempting regular signup...");
+      console.log('Attempting regular signup...');
       const redirectTo =
-        typeof window !== "undefined"
+        typeof window !== 'undefined'
           ? `${window.location.origin}/auth/email-verified`
           : undefined;
 
@@ -302,13 +312,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             first_name: firstName,
             last_name: lastName,
+            role: 'patient',
           },
         },
       });
 
       if (error) {
-        console.error("Signup error:", error);
-        console.error("Error details:", {
+        console.error('Signup error:', error);
+        console.error('Error details:', {
           message: error.message,
           status: error.status,
           name: error.name,
@@ -317,28 +328,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!data.user) {
-        console.error("No user returned from signup");
-        return { error: new Error("Failed to create user account") };
+        console.error('No user returned from signup');
+        return { error: new Error('Failed to create user account') };
       }
 
-      console.log("User created successfully:", data.user.id);
+      console.log('User created successfully:', data.user.id);
 
       // Ensure clinic_id column exists in patients table
-      console.log("Checking if clinic_id column exists...");
+      console.log('Checking if clinic_id column exists...');
       try {
         // Try to run a query that would fail if clinic_id column doesn't exist
         const { error: columnCheckError } = await supabase
-          .from("patients")
-          .select("clinic_id")
+          .from('patients')
+          .select('clinic_id')
           .limit(1);
 
         if (
           columnCheckError &&
-          columnCheckError.message?.includes("column") &&
-          columnCheckError.message?.includes("clinic_id")
+          columnCheckError.message?.includes('column') &&
+          columnCheckError.message?.includes('clinic_id')
         ) {
           console.log(
-            "clinic_id column does not exist, attempting to add it...",
+            'clinic_id column does not exist, attempting to add it...',
           );
 
           // Try to add the column using a direct SQL query (this might not work with RLS)
@@ -347,16 +358,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // This is a workaround - we'll try to insert without clinic_id first
             // and then update if the column gets added later
             console.warn(
-              "clinic_id column missing - creating patient without clinic association for now",
+              'clinic_id column missing - creating patient without clinic association for now',
             );
           } catch (alterError) {
-            console.warn("Could not add clinic_id column:", alterError);
+            console.warn('Could not add clinic_id column:', alterError);
           }
         } else {
-          console.log("clinic_id column exists");
+          console.log('clinic_id column exists');
         }
       } catch (checkError) {
-        console.warn("Error checking clinic_id column:", checkError);
+        console.warn('Error checking clinic_id column:', checkError);
       }
 
       // Create patient record with clinic association (if column exists)
@@ -373,30 +384,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let insertData = { ...patientData };
       if (clinicId) {
         insertData.clinic_id = clinicId;
-        console.log("Including clinic_id in patient data:", clinicId);
+        console.log('Including clinic_id in patient data:', clinicId);
       }
 
-      console.log("Creating patient record...");
+      console.log('Creating patient record...');
       let { error: patientError } = await supabase
-        .from("patients")
+        .from('patients')
         .insert(insertData);
 
       // If clinic_id column doesn't exist, retry without it
-      if (patientError && patientError.message?.includes("clinic_id")) {
+      if (patientError && patientError.message?.includes('clinic_id')) {
         console.warn(
-          "clinic_id column not found, creating patient without clinic association",
+          'clinic_id column not found, creating patient without clinic association',
         );
         const { error: retryError } = await supabase
-          .from("patients")
+          .from('patients')
           .insert(patientData);
 
         if (retryError) {
-          console.error("Error creating patient record:", retryError);
-          return { error: new Error("Failed to create patient profile") };
+          console.error('Error creating patient record:', retryError);
+          return { error: new Error('Failed to create patient profile') };
         }
       } else if (patientError) {
-        console.error("Error creating patient record:", patientError);
-        console.error("Patient error details:", {
+        console.error('Error creating patient record:', patientError);
+        console.error('Patient error details:', {
           message: patientError.message,
           details: patientError.details,
           hint: patientError.hint,
@@ -409,11 +420,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
       }
 
-      console.log("Signup process completed successfully");
+      console.log('Signup process completed successfully');
       return { error: null };
     } catch (err) {
-      console.error("Unexpected error during signup:", err);
-      return { error: new Error("An unexpected error occurred during signup") };
+      console.error('Unexpected error during signup:', err);
+      return { error: new Error('An unexpected error occurred during signup') };
     }
   };
 
@@ -427,7 +438,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
+      provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/patient`,
       },
@@ -437,7 +448,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithApple = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: "apple",
+      provider: 'apple',
       options: {
         redirectTo: `${window.location.origin}/patient`,
       },
@@ -474,7 +485,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }

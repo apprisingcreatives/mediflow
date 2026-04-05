@@ -1,10 +1,9 @@
-"use client";
+'use client';
 
-import { Suspense } from "react";
-import { Progress } from "@/components/ui/progress";
-import { PatientChatbot } from "@/components/chatbot/patient-chatbot";
+import { Suspense } from 'react';
+import { Progress } from '@/components/ui/progress';
+import { PatientChatbot } from '@/components/chatbot/patient-chatbot';
 import {
-
   PersonalInfoStep,
   MedicalHistoryStep,
   AppointmentStep,
@@ -16,8 +15,8 @@ import {
   BookingNavigation,
   ErrorAlert,
   BOOKING_STEPS,
-} from "@/components/appointments/patientBooking";
-import { useBookingForm } from "@/hooks";
+} from '@/components/appointments/patientBooking';
+import { useBookingForm } from '@/hooks';
 
 function BookingContent() {
   const {
@@ -45,7 +44,7 @@ function BookingContent() {
 
   // Get current URL for redirects
   const currentUrl =
-    typeof window !== "undefined" ? window.location.href : "/book";
+    typeof window !== 'undefined' ? window.location.href : '/book';
 
   // Render step content based on current step
   const renderStepContent = () => {
@@ -90,14 +89,13 @@ function BookingContent() {
         return null;
     }
   };
-
   return (
-    <div className="min-h-screen bg-clinic-bg dark:bg-slate-900">
+    <div className='min-h-screen bg-clinic-bg dark:bg-slate-900'>
       {/* Header */}
       <BookingHeader user={user} patient={patient} redirectUrl={currentUrl} />
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
+      <main className='container mx-auto px-4 py-8'>
+        <div className='max-w-2xl mx-auto'>
           {/* Login Prompt for Non-authenticated Users */}
           {!authLoading && !user && currentStep === 1 && (
             <LoginPrompt redirectUrl={currentUrl} />
@@ -110,14 +108,14 @@ function BookingContent() {
           {currentStep < 4 && <ProgressStepper currentStep={currentStep} />}
 
           {/* Form Card */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-8">
+          <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-8'>
             {/* Step Title & Progress */}
             {currentStep < 4 && (
-              <div className="mb-6">
-                <h2 className="font-display text-2xl font-bold text-clinic-navy dark:text-white mb-2">
+              <div className='mb-6'>
+                <h2 className='font-display text-2xl font-bold text-clinic-navy dark:text-white mb-2'>
                   {BOOKING_STEPS[currentStep - 1].title}
                 </h2>
-                <Progress value={progress} className="h-1" />
+                <Progress value={progress} className='h-1' />
               </div>
             )}
 
@@ -149,8 +147,8 @@ export default function BookingPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center">
-          <div className="animate-pulse text-clinic-navy dark:text-white">
+        <div className='min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center'>
+          <div className='animate-pulse text-clinic-navy dark:text-white'>
             Loading booking form...
           </div>
         </div>

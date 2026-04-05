@@ -32,21 +32,21 @@ function LoginContent() {
   const redirectUrl = searchParams.get("redirect") || "/patient";
 
   useEffect(() => {
-    if (!authLoading && user) {
-      // Handle patient redirect
-      if (patient) {
-        if (patient.clinic_id) {
-          router.push(`/clinic/${patient.clinic_id}/patient`);
-        } else {
-          router.push(redirectUrl);
-        }
+    if (!authLoading && user && !isLoading) {
+      // If there's a custom redirect param, don't override it
+      const hasCustomRedirect = searchParams.get("redirect");
+      if (hasCustomRedirect) {
+        router.push(redirectUrl);
+        return;
       }
-      // Handle practitioner redirect
-      else if (practitioner) {
+      // Default role-based redirects
+      if (patient) {
+        router.push('/patient');
+      } else if (practitioner) {
         router.push(`/practitioner/${practitioner.id}/clinic/${practitioner.clinic_id}/dashboard`);
       }
     }
-  }, [user, patient, practitioner, authLoading, router, redirectUrl]);
+  }, [user, patient, practitioner, authLoading, isLoading, router, redirectUrl, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,11 +58,11 @@ function LoginContent() {
     if (result.error) {
       setError(result.error.message);
       setIsLoading(false);
-    } else if (result.redirectTo) {
-      // Use the redirect URL from signIn result
-      router.push(result.redirectTo);
+    } else {
+      // Prefer the redirect query param over the default role-based redirect
+      const hasCustomRedirect = searchParams.get("redirect");
+      router.push(hasCustomRedirect ? redirectUrl : (result.redirectTo || redirectUrl));
     }
-    // If no redirectTo, let useEffect handle it after state updates
   };
 
   const handleGoogleSignIn = async () => {

@@ -13,7 +13,7 @@ export default function PractitionerSettingsPage() {
   const params = useParams();
   const practitionerId = params.practitionerId as string;
   const clinicId = params.clinicId as string;
-  const { profile } = usePractitionerContext();
+  const { profile, refreshProfile } = usePractitionerContext();
 
   const [name, setName] = useState(profile?.name || '');
   const [saving, setSaving] = useState(false);
@@ -31,6 +31,7 @@ export default function PractitionerSettingsPage() {
         .update({ name: name.trim(), updated_at: new Date().toISOString() })
         .eq('id', profile.id);
       if (error) throw error;
+      await refreshProfile();
       setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update name');
