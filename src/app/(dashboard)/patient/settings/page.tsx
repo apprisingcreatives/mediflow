@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { KeyRound, ArrowLeft } from 'lucide-react';
+import { KeyRound } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function PatientSettingsPage() {
@@ -50,14 +50,6 @@ export default function PatientSettingsPage() {
 
   return (
     <div className='container mx-auto px-4 py-8 max-w-2xl'>
-      <Link
-        href='/patient'
-        className='inline-flex items-center gap-2 text-sm text-clinic-text/60 dark:text-white/60 hover:text-clinic-navy dark:hover:text-white transition-colors mb-6'
-      >
-        <ArrowLeft className='w-4 h-4' />
-        Back to Dashboard
-      </Link>
-
       <h2 className='font-display text-xl font-bold text-clinic-navy dark:text-white mb-6'>
         Settings
       </h2>

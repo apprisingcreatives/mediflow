@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/use-auth';
 import useGetAppointments from '@/hooks/useGetAppointments';
@@ -45,9 +44,6 @@ export default function PatientHistoryPage() {
     <div className="min-h-screen bg-clinic-bg dark:bg-slate-900">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/patient')}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <div>
             <h1 className="text-xl font-display font-bold text-clinic-navy dark:text-white">
               My History

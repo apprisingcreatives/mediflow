@@ -1,4 +1,5 @@
 // Components
+export { PatientSidebar } from './PatientSidebar';
 export { PatientHeader } from './PatientHeader';
 export { QuickActions } from './QuickActions';
 export { UpcomingAppointments } from './UpcomingAppointments';
