@@ -28,6 +28,8 @@ interface Clinic {
   is_subscription_active?: boolean;
   payment_status?: string;
   slug?: string;
+  email_notifications_enabled: boolean;
+  appointment_reminders_enabled: boolean;
 }
 
 interface ClinicAdmin {

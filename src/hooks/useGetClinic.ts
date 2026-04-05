@@ -20,6 +20,8 @@ interface Clinic {
   is_subscription_active?: boolean;
   payment_status?: string;
   slug?: string;
+  email_notifications_enabled: boolean;
+  appointment_reminders_enabled: boolean;
   clinic_services?: Array<{
     id: string;
     name: string;
@@ -72,6 +74,8 @@ const useGetClinic = () => {
           is_subscription_active,
           payment_status,
           slug,
+          email_notifications_enabled,
+          appointment_reminders_enabled,
           clinic_services (
             id,
             name,

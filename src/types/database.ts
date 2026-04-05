@@ -43,6 +43,9 @@ export interface Clinic {
   stripe_subscription_id: string | null;
 
   slug: string | null;
+
+  email_notifications_enabled: boolean;
+  appointment_reminders_enabled: boolean;
 }
 
 
