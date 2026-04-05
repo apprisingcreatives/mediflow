@@ -81,12 +81,11 @@ export default function ClinicPage() {
     }
   }, [clinicId, clinic, fetchClinic]);
 
+  const isPatientOrGuest = !user || (!role || role === 'patient');
+
   const renderButtonText = () => {
     if (!user) {
       return 'Sign in to Book';
-    }
-    if (isClinicAdmin({ role, clinicId, userClinicId })) {
-      return 'Manage This Service';
     }
     return 'Book This Service';
   };
@@ -246,14 +245,16 @@ export default function ClinicPage() {
             {/* CTA */}
             <div className='flex flex-col gap-3'>
               {renderDashboardButton()}
-              <Button
-                size='lg'
-                className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
-                onClick={() => handleBooking()}
-              >
-                <Calendar className='w-5 h-5 mr-2' />
-                {user ? 'Book Appointment' : 'Sign in to Book'}
-              </Button>
+              {isPatientOrGuest && (
+                <Button
+                  size='lg'
+                  className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
+                  onClick={() => handleBooking()}
+                >
+                  <Calendar className='w-5 h-5 mr-2' />
+                  {user ? 'Book Appointment' : 'Sign in to Book'}
+                </Button>
+              )}
               {!user && (
                 <div className='flex flex-col gap-2'>
                   <Button
@@ -431,13 +432,15 @@ export default function ClinicPage() {
                   </span>
                 </div>
 
-                <Button
-                  className='w-full mt-4 bg-clinic-navy hover:bg-clinic-navy/90 text-white'
-                  onClick={() => handleBooking(service.id, service.name)}
-                >
-                  {renderButtonText()}
-                  <ChevronRight className='w-4 h-4 ml-1' />
-                </Button>
+                {isPatientOrGuest && (
+                  <Button
+                    className='w-full mt-4 bg-clinic-navy hover:bg-clinic-navy/90 text-white'
+                    onClick={() => handleBooking(service.id, service.name)}
+                  >
+                    {renderButtonText()}
+                    <ChevronRight className='w-4 h-4 ml-1' />
+                  </Button>
+                )}
               </div>
             ))}
 
@@ -486,22 +489,24 @@ export default function ClinicPage() {
                     </p>
                   )}
 
-                  <Button
-                    variant='outline'
-                    className='w-full border-clinic-teal text-clinic-teal hover:bg-clinic-teal hover:text-white'
-                    onClick={() =>
-                      handleBooking(
-                        undefined,
-                        undefined,
-                        doctor.id,
-                        doctor.name,
-                      )
-                    }
-                  >
-                    {user
-                      ? `Book with ${doctor.name.split(' ')[0]}`
-                      : 'Sign in to Book'}
-                  </Button>
+                  {isPatientOrGuest && (
+                    <Button
+                      variant='outline'
+                      className='w-full border-clinic-teal text-clinic-teal hover:bg-clinic-teal hover:text-white'
+                      onClick={() =>
+                        handleBooking(
+                          undefined,
+                          undefined,
+                          doctor.id,
+                          doctor.name,
+                        )
+                      }
+                    >
+                      {user
+                        ? `Book with ${doctor.name.split(' ')[0]}`
+                        : 'Sign in to Book'}
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
