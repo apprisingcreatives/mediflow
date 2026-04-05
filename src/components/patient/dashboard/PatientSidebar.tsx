@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   Calendar,
   FileText,
+  HelpCircle,
   History,
   LayoutDashboard,
   LogOut,
@@ -28,6 +29,7 @@ const navItems = [
   { label: 'Visit History', href: '/patient/history', icon: History },
   { label: 'Messages', href: '/patient/messages', icon: MessageSquare },
   { label: 'Medical Records', href: '/patient/records', icon: FileText },
+  { label: 'Help', href: '/patient/help', icon: HelpCircle },
   { label: 'Settings', href: '/patient/settings', icon: Settings },
 ];
 

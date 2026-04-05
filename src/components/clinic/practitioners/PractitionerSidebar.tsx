@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   Calendar,
   Clock,
+  HelpCircle,
   User,
   LayoutDashboard,
   LogOut,
@@ -59,6 +60,11 @@ export function PractitionerSidebar({
       label: 'Profile',
       href: `${basePath}/profile`,
       icon: User,
+    },
+    {
+      label: 'Help',
+      href: `${basePath}/help`,
+      icon: HelpCircle,
     },
     {
       label: 'Settings',
