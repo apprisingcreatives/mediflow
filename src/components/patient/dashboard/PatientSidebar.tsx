@@ -6,10 +6,12 @@ import { cn } from '@/lib/utils';
 import {
   Calendar,
   FileText,
+  HelpCircle,
   History,
   LayoutDashboard,
   LogOut,
   MessageSquare,
+  MessageSquareWarning,
   ChevronLeft,
   Settings,
 } from 'lucide-react';
@@ -28,6 +30,8 @@ const navItems = [
   { label: 'Visit History', href: '/patient/history', icon: History },
   { label: 'Messages', href: '/patient/messages', icon: MessageSquare },
   { label: 'Medical Records', href: '/patient/records', icon: FileText },
+  { label: 'Help', href: '/patient/help', icon: HelpCircle },
+  { label: 'Report', href: '/patient/report', icon: MessageSquareWarning },
   { label: 'Settings', href: '/patient/settings', icon: Settings },
 ];
 

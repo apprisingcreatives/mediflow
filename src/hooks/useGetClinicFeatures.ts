@@ -113,9 +113,7 @@ const useGetClinicFeatures = () => {
           }
         },
       )
-      .subscribe((status) => {
-        console.log(`📡 Subscription status: ${status}`);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);

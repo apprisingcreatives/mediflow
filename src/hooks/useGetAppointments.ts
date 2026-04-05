@@ -273,9 +273,6 @@ const useGetAppointments = (options: UseGetAppointmentsOptions = {}) => {
           handleRealtimeChange
         )
         .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log(`Subscribed to appointments realtime for clinic: ${clinicId}`);
-          }
           if (status === 'CHANNEL_ERROR') {
             console.error('Realtime subscription error');
           }
@@ -309,9 +306,6 @@ const useGetAppointments = (options: UseGetAppointmentsOptions = {}) => {
           handleRealtimeChange
         )
         .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log(`Subscribed to appointments realtime for patient: ${patientId}`);
-          }
           if (status === 'CHANNEL_ERROR') {
             console.error('Realtime subscription error');
           }

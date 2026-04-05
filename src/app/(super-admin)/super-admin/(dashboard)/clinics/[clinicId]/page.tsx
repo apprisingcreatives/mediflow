@@ -12,7 +12,6 @@ import {
   MapPin,
   Phone,
   Globe,
-  Edit,
   Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,14 +21,6 @@ import {
   useGetClinicFeatures,
   usePutClinicFeatures,
 } from '@/hooks';
-import { ClinicForm } from '@/components/forms/ClinicForm';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { Clinic } from '@/types/database';
 import { AIFeature } from '@/hooks/useGetFeatures';
 
@@ -105,8 +96,6 @@ export default function ClinicDetailPage() {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-
   // Stats
   const [stats, setStats] = useState<ClinicStats>({ services: 0, practitioners: 0, patients: 0 });
 
@@ -359,20 +348,9 @@ export default function ClinicDetailPage() {
           <div className='space-y-6'>
             {/* Clinic info card */}
             <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6'>
-              <div className='flex items-center justify-between mb-5'>
-                <h2 className='font-display text-lg font-semibold text-clinic-navy dark:text-white'>
-                  Clinic Information
-                </h2>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setEditDialogOpen(true)}
-                  className='gap-2'
-                >
-                  <Edit className='w-4 h-4' />
-                  Edit
-                </Button>
-              </div>
+              <h2 className='font-display text-lg font-semibold text-clinic-navy dark:text-white mb-5'>
+                Clinic Information
+              </h2>
 
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-5'>
                 <div>
@@ -758,28 +736,6 @@ export default function ClinicDetailPage() {
         )}
       </div>
 
-      {/* Edit Clinic Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className='max-w-lg max-h-[90vh] overflow-y-auto'>
-          <DialogHeader>
-            <DialogTitle className='font-display text-clinic-navy dark:text-white'>
-              Edit Clinic
-            </DialogTitle>
-            <DialogDescription className='text-clinic-text/60 dark:text-white/60'>
-              Update the clinic&apos;s details below.
-            </DialogDescription>
-          </DialogHeader>
-          <ClinicForm
-            // Clinic satisfies the fields ClinicForm needs (subset via PublicClinicWithDetails)
-            clinic={clinic as never}
-            onSuccess={() => {
-              setEditDialogOpen(false);
-              loadClinic();
-            }}
-            onCancel={() => setEditDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

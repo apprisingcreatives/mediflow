@@ -9,6 +9,8 @@ import {
   Building2,
   Users,
   Calendar,
+  HelpCircle,
+  MessageSquareWarning,
   Settings,
   LogOut,
   FileText,
@@ -43,6 +45,8 @@ const NAV_CONFIG: NavItem[] = [
   { path: 'services', label: 'Services', icon: FileText, requiresSubscription: true },
   { path: 'ai-features', label: 'AI Features', icon: Sparkles, requiresSubscription: true },
   { path: 'billing', label: 'Billing', icon: CreditCard, requiresSubscription: false },
+  { path: 'help', label: 'Help', icon: HelpCircle, requiresSubscription: false },
+  { path: 'report', label: 'Report', icon: MessageSquareWarning, requiresSubscription: false },
   { path: 'settings', label: 'Settings', icon: Settings, requiresSubscription: false },
 ];
 

@@ -238,11 +238,7 @@ const usePractitionerDashboard = (options: UsePractitionerDashboardOptions = {})
           },
           handleRealtimeChange
         )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log(`Subscribed to appointments realtime for practitioner: ${practitionerId}`);
-          }
-        });
+        .subscribe();
 
       channelRef.current = channel;
     },
