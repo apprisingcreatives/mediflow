@@ -1,12 +1,8 @@
 "use client";
 
-import { format } from "date-fns";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Clock, Loader2, Stethoscope, User } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
 import { AppointmentStepProps } from "../types";
-import { formatTime } from "@/components/patient/dashboard";
 import ServiceSelection from "../components/ServiceSelection";
 import PractitionerSelection from "../components/PractitionerSelection";
 import DateSelection from "../components/DateSelection";
@@ -27,14 +23,14 @@ export function AppointmentStep({
   const handleServiceSelect = (serviceId: string) => {
     updateFormData({
       selectedServiceId: serviceId,
-      time: "", // Clear time when service changes
+      time: "",
     });
   };
 
   const handlePractitionerSelect = (practitionerId: string) => {
     updateFormData({
       selectedPractitionerId: practitionerId,
-      date: "", // Clear date and time when practitioner changes
+      date: "",
       time: "",
     });
   };
@@ -48,12 +44,6 @@ export function AppointmentStep({
 
   return (
     <div className='space-y-6'>
-      <ServiceSelection
-        services={services}
-        selectedServiceId={formData.selectedServiceId}
-        onSelect={handleServiceSelect}
-      />
-
       <PractitionerSelection
         practitioners={practitioners}
         selectedPractitionerId={formData.selectedPractitionerId}
@@ -61,9 +51,15 @@ export function AppointmentStep({
         onSelect={handlePractitionerSelect}
       />
 
+      <ServiceSelection
+        services={services}
+        selectedServiceId={formData.selectedServiceId}
+        onSelect={handleServiceSelect}
+      />
+
       <DateSelection
         date={formData.date}
-        isDisabled={!formData.selectedPractitionerId}
+        isDisabled={!formData.selectedPractitionerId || !formData.selectedServiceId}
         onChange={handleDateChange}
       />
 
@@ -77,6 +73,19 @@ export function AppointmentStep({
         hasDate={!!formData.date}
         onSelect={(time) => updateFormData({ time })}
       />
+
+      {/* Notes */}
+      <div className='space-y-2'>
+        <Label className='text-sm font-medium text-clinic-navy dark:text-white'>
+          Notes (Optional)
+        </Label>
+        <Textarea
+          value={formData.symptoms}
+          onChange={(e) => updateFormData({ symptoms: e.target.value })}
+          placeholder='Add any notes or special instructions...'
+          rows={3}
+        />
+      </div>
 
       {(selectedService || selectedPractitioner) && (
         <BookingSummary

@@ -19,23 +19,16 @@ function ServiceSelection({
   selectedServiceId,
   onSelect,
 }: ServiceSelectionProps) {
-  if (services.length === 0) {
-    return (
-      <div className='space-y-2'>
-        <Label>Select a Service *</Label>
-        <div className='p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800'>
-          <p className='text-sm text-amber-700 dark:text-amber-400'>
-            No services available for this clinic.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className='space-y-2'>
-      <Label>Select a Service *</Label>
-      <div className='grid gap-3 mt-2'>
+      <Label className='text-sm font-medium text-clinic-navy dark:text-white'>
+        Service
+      </Label>
+      {services.length === 0 ? (
+        <div className='p-4 border rounded-lg text-center text-sm text-clinic-text/60'>
+          No services available for this clinic.
+        </div>
+      ) : (
         <Select value={selectedServiceId} onValueChange={onSelect}>
           <SelectTrigger>
             <SelectValue placeholder='Select a service' />
@@ -47,14 +40,9 @@ function ServiceSelection({
                 {service.duration_minutes} min)
               </SelectItem>
             ))}
-            {services.length === 0 && (
-              <div className='p-2 text-sm text-clinic-text/60 text-center'>
-                No services available
-              </div>
-            )}
           </SelectContent>
         </Select>
-      </div>
+      )}
     </div>
   );
 }

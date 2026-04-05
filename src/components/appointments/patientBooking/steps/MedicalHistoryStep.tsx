@@ -1,10 +1,20 @@
 "use client";
 
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Sparkles } from "lucide-react";
 import { StepProps, CHRONIC_CONDITIONS } from "../types";
+
+const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 export function MedicalHistoryStep({ formData, updateFormData }: StepProps) {
   const handleConditionToggle = (condition: string, checked: boolean) => {
@@ -37,6 +47,27 @@ export function MedicalHistoryStep({ formData, updateFormData }: StepProps) {
         </div>
       </div>
 
+      {/* Blood Type */}
+      <div className="space-y-2">
+        <Label>Blood Type</Label>
+        <Select
+          value={formData.bloodType}
+          onValueChange={(value) => updateFormData({ bloodType: value })}
+        >
+          <SelectTrigger className="h-12">
+            <SelectValue placeholder="Select blood type" />
+          </SelectTrigger>
+          <SelectContent>
+            {BLOOD_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Chronic Conditions */}
       <div className="space-y-2">
         <Label>Do you have any of the following conditions?</Label>
         <div className="grid grid-cols-2 gap-3 mt-2">
@@ -60,6 +91,7 @@ export function MedicalHistoryStep({ formData, updateFormData }: StepProps) {
         </div>
       </div>
 
+      {/* Current Medications */}
       <div className="space-y-2">
         <Label htmlFor="medications">Current Medications</Label>
         <Textarea
@@ -71,6 +103,7 @@ export function MedicalHistoryStep({ formData, updateFormData }: StepProps) {
         />
       </div>
 
+      {/* Allergies */}
       <div className="space-y-2">
         <Label htmlFor="allergies">Known Allergies</Label>
         <Textarea
@@ -82,6 +115,19 @@ export function MedicalHistoryStep({ formData, updateFormData }: StepProps) {
         />
       </div>
 
+      {/* Medical Notes */}
+      <div className="space-y-2">
+        <Label htmlFor="medicalNotes">Medical Notes</Label>
+        <Textarea
+          id="medicalNotes"
+          value={formData.medicalNotes}
+          onChange={(e) => updateFormData({ medicalNotes: e.target.value })}
+          placeholder="Any additional medical information the doctor should know..."
+          className="min-h-[80px]"
+        />
+      </div>
+
+      {/* Symptoms */}
       <div className="space-y-2">
         <Label htmlFor="symptoms">
           What symptoms or concerns bring you in today? *

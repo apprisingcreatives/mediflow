@@ -10,11 +10,21 @@ export interface BookingFormData {
   phone: string;
   dateOfBirth: string;
   gender: string;
+  address: string;
+  city: string;
+  // Emergency Contact
+  emergencyContactName: string;
+  emergencyContactPhone: string;
   // Medical History
+  bloodType: string;
   conditions: string[];
   medications: string;
   allergies: string;
+  medicalNotes: string;
   symptoms: string;
+  // Insurance
+  insuranceProvider: string;
+  insurancePolicyNumber: string;
   // Appointment
   selectedPractitionerId: string;
   selectedServiceId: string;
@@ -96,10 +106,18 @@ export const INITIAL_FORM_DATA: BookingFormData = {
   phone: "",
   dateOfBirth: "",
   gender: "",
+  address: "",
+  city: "",
+  emergencyContactName: "",
+  emergencyContactPhone: "",
+  bloodType: "",
   conditions: [],
   medications: "",
   allergies: "",
+  medicalNotes: "",
   symptoms: "",
+  insuranceProvider: "",
+  insurancePolicyNumber: "",
   selectedPractitionerId: "",
   selectedServiceId: "",
   date: "",

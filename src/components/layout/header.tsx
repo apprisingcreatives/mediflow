@@ -13,9 +13,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Menu, X, Activity, User, Settings, LogOut } from 'lucide-react';
+import {
+  Menu,
+  X,
+  Activity,
+  User,
+  Settings,
+  LogOut,
+  LayoutDashboard,
+  History,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 
 const navLinks = [
   { href: '/#features', label: 'Features' },
@@ -32,7 +42,18 @@ interface HeaderProps {
 export function Header({ showSignIn = true }: HeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, patient, signOut } = useAuth();
+  const router = useRouter();
+  const { user, patient, practitioner, signOut } = useAuth();
+  const { user_metadata } = user || {};
+  const {
+    role,
+    name: userName,
+    clinic_id,
+    practitioner_id,
+    first_name,
+    last_name,
+  } = user_metadata || {};
+  const name = (userName as string) || `${first_name} ${last_name}`;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -47,11 +68,54 @@ export function Header({ showSignIn = true }: HeaderProps) {
     await signOut();
   };
 
+  const getDisplayName = () => {
+    if (!user) return '';
+    if (role === 'patient') {
+      return name;
+    }
+    if (role === 'clinic_practitioner') {
+      return name;
+    }
+    return name || '';
+  };
+
   const getInitials = (firstName?: string, lastName?: string) => {
     if (firstName && lastName) {
       return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
     }
+    if (role === 'clinic_practitioner') {
+      return name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+    }
     return 'U';
+  };
+
+  const getMenuItems = () => {
+    if (role === 'clinic_practitioner') {
+      const pid = practitioner_id || practitioner?.id;
+      const base = `/practitioner/${pid}/clinic/${clinic_id}`;
+      return [
+        {
+          label: 'Dashboard',
+          href: `${base}/dashboard`,
+          icon: LayoutDashboard,
+        },
+        { label: 'Settings', href: `${base}/settings`, icon: Settings },
+      ];
+    }
+    if (role === 'clinic_admin') {
+      return [{ label: 'Dashboard', href: '/clinic', icon: LayoutDashboard }];
+    }
+    // Default: patient
+    return [
+      { label: 'Dashboard', href: '/patient', icon: LayoutDashboard },
+      { label: 'Visit History', href: '/patient/history', icon: History },
+      { label: 'Settings', href: '/patient/settings', icon: Settings },
+    ];
   };
 
   return (
@@ -100,7 +164,7 @@ export function Header({ showSignIn = true }: HeaderProps) {
                   >
                     <Avatar className='h-10 w-10'>
                       <AvatarFallback className='bg-clinic-teal text-white'>
-                        {getInitials(patient?.first_name, patient?.last_name)}
+                        {getInitials(first_name, last_name)}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -109,7 +173,7 @@ export function Header({ showSignIn = true }: HeaderProps) {
                   <DropdownMenuLabel className='font-normal'>
                     <div className='flex flex-col space-y-1'>
                       <p className='text-sm font-medium leading-none'>
-                        {patient?.first_name} {patient?.last_name}
+                        {getDisplayName()}
                       </p>
                       <p className='text-xs leading-none text-muted-foreground'>
                         {user.email}
@@ -117,18 +181,14 @@ export function Header({ showSignIn = true }: HeaderProps) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href='/patient' className='cursor-pointer'>
-                      <User className='mr-2 h-4 w-4' />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href='/patient/onboarding' className='cursor-pointer'>
-                      <Settings className='mr-2 h-4 w-4' />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
+                  {getMenuItems().map((item) => (
+                    <DropdownMenuItem key={item.href} asChild>
+                      <Link href={item.href} className='cursor-pointer'>
+                        <item.icon className='mr-2 h-4 w-4' />
+                        <span>{item.label}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleSignOut}
@@ -205,7 +265,7 @@ export function Header({ showSignIn = true }: HeaderProps) {
                         </Avatar>
                         <div className='flex-1 min-w-0'>
                           <p className='text-sm font-medium truncate'>
-                            {patient?.first_name} {patient?.last_name}
+                            {getDisplayName()}
                           </p>
                           <p className='text-xs text-muted-foreground truncate'>
                             {user.email}
@@ -213,12 +273,21 @@ export function Header({ showSignIn = true }: HeaderProps) {
                         </div>
                       </div>
                       <div className='flex flex-col gap-2'>
-                        <Button variant='outline' asChild className='w-full'>
-                          <Link href='/patient'>Profile</Link>
-                        </Button>
-                        <Button variant='outline' asChild className='w-full'>
-                          <Link href='/patient/onboarding'>Settings</Link>
-                        </Button>
+                        {getMenuItems().map((item) => (
+                          <Button
+                            key={item.href}
+                            variant='outline'
+                            asChild
+                            className='w-full'
+                          >
+                            <Link
+                              href={item.href}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                              {item.label}
+                            </Link>
+                          </Button>
+                        ))}
                         <Button
                           variant='outline'
                           onClick={handleSignOut}

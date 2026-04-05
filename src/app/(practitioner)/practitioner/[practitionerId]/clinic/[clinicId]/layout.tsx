@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, createContext, useContext } from 'react';
+import { useEffect, useState, useCallback, createContext, useContext } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -10,11 +10,13 @@ import { PractitionerSidebar } from '@/components/clinic/practitioners';
 interface PractitionerContextType {
   profile: PractitionerProfile | null;
   isLoading: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const PractitionerContext = createContext<PractitionerContextType>({
   profile: null,
   isLoading: true,
+  refreshProfile: async () => {},
 });
 
 export const usePractitionerContext = () => useContext(PractitionerContext);
@@ -32,6 +34,11 @@ export default function PractitionerClinicLayout({
   const { session, isLoading: authLoading } = useAuth();
   const { profile, profileLoading, fetchProfile } = usePractitionerDashboard();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+
+  const refreshProfile = useCallback(async () => {
+    await fetchProfile(clinicId);
+  }, [fetchProfile, clinicId]);
 
   // Fetch profile and verify authorization
   useEffect(() => {
@@ -58,13 +65,14 @@ export default function PractitionerClinicLayout({
       }
 
       setIsAuthorized(true);
+      setInitialLoadDone(true);
     };
 
     verifyAccess();
   }, [session, authLoading, clinicId, practitionerId, fetchProfile, router]);
 
   // Loading state
-  if (authLoading || profileLoading || isAuthorized === null) {
+  if (authLoading || (!initialLoadDone && profileLoading) || isAuthorized === null) {
     return (
       <div className="min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center">
@@ -99,7 +107,7 @@ export default function PractitionerClinicLayout({
   }
 
   return (
-    <PractitionerContext.Provider value={{ profile, isLoading: profileLoading }}>
+    <PractitionerContext.Provider value={{ profile, isLoading: profileLoading, refreshProfile }}>
       <div className="min-h-screen bg-clinic-bg dark:bg-slate-900 flex">
         {/* Sidebar */}
         <PractitionerSidebar

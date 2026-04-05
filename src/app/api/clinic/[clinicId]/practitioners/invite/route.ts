@@ -191,6 +191,18 @@ export async function POST(
       );
     }
 
+    // Update user metadata with practitioner_id
+    await supabaseAdmin.auth.admin.updateUserById(invitedUser.user.id, {
+      user_metadata: {
+        name,
+        specialization,
+        role: 'clinic_practitioner',
+        clinic_id: clinicId,
+        clinic_name: clinic.name,
+        practitioner_id: newPractitioner.id,
+      },
+    });
+
     // Create default working hours for the practitioner
     const workingHoursData = DEFAULT_WORKING_HOURS.map(wh => ({
       ...wh,

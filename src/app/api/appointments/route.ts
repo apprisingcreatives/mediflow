@@ -44,6 +44,7 @@ export async function POST(request: Request) {
       appointment_date,
       appointment_time,
       notes,
+      patient_info,
     } = body;
 
     // Validate required fields
@@ -66,6 +67,36 @@ export async function POST(request: Request) {
         { error: 'Patient record not found' },
         { status: 404 },
       );
+    }
+
+    // Update patient record with info from booking form
+    if (patient_info) {
+      const updateData: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      const fields = [
+        'first_name', 'last_name', 'phone', 'date_of_birth', 'gender',
+        'address', 'city', 'emergency_contact_name', 'emergency_contact_phone',
+        'blood_type', 'current_medications', 'allergies', 'chronic_conditions',
+        'medical_notes', 'insurance_provider', 'insurance_policy_number',
+      ];
+
+      for (const field of fields) {
+        if (patient_info[field] !== undefined && patient_info[field] !== null) {
+          updateData[field] = patient_info[field];
+        }
+      }
+
+      const { error: updateError } = await supabase
+        .from('patients')
+        .update(updateData)
+        .eq('id', patient.id);
+
+      if (updateError) {
+        console.error('Failed to update patient record:', updateError);
+        // Continue with appointment creation — non-critical
+      }
     }
 
     // Ensure patient_clinics record exists (for clinic-patient relationship)
@@ -157,6 +188,7 @@ export async function POST(request: Request) {
       entity_type: 'appointment',
       entity_id: appointment.id,
       metadata: {
+        clinic_name: clinicName,
         practitioner_name: practitionerName,
         service_name: serviceName,
         date: appointment_date,

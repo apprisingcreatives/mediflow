@@ -21,6 +21,7 @@ const GENDER_OPTIONS = [
 export function PersonalInfoStep({ formData, updateFormData }: StepProps) {
   return (
     <div className="space-y-6">
+      {/* Name */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="firstName">First Name *</Label>
@@ -44,6 +45,7 @@ export function PersonalInfoStep({ formData, updateFormData }: StepProps) {
         </div>
       </div>
 
+      {/* Email */}
       <div className="space-y-2">
         <Label htmlFor="email">Email Address *</Label>
         <Input
@@ -56,6 +58,7 @@ export function PersonalInfoStep({ formData, updateFormData }: StepProps) {
         />
       </div>
 
+      {/* Phone */}
       <div className="space-y-2">
         <Label htmlFor="phone">Phone Number *</Label>
         <Input
@@ -63,11 +66,12 @@ export function PersonalInfoStep({ formData, updateFormData }: StepProps) {
           type="tel"
           value={formData.phone}
           onChange={(e) => updateFormData({ phone: e.target.value })}
-          placeholder="(123) 456-7890"
+          placeholder="+63 912 345 6789"
           className="h-12"
         />
       </div>
 
+      {/* DOB & Gender */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="dob">Date of Birth *</Label>
@@ -96,6 +100,97 @@ export function PersonalInfoStep({ formData, updateFormData }: StepProps) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      {/* Address */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="address">Address</Label>
+          <Input
+            id="address"
+            value={formData.address}
+            onChange={(e) => updateFormData({ address: e.target.value })}
+            placeholder="123 Main St"
+            className="h-12"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="city">City</Label>
+          <Input
+            id="city"
+            value={formData.city}
+            onChange={(e) => updateFormData({ city: e.target.value })}
+            placeholder="Manila"
+            className="h-12"
+          />
+        </div>
+      </div>
+
+      {/* Emergency Contact */}
+      <div>
+        <h3 className="text-sm font-medium text-clinic-navy dark:text-white mb-3">
+          Emergency Contact
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="emergencyName">Contact Name *</Label>
+            <Input
+              id="emergencyName"
+              value={formData.emergencyContactName}
+              onChange={(e) =>
+                updateFormData({ emergencyContactName: e.target.value })
+              }
+              placeholder="Jane Doe"
+              className="h-12"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="emergencyPhone">Contact Phone *</Label>
+            <Input
+              id="emergencyPhone"
+              type="tel"
+              value={formData.emergencyContactPhone}
+              onChange={(e) =>
+                updateFormData({ emergencyContactPhone: e.target.value })
+              }
+              placeholder="+63 912 345 6789"
+              className="h-12"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Insurance */}
+      <div>
+        <h3 className="text-sm font-medium text-clinic-navy dark:text-white mb-3">
+          Insurance Information
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="insuranceProvider">Insurance Provider</Label>
+            <Input
+              id="insuranceProvider"
+              value={formData.insuranceProvider}
+              onChange={(e) =>
+                updateFormData({ insuranceProvider: e.target.value })
+              }
+              placeholder="PhilHealth"
+              className="h-12"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="insurancePolicyNumber">Policy Number</Label>
+            <Input
+              id="insurancePolicyNumber"
+              value={formData.insurancePolicyNumber}
+              onChange={(e) =>
+                updateFormData({ insurancePolicyNumber: e.target.value })
+              }
+              placeholder="PH-123456789"
+              className="h-12"
+            />
+          </div>
         </div>
       </div>
     </div>
