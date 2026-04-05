@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { BookOpen, ChevronDown, HelpCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import useGetHelpGuides from '@/hooks/useGetHelpGuides';
@@ -93,9 +94,9 @@ export function HelpGuideViewer({ category }: HelpGuideViewerProps) {
             {isExpanded && (
               <div className="px-5 pb-5 space-y-4">
                 {guide.body && (
-                  <p className="text-sm text-clinic-text/70 dark:text-white/70 whitespace-pre-line">
-                    {guide.body}
-                  </p>
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-clinic-text/70 dark:text-white/70 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-clinic-navy [&_h2]:dark:text-white [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-clinic-navy [&_h3]:dark:text-white [&_h3]:mt-3 [&_h3]:mb-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_p]:my-1.5 [&_strong]:text-clinic-navy [&_strong]:dark:text-white">
+                    <ReactMarkdown>{guide.body}</ReactMarkdown>
+                  </div>
                 )}
 
                 {faqs.length > 0 && (
@@ -129,9 +130,9 @@ export function HelpGuideViewer({ category }: HelpGuideViewerProps) {
                           </button>
                           {faqExpanded && (
                             <div className="px-3 pb-3 pl-9">
-                              <p className="text-sm text-clinic-text/60 dark:text-white/60 whitespace-pre-line">
-                                {faq.answer}
-                              </p>
+                              <div className="prose prose-sm dark:prose-invert max-w-none text-clinic-text/60 dark:text-white/60 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_strong]:text-clinic-navy [&_strong]:dark:text-white">
+                                <ReactMarkdown>{faq.answer}</ReactMarkdown>
+                              </div>
                             </div>
                           )}
                         </div>

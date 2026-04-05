@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquare,
+  MessageSquareWarning,
   ChevronLeft,
   Settings,
 } from 'lucide-react';
@@ -30,6 +31,7 @@ const navItems = [
   { label: 'Messages', href: '/patient/messages', icon: MessageSquare },
   { label: 'Medical Records', href: '/patient/records', icon: FileText },
   { label: 'Help', href: '/patient/help', icon: HelpCircle },
+  { label: 'Report', href: '/patient/report', icon: MessageSquareWarning },
   { label: 'Settings', href: '/patient/settings', icon: Settings },
 ];
 

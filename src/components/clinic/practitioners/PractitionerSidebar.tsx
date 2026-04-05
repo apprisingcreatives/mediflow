@@ -7,6 +7,7 @@ import {
   Calendar,
   Clock,
   HelpCircle,
+  MessageSquareWarning,
   User,
   LayoutDashboard,
   LogOut,
@@ -65,6 +66,11 @@ export function PractitionerSidebar({
       label: 'Help',
       href: `${basePath}/help`,
       icon: HelpCircle,
+    },
+    {
+      label: 'Report',
+      href: `${basePath}/report`,
+      icon: MessageSquareWarning,
     },
     {
       label: 'Settings',
