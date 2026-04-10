@@ -1,10 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PatientInfo } from './types';
+import { supabase } from '@/lib/supabase';
 
 interface OnboardingBannerProps {
   patient: PatientInfo;
@@ -12,8 +14,27 @@ interface OnboardingBannerProps {
 
 export function OnboardingBanner({ patient }: OnboardingBannerProps) {
   const router = useRouter();
+  const [clinicId, setClinicId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (patient?.id) {
+      supabase
+        .from('patient_clinics')
+        .select('clinic_id')
+        .eq('patient_id', patient.id)
+        .limit(1)
+        .single()
+        .then(({ data }) => {
+          if (data) setClinicId(data.clinic_id);
+        });
+    }
+  }, [patient?.id]);
 
   if (patient.onboarding_completed) {
+    return null;
+  }
+
+  if (!clinicId) {
     return null;
   }
 
@@ -35,7 +56,7 @@ export function OnboardingBanner({ patient }: OnboardingBannerProps) {
             </div>
           </div>
           <Button
-            onClick={() => router.push(`/clinic/${patient.clinic_id}/patient/onboarding`)}
+            onClick={() => router.push(`/clinic/${clinicId}/patient/onboarding`)}
             className="bg-amber-600 hover:bg-amber-700 text-white"
           >
             Complete Now
