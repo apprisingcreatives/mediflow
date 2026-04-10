@@ -229,6 +229,7 @@ export interface AITreatmentPrediction {
   recommended_treatments: any;
   risk_factors: any;
   predicted_conditions: any;
+  recommended_specialty: string | null;
   generated_at: string;
   reviewed_by: string | null;
   reviewed_at: string | null;

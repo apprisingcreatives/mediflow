@@ -30,8 +30,9 @@ export interface AnalysisResult {
 }
 
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
-  const pdfParse = (await import('pdf-parse')).default;
-  const data = await pdfParse(buffer);
+  const pdfParseModule = await import('pdf-parse');
+  const pdfParse = pdfParseModule.default ?? pdfParseModule;
+  const data = await (pdfParse as any)(buffer);
   return data.text;
 }
 
