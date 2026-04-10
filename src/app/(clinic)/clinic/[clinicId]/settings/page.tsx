@@ -14,6 +14,7 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
+  FileText,
 } from 'lucide-react';
 import { useClinicContext } from '../layout';
 
@@ -176,6 +177,27 @@ export default function SettingsPage() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Document Types */}
+      <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6'>
+        <div className='flex items-center gap-3 mb-6'>
+          <div className='w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center'>
+            <FileText className='w-5 h-5 text-blue-500' />
+          </div>
+          <div>
+            <h3 className='font-semibold text-clinic-navy dark:text-white'>
+              Document Types
+            </h3>
+            <p className='text-sm text-clinic-text/60 dark:text-white/60'>
+              Configure the types of documents patients can upload to your clinic
+            </p>
+          </div>
+        </div>
+
+        <Link href={`/clinic/${clinicId}/settings/document-types`}>
+          <Button variant='outline'>Manage Document Types</Button>
+        </Link>
       </div>
 
       {/* Security */}

@@ -210,20 +210,14 @@ export interface PatientQuestionResponse {
 export interface PatientDocument {
   id: string;
   patient_id: string;
-  clinic_id: string;
-  document_type_id: string;
   file_name: string;
   file_path: string;
   file_size_bytes: number | null;
   mime_type: string | null;
+  description: string | null;
   uploaded_at: string;
-  verified_by: string | null;
-  verified_at: string | null;
-  status: "pending" | "approved" | "rejected";
-  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
-  document_type?: ClinicRequiredDocument;
 }
 
 export interface AITreatmentPrediction {
