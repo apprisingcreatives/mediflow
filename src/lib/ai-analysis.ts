@@ -177,5 +177,16 @@ Be conservative with confidence scores. Only assign >0.9 if the data strongly su
     };
   }
 
-  return JSON.parse(jsonMatch[0]) as AnalysisResult;
+  try {
+    return JSON.parse(jsonMatch[0]) as AnalysisResult;
+  } catch {
+    return {
+      recommended_specialty: 'General Practice',
+      recommended_treatments: ['Schedule an initial consultation'],
+      risk_factors: [],
+      predicted_conditions: [],
+      confidence_score: 0.5,
+      summary: 'Unable to parse AI analysis. A general consultation is recommended.',
+    };
+  }
 }

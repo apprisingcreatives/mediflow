@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import {
   Card,
   CardContent,
@@ -61,9 +62,15 @@ export default function OnboardingManagement({
   const handleLoadTemplate = async () => {
     setLoadingTemplate(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch(
         `/api/clinic/${clinicId}/onboarding/questions/load-template`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+        }
       );
       if (response.ok) {
         fetchOnboardingData();

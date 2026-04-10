@@ -516,6 +516,33 @@ export default function PatientOnboarding({
 
             {aiPrediction && (
               <>
+                {aiPrediction.recommended_specialty && (
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-medium">Recommended Specialty:</h4>
+                    <Badge variant="secondary" className="text-sm">
+                      {aiPrediction.recommended_specialty}
+                    </Badge>
+                  </div>
+                )}
+
+                {aiPrediction.predicted_conditions &&
+                  aiPrediction.predicted_conditions.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2">
+                        Conditions to Investigate:
+                      </h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        {aiPrediction.predicted_conditions.map(
+                          (condition: string, index: number) => (
+                            <li key={index} className="text-sm">
+                              {condition}
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
+
                 {aiPrediction.recommended_treatments && (
                   <div>
                     <h4 className="font-medium mb-2">Recommended Treatments:</h4>
