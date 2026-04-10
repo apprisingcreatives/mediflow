@@ -28,6 +28,7 @@ import {
   ClinicOnboardingQuestion,
   ClinicRequiredDocument,
 } from "@/types/database";
+import { supabase } from "@/lib/supabase";
 
 interface PatientOnboardingProps {
   clinicId: string;
@@ -47,6 +48,18 @@ export default function PatientOnboarding({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [matchedPractitioner, setMatchedPractitioner] = useState<{
+    id: string;
+    name: string;
+    specialization: string;
+  } | null>(null);
+
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return {};
+    return { Authorization: `Bearer ${session.access_token}` };
+  };
 
   useEffect(() => {
     fetchOnboardingData();
@@ -54,8 +67,10 @@ export default function PatientOnboarding({
 
   const fetchOnboardingData = async () => {
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(
-        `/api/clinic/${clinicId}/patients/${patientId}/onboarding`
+        `/api/clinic/${clinicId}/patients/${patientId}/onboarding`,
+        { headers }
       );
       if (response.ok) {
         const data = await response.json();
@@ -106,12 +121,9 @@ export default function PatientOnboarding({
       }
     });
 
-    // Count uploaded documents
-    documents.forEach((document) => {
-      if (uploadedDocs.some((doc) => doc.document_type_id === document.id)) {
-        completedItems++;
-      }
-    });
+    // Count uploaded documents (at least one per required document type)
+    const uploadedCount = Math.min(uploadedDocs.length, documents.length);
+    completedItems += uploadedCount;
 
     setProgress((completedItems / totalItems) * 100);
   };
@@ -145,10 +157,12 @@ export default function PatientOnboarding({
     formData.append("file", file);
 
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `/api/clinic/${clinicId}/patients/${patientId}/documents`,
         {
           method: "POST",
+          headers,
           body: formData,
         }
       );
@@ -173,11 +187,12 @@ export default function PatientOnboarding({
         })
       );
 
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `/api/clinic/${clinicId}/patients/${patientId}/onboarding`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { ...headers, "Content-Type": "application/json" },
           body: JSON.stringify({
             responses: responseData,
             completeOnboarding: true,
@@ -192,6 +207,28 @@ export default function PatientOnboarding({
       console.error("Error submitting onboarding:", error);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(
+        `/api/clinic/${clinicId}/patients/${patientId}/onboarding/analyze`,
+        { method: "POST", headers }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setOnboardingData((prev) =>
+          prev ? { ...prev, aiPrediction: data.prediction } : prev
+        );
+        setMatchedPractitioner(data.matchedPractitioner);
+      }
+    } catch (error) {
+      console.error("Error analyzing health data:", error);
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -382,7 +419,7 @@ export default function PatientOnboarding({
             <CardContent className="space-y-4">
               {documents.map((document) => {
                 const uploadedDoc = uploadedDocuments?.find(
-                  (doc) => doc.document_type_id === document.id
+                  (doc) => doc.description === document.document_name
                 );
 
                 return (
@@ -448,59 +485,92 @@ export default function PatientOnboarding({
           </Card>
         )}
 
-        {/* AI Prediction Section */}
-        {aiPrediction && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" />
-                AI Health Assessment
-              </CardTitle>
-              <CardDescription>
-                Based on your responses, here are our AI-powered recommendations
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {aiPrediction.recommended_treatments && (
-                <div>
-                  <h4 className="font-medium mb-2">Recommended Treatments:</h4>
-                  <ul className="list-disc list-inside space-y-1">
-                    {aiPrediction.recommended_treatments.map(
-                      (treatment: string, index: number) => (
-                        <li key={index} className="text-sm">
-                          {treatment}
-                        </li>
-                      )
-                    )}
-                  </ul>
-                </div>
-              )}
+        {/* AI Analysis Trigger */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              AI Health Assessment
+            </CardTitle>
+            <CardDescription>
+              Based on your responses, here are our AI-powered recommendations
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!aiPrediction && !analyzing && (
+              <Button onClick={handleAnalyze} disabled={progress < 50}>
+                {progress < 50
+                  ? "Complete more questions to enable analysis"
+                  : "Analyze My Health Profile"}
+              </Button>
+            )}
 
-              {aiPrediction.risk_factors &&
-                aiPrediction.risk_factors.length > 0 && (
+            {analyzing && (
+              <div className="flex items-center gap-3 py-4">
+                <div className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                <p className="text-sm text-muted-foreground">
+                  Analyzing your health profile... This may take a moment.
+                </p>
+              </div>
+            )}
+
+            {aiPrediction && (
+              <>
+                {aiPrediction.recommended_treatments && (
                   <div>
-                    <h4 className="font-medium mb-2">
-                      Identified Risk Factors:
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {aiPrediction.risk_factors.map(
-                        (risk: string, index: number) => (
-                          <Badge key={index} variant="destructive">
-                            {risk}
-                          </Badge>
+                    <h4 className="font-medium mb-2">Recommended Treatments:</h4>
+                    <ul className="list-disc list-inside space-y-1">
+                      {aiPrediction.recommended_treatments.map(
+                        (treatment: string, index: number) => (
+                          <li key={index} className="text-sm">
+                            {treatment}
+                          </li>
                         )
                       )}
-                    </div>
+                    </ul>
                   </div>
                 )}
 
-              <div className="text-sm text-muted-foreground">
-                Confidence Score:{" "}
-                {Math.round((aiPrediction.confidence_score || 0) * 100)}%
+                {aiPrediction.risk_factors &&
+                  aiPrediction.risk_factors.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2">
+                        Identified Risk Factors:
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {aiPrediction.risk_factors.map(
+                          (risk: string, index: number) => (
+                            <Badge key={index} variant="destructive">
+                              {risk}
+                            </Badge>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                <div className="text-sm text-muted-foreground">
+                  Confidence Score:{" "}
+                  {Math.round((aiPrediction.confidence_score || 0) * 100)}%
+                </div>
+              </>
+            )}
+
+            {matchedPractitioner && (
+              <div className="mt-4 p-4 bg-primary/5 rounded-lg">
+                <p className="font-medium mb-2">
+                  We recommend booking with {matchedPractitioner.name} ({matchedPractitioner.specialization})
+                </p>
+                <a
+                  href={`/book?clinic=${clinicId}&practitionerId=${matchedPractitioner.id}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+                >
+                  Book Appointment
+                </a>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex justify-center">
