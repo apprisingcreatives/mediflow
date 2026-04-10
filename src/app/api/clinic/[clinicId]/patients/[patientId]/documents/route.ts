@@ -87,7 +87,7 @@ export async function POST(
     }
 
     // Upload file to Supabase Storage
-    const fileName = `${patientId}/${documentTypeId}/${Date.now()}_${file.name}`;
+    const fileName = `${patientId}/${Date.now()}_${file.name}`;
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from("patient-documents")
       .upload(fileName, file);
@@ -101,8 +101,6 @@ export async function POST(
       .from("patient_documents")
       .insert({
         patient_id: patientId,
-        clinic_id: clinicId,
-        document_type_id: documentTypeId,
         file_name: file.name,
         file_path: uploadData.path,
         file_size_bytes: file.size,
