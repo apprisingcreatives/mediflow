@@ -2,16 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Activity, Mail, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+type Role = 'patient' | 'clinic_admin' | 'practitioner' | 'super_admin';
+
 interface ForgotPasswordFormProps {
   redirectTo: string;
   loginHref: string;
+  allowedRoles: Role[];
   title?: string;
   subtitle?: string;
 }
@@ -19,8 +21,9 @@ interface ForgotPasswordFormProps {
 export function ForgotPasswordForm({
   redirectTo,
   loginHref,
+  allowedRoles,
   title = 'Forgot Password',
-  subtitle = 'Enter your email and we\'ll send you a reset link',
+  subtitle = "Enter your email and we'll send you a reset link",
 }: ForgotPasswordFormProps) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +35,6 @@ export function ForgotPasswordForm({
     const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
     return () => clearTimeout(timer);
   }, [cooldown]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cooldown > 0) return;
@@ -40,15 +42,18 @@ export function ForgotPasswordForm({
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
+      const response = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, allowedRoles, redirectTo }),
       });
 
-      if (error) {
-        console.error('Reset password error:', error);
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || 'Failed to send reset link');
       }
 
-      // Always show success to prevent email enumeration
+      // Always show success to prevent email enumeration and role probing
       setIsSubmitted(true);
       setCooldown(60);
     } catch (err) {

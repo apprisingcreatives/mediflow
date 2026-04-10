@@ -7,6 +7,7 @@ export default function ClinicForgotPasswordPage() {
     <ForgotPasswordForm
       redirectTo={redirectTo}
       loginHref='/clinic/login'
+      allowedRoles={['clinic_admin']}
       title='Forgot Clinic Password'
       subtitle='Enter your clinic admin email to receive a reset link'
     />
