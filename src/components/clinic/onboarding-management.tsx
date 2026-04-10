@@ -28,6 +28,7 @@ export default function OnboardingManagement({
   const [questions, setQuestions] = useState<ClinicOnboardingQuestion[]>([]);
   const [documents, setDocuments] = useState<ClinicRequiredDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -54,6 +55,26 @@ export default function OnboardingManagement({
       console.error("Error fetching onboarding data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLoadTemplate = async () => {
+    setLoadingTemplate(true);
+    try {
+      const response = await fetch(
+        `/api/clinic/${clinicId}/onboarding/questions/load-template`,
+        { method: "POST" }
+      );
+      if (response.ok) {
+        fetchOnboardingData();
+      } else {
+        const data = await response.json();
+        console.error("Error loading template:", data.error);
+      }
+    } catch (error) {
+      console.error("Error loading template:", error);
+    } finally {
+      setLoadingTemplate(false);
     }
   };
 
@@ -117,14 +138,24 @@ export default function OnboardingManagement({
         <TabsContent value="questions" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Health History Questions</h2>
-            <Button
-              onClick={() =>
-                router.push(`/clinic/dashboard/onboarding/questions/new`)
-              }
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Question
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLoadTemplate}
+                disabled={loadingTemplate || questions.length > 0}
+              >
+                {loadingTemplate ? "Loading..." : "Load Template"}
+              </Button>
+              <Button
+                onClick={() =>
+                  router.push(`/clinic/dashboard/onboarding/questions/new`)
+                }
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Question
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-4">
