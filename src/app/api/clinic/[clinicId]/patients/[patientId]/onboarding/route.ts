@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { analyzePatientData } from "@/lib/ai-service";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -26,6 +25,39 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Verify user is the patient or clinic staff
+    const { data: patient } = await supabaseAdmin
+      .from('patients')
+      .select('id')
+      .eq('id', patientId)
+      .eq('auth_user_id', user.id)
+      .single();
+
+    if (!patient) {
+      // Check if user is clinic admin or practitioner
+      const { data: clinicStaff } = await supabaseAdmin
+        .from('clinic_admins')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+        .single();
+
+      if (!clinicStaff) {
+        const { data: practitioner } = await supabaseAdmin
+          .from('practitioners')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .eq('clinic_id', clinicId)
+          .eq('is_active', true)
+          .single();
+
+        if (!practitioner) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+      }
+    }
+
     // Get onboarding questions for this clinic
     const { data: questions, error: questionsError } = await supabaseAdmin
       .from("clinic_onboarding_questions")
@@ -35,8 +67,9 @@ export async function GET(
       .order("display_order", { ascending: true });
 
     if (questionsError) {
+      console.error("Error fetching onboarding questions:", questionsError);
       return NextResponse.json(
-        { error: questionsError.message },
+        { error: "Internal server error" },
         { status: 500 }
       );
     }
@@ -50,8 +83,9 @@ export async function GET(
       .order("display_order", { ascending: true });
 
     if (documentsError) {
+      console.error("Error fetching required documents:", documentsError);
       return NextResponse.json(
-        { error: documentsError.message },
+        { error: "Internal server error" },
         { status: 500 }
       );
     }
@@ -69,8 +103,9 @@ export async function GET(
       .eq("clinic_id", clinicId);
 
     if (responsesError) {
+      console.error("Error fetching patient responses:", responsesError);
       return NextResponse.json(
-        { error: responsesError.message },
+        { error: "Internal server error" },
         { status: 500 }
       );
     }
@@ -84,11 +119,11 @@ export async function GET(
         document_type:clinic_required_documents(*)
       `
       )
-      .eq("patient_id", patientId)
-      .eq("clinic_id", clinicId);
+      .eq("patient_id", patientId);
 
     if (docsError) {
-      return NextResponse.json({ error: docsError.message }, { status: 500 });
+      console.error("Error fetching patient documents:", docsError);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
     // Get AI prediction if exists
@@ -170,8 +205,9 @@ export async function POST(
         });
 
       if (responseError) {
+        console.error("Error saving patient responses:", responseError);
         return NextResponse.json(
-          { error: responseError.message },
+          { error: "Internal server error" },
           { status: 500 }
         );
       }
@@ -183,20 +219,16 @@ export async function POST(
         .from("patients")
         .update({
           onboarding_completed: true,
-          onboarding_completed_at: new Date().toISOString(),
         })
-        .eq("id", patientId)
-        .eq("clinic_id", clinicId);
+        .eq("id", patientId);
 
       if (updateError) {
+        console.error("Error updating onboarding status:", updateError);
         return NextResponse.json(
-          { error: updateError.message },
+          { error: "Internal server error" },
           { status: 500 }
         );
       }
-
-      // Trigger AI analysis here (we'll implement this next)
-      await triggerAIAnalysis(patientId, clinicId);
     }
 
     return NextResponse.json({
@@ -210,44 +242,5 @@ export async function POST(
       { error: "Internal server error" },
       { status: 500 }
     );
-  }
-}
-
-async function triggerAIAnalysis(patientId: string, clinicId: string) {
-  try {
-    // Get all patient responses and documents
-    const { data: responses } = await supabaseAdmin
-      .from("patient_question_responses")
-      .select(
-        `
-        *,
-        question:clinic_onboarding_questions(question_text, question_type, category)
-      `
-      )
-      .eq("patient_id", patientId)
-      .eq("clinic_id", clinicId);
-
-    const { data: documents } = await supabaseAdmin
-      .from("patient_documents")
-      .select("*")
-      .eq("patient_id", patientId)
-      .eq("clinic_id", clinicId)
-      .eq("status", "approved");
-
-    // Use AI service for analysis
-    const analysis = analyzePatientData(responses || []);
-
-    // Save AI prediction
-    await supabaseAdmin.from("ai_treatment_predictions").insert({
-      patient_id: patientId,
-      clinic_id: clinicId,
-      prediction_data: analysis.predictionData,
-      confidence_score: analysis.confidenceScore,
-      recommended_treatments: analysis.recommendedTreatments,
-      risk_factors: analysis.riskFactors,
-      predicted_conditions: analysis.predictedConditions,
-    });
-  } catch (error) {
-    console.error("Error in AI analysis:", error);
   }
 }
