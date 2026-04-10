@@ -55,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [patientClinicIds, setPatientClinicIds] = useState<string[]>([]);
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -70,8 +71,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Error fetching patient:', error);
       }
       setPatient(data);
+      if (data) {
+        await fetchPatientClinics(data.id);
+      }
     } catch (err) {
       console.error('Failed to fetch patient:', err);
+    }
+  };
+
+  const fetchPatientClinics = async (patientId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('patient_clinics')
+        .select('clinic_id')
+        .eq('patient_id', patientId);
+
+      if (error) {
+        console.error('Error fetching patient clinics:', error);
+        return;
+      }
+      setPatientClinicIds((data ?? []).map((pc) => pc.clinic_id));
+    } catch (err) {
+      console.error('Failed to fetch patient clinics:', err);
     }
   };
 
@@ -295,10 +316,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clinicId?: string,
   ) => {
     try {
-      // Use regular signup - ensure email confirmation is disabled in Supabase dashboard
       const redirectTo =
         typeof window !== 'undefined'
-          ? `${window.location.origin}/auth/email-verified`
+          ? `${window.location.origin}/auth/email-verified${clinicId ? `?clinic=${clinicId}` : ''}`
           : undefined;
 
       const { data, error } = await supabase.auth.signUp({
@@ -315,100 +335,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        console.error('Signup error:', error);
-        console.error('Error details:', {
-          message: error.message,
-          status: error.status,
-          name: error.name,
-        });
         return { error };
       }
 
       if (!data.user) {
-        console.error('No user returned from signup');
         return { error: new Error('Failed to create user account') };
       }
 
-      // Ensure clinic_id column exists in patients table
-      try {
-        // Try to run a query that would fail if clinic_id column doesn't exist
-        const { error: columnCheckError } = await supabase
-          .from('patients')
-          .select('clinic_id')
-          .limit(1);
-
-        if (
-          columnCheckError &&
-          columnCheckError.message?.includes('column') &&
-          columnCheckError.message?.includes('clinic_id')
-        ) {
-          // Try to add the column using a direct SQL query (this might not work with RLS)
-          // If this fails, we'll fall back to creating patient without clinic_id
-          try {
-            // This is a workaround - we'll try to insert without clinic_id first
-            // and then update if the column gets added later
-            console.warn(
-              'clinic_id column missing - creating patient without clinic association for now',
-            );
-          } catch (alterError) {
-            console.warn('Could not add clinic_id column:', alterError);
-          }
-        }
-      } catch (checkError) {
-        console.warn('Error checking clinic_id column:', checkError);
-      }
-
-      // Create patient record with clinic association (if column exists)
-      const patientData: any = {
-        auth_user_id: data.user.id,
-        email: email,
-        first_name: firstName,
-        last_name: lastName,
-        onboarding_completed: false,
-        is_active: false, // New accounts start as inactive until email verified
-      };
-
-      // Try to insert with clinic_id first
-      let insertData = { ...patientData };
-      if (clinicId) {
-        insertData.clinic_id = clinicId;
-      }
-
-      let { error: patientError } = await supabase
-        .from('patients')
-        .insert(insertData);
-
-      // If clinic_id column doesn't exist, retry without it
-      if (patientError && patientError.message?.includes('clinic_id')) {
-        console.warn(
-          'clinic_id column not found, creating patient without clinic association',
-        );
-        const { error: retryError } = await supabase
-          .from('patients')
-          .insert(patientData);
-
-        if (retryError) {
-          console.error('Error creating patient record:', retryError);
-          return { error: new Error('Failed to create patient profile') };
-        }
-      } else if (patientError) {
-        console.error('Error creating patient record:', patientError);
-        console.error('Patient error details:', {
-          message: patientError.message,
-          details: patientError.details,
-          hint: patientError.hint,
-          code: patientError.code,
-        });
-        return {
-          error: new Error(
-            `Failed to create patient profile: ${patientError.message}`,
-          ),
-        };
-      }
-
+      // Patient record is created after email verification on the email-verified page.
       return { error: null };
     } catch (err) {
-      console.error('Unexpected error during signup:', err);
       return { error: new Error('An unexpected error occurred during signup') };
     }
   };
@@ -418,6 +354,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setPatient(null);
+    setPatientClinicIds([]);
     setPractitioner(null);
   };
 
@@ -442,7 +379,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const canAccessClinic = (clinicId: string): boolean => {
-    return patient?.clinic_id === clinicId;
+    return patientClinicIds.includes(clinicId);
   };
 
   return (
