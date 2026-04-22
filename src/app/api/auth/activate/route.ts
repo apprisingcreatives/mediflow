@@ -42,7 +42,6 @@ export async function POST(request: Request) {
     }
 
     const metadata = user.user_metadata;
-    const clinicId = request.headers.get('x-clinic-id');
 
     // Create patient record using admin client (bypasses RLS)
     const { data: patient, error: patientError } = await supabaseAdmin
@@ -64,21 +63,6 @@ export async function POST(request: Request) {
         { error: 'Failed to create patient profile' },
         { status: 500 },
       );
-    }
-
-    // Associate patient with clinic if provided
-    if (clinicId) {
-      const { error: clinicError } = await supabaseAdmin
-        .from('patient_clinics')
-        .insert({
-          patient_id: patient.id,
-          clinic_id: clinicId,
-        });
-
-      if (clinicError) {
-        console.error('Error associating patient with clinic:', clinicError);
-        // Non-fatal — patient is created, clinic link can be added later
-      }
     }
 
     return NextResponse.json(

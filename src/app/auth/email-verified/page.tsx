@@ -20,15 +20,11 @@ export default function EmailVerifiedPage() {
         // Extract tokens from URL hash (Supabase sends them as hash params)
         if (typeof window !== 'undefined') {
           const urlHash = window.location.hash.replace(/^#/, '');
-          const urlSearch = window.location.search;
 
           const hashParams = new URLSearchParams(urlHash);
-          const searchParams = new URLSearchParams(urlSearch);
 
           const access_token = hashParams.get('access_token');
           const refresh_token = hashParams.get('refresh_token');
-          const clinicId = searchParams.get('clinic');
-
           if (access_token) {
             const { error: setError } = await supabase.auth.setSession({
               access_token,
@@ -72,7 +68,6 @@ export default function EmailVerifiedPage() {
             headers: {
               Authorization: `Bearer ${sessionData.session.access_token}`,
               'Content-Type': 'application/json',
-              ...(clinicId ? { 'x-clinic-id': clinicId } : {}),
             },
           });
 
@@ -86,12 +81,8 @@ export default function EmailVerifiedPage() {
           setStatus('success');
           setMessage('Your email has been verified and your account is active!');
 
-          // Redirect to clinic-specific onboarding after a short delay
-          const onboardingPath = clinicId
-            ? `/clinic/${clinicId}/patient/onboarding`
-            : '/patient';
           setTimeout(() => {
-            router.push(onboardingPath);
+            router.push('/patient/profile/setup');
           }, 2000);
         }
       } catch (err) {
