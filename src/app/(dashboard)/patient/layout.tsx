@@ -30,9 +30,7 @@ export default function PatientLayout({
   const router = useRouter();
   const { user, patient, isLoading: authLoading, refreshPatient } = useAuth();
 
-  const isFullScreenFlow =
-    pathname.startsWith('/patient/onboarding') ||
-    pathname.startsWith('/patient/profile/setup');
+  const isFullScreenFlow = pathname.startsWith('/patient/onboarding');
 
   // Loading state
   if (authLoading) {
