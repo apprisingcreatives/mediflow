@@ -111,6 +111,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
     let currentUserId: string | null = null;
 
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          const role = session.user.user_metadata?.role;
+          if (!role || role === 'patient') {
+            currentUserId = session.user.id;
+            await fetchPatient(session.user.id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to get session:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    initSession();
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
