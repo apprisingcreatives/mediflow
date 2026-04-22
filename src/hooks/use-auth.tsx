@@ -202,18 +202,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .eq('auth_user_id', authData.user.id)
             .single();
 
-          // If patient record not found or query failed, allow login (might be clinic-specific patient)
-          if (!patientError && patientData && !patientData.is_active) {
-            // Account exists but is not activated
-            // Sign out the user since they shouldn't be logged in yet
-            await supabase.auth.signOut();
-            return {
-              error: new Error(
-                'This account is not yet activated, please check your email.',
-              ),
-            };
-          }
-
           // Set patient state
           if (patientData) {
             setPatient(patientData);

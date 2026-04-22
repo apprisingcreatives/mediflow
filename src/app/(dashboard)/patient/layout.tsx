@@ -30,8 +30,9 @@ export default function PatientLayout({
   const router = useRouter();
   const { user, patient, isLoading: authLoading, refreshPatient } = useAuth();
 
-  // Onboarding is a full-screen wizard — no sidebar
-  const isOnboarding = pathname.startsWith('/patient/onboarding');
+  const isFullScreenFlow =
+    pathname.startsWith('/patient/onboarding') ||
+    pathname.startsWith('/patient/profile/setup');
 
   // Loading state
   if (authLoading) {
@@ -51,8 +52,7 @@ export default function PatientLayout({
     return null;
   }
 
-  // Onboarding — render without sidebar
-  if (isOnboarding) {
+  if (isFullScreenFlow) {
     return (
       <PatientContext.Provider value={{ patient, isLoading: authLoading, refreshPatient }}>
         {children}
