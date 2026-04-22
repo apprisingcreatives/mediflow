@@ -12,7 +12,7 @@ import useActivityLogs from '@/hooks/useActivityLogs';
 import {
   UpcomingAppointments,
   HealthSummary,
-  OnboardingBanner,
+  IntakeBanner,
   PatientInfo,
 } from '@/components/patient/dashboard';
 import { ActivityTimeline } from '@/components/activity/ActivityTimeline';
@@ -119,9 +119,9 @@ export default function PatientDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Onboarding Banner */}
-      {patientInfo && !patientInfo.onboarding_completed && (
-        <OnboardingBanner patient={patientInfo} />
+      {/* Intake Banner */}
+      {patientInfo && (
+        <IntakeBanner patientId={patientInfo.id} />
       )}
 
       {/* Welcome */}
