@@ -113,12 +113,7 @@ export async function GET(
     // Get patient's uploaded documents
     const { data: uploadedDocuments, error: docsError } = await supabaseAdmin
       .from("patient_documents")
-      .select(
-        `
-        *,
-        document_type:clinic_required_documents(*)
-      `
-      )
+      .select("*")
       .eq("patient_id", patientId);
 
     if (docsError) {
