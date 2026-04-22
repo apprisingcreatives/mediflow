@@ -124,18 +124,13 @@ export default function ClinicPatientPortal() {
   const router = useRouter();
   const params = useParams();
   const clinicId = params.clinicId as string;
-  const { user, patient, isLoading, signOut, canAccessClinic } = useAuth();
+  const { user, patient, isLoading, signOut } = useAuth();
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        router.push("/login?redirect=/patient");
-      } else if (!canAccessClinic(clinicId)) {
-        // Patient cannot access this clinic
-        router.push("/patient");
-      }
+    if (!isLoading && !user) {
+      router.push("/login?redirect=/patient");
     }
-  }, [user, patient, isLoading, router, clinicId, canAccessClinic]);
+  }, [user, isLoading, router]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -152,7 +147,7 @@ export default function ClinicPatientPortal() {
     );
   }
 
-  if (!user || !canAccessClinic(clinicId)) {
+  if (!user) {
     return null;
   }
 

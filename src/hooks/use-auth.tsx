@@ -46,7 +46,6 @@ interface AuthContextType {
   signInWithApple: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshPatient: () => Promise<void>;
-  canAccessClinic: (clinicId: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,7 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
-  const [patientClinicIds, setPatientClinicIds] = useState<string[]>([]);
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -71,28 +69,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Error fetching patient:', error);
       }
       setPatient(data);
-      if (data) {
-        await fetchPatientClinics(data.id);
-      }
     } catch (err) {
       console.error('Failed to fetch patient:', err);
-    }
-  };
-
-  const fetchPatientClinics = async (patientId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('patient_clinics')
-        .select('clinic_id')
-        .eq('patient_id', patientId);
-
-      if (error) {
-        console.error('Error fetching patient clinics:', error);
-        return;
-      }
-      setPatientClinicIds((data ?? []).map((pc) => pc.clinic_id));
-    } catch (err) {
-      console.error('Failed to fetch patient clinics:', err);
     }
   };
 
@@ -354,7 +332,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setPatient(null);
-    setPatientClinicIds([]);
     setPractitioner(null);
   };
 
@@ -378,10 +355,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const canAccessClinic = (clinicId: string): boolean => {
-    return patientClinicIds.includes(clinicId);
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -396,7 +369,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithApple,
         signOut,
         refreshPatient,
-        canAccessClinic,
       }}
     >
       {children}
