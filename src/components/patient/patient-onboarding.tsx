@@ -33,12 +33,14 @@ import { supabase } from "@/lib/supabase";
 interface PatientOnboardingProps {
   clinicId: string;
   patientId: string;
+  appointmentId?: string;
   onComplete?: () => void;
 }
 
 export default function PatientOnboarding({
   clinicId,
   patientId,
+  appointmentId,
   onComplete,
 }: PatientOnboardingProps) {
   const [onboardingData, setOnboardingData] =
@@ -61,6 +63,14 @@ export default function PatientOnboarding({
     return { Authorization: `Bearer ${session.access_token}` };
   };
 
+  const dataUrl = appointmentId
+    ? `/api/appointments/${appointmentId}/intake`
+    : `/api/clinic/${clinicId}/patients/${patientId}/onboarding`;
+  const documentsUrl = appointmentId
+    ? `/api/appointments/${appointmentId}/intake/documents`
+    : `/api/clinic/${clinicId}/patients/${patientId}/documents`;
+  const analyzeUrl = `/api/clinic/${clinicId}/patients/${patientId}/onboarding/analyze`;
+
   useEffect(() => {
     fetchOnboardingData();
   }, [clinicId, patientId]);
@@ -68,10 +78,7 @@ export default function PatientOnboarding({
   const fetchOnboardingData = async () => {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(
-        `/api/clinic/${clinicId}/patients/${patientId}/onboarding`,
-        { headers }
-      );
+      const response = await fetch(dataUrl, { headers });
       if (response.ok) {
         const data = await response.json();
         setOnboardingData(data);
@@ -158,14 +165,11 @@ export default function PatientOnboarding({
 
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(
-        `/api/clinic/${clinicId}/patients/${patientId}/documents`,
-        {
-          method: "POST",
-          headers,
-          body: formData,
-        }
-      );
+      const response = await fetch(documentsUrl, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
 
       if (response.ok) {
         // Refresh onboarding data to show uploaded document
@@ -188,17 +192,14 @@ export default function PatientOnboarding({
       );
 
       const headers = await getAuthHeaders();
-      const response = await fetch(
-        `/api/clinic/${clinicId}/patients/${patientId}/onboarding`,
-        {
-          method: "POST",
-          headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            responses: responseData,
-            completeOnboarding: true,
-          }),
-        }
-      );
+      const response = await fetch(dataUrl, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          responses: responseData,
+          ...(appointmentId ? { completeIntake: true } : { completeOnboarding: true }),
+        }),
+      });
 
       if (response.ok) {
         onComplete?.();
@@ -214,10 +215,10 @@ export default function PatientOnboarding({
     setAnalyzing(true);
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(
-        `/api/clinic/${clinicId}/patients/${patientId}/onboarding/analyze`,
-        { method: "POST", headers }
-      );
+      const response = await fetch(analyzeUrl, {
+        method: "POST",
+        headers,
+      });
       if (response.ok) {
         const data = await response.json();
         setOnboardingData((prev) =>
@@ -607,7 +608,7 @@ export default function PatientOnboarding({
           size="lg"
           className="px-8"
         >
-          {submitting ? "Completing..." : "Complete Onboarding"}
+          {submitting ? "Completing..." : appointmentId ? "Complete Intake" : "Complete Onboarding"}
         </Button>
       </div>
     </div>
