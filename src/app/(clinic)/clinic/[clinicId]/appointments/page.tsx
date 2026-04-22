@@ -10,6 +10,7 @@ import {
   subMonths,
 } from 'date-fns';
 import axios from 'axios';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -200,9 +201,11 @@ export default function AppointmentsPage() {
             notes: data.notes,
           });
         }
+
+        toast.success('Appointment updated successfully');
       } else {
         // Create new appointment
-        await createAppointment({
+        const result = await createAppointment({
           clinicId,
           patientId: data.patientId,
           practitionerId: data.practitionerId,
@@ -212,9 +215,14 @@ export default function AppointmentsPage() {
           notes: data.notes,
           bookedBy: 'clinic_admin',
         });
-      }
 
-      // Note: No need to manually refresh - realtime subscription will handle updates automatically
+        if (!result) {
+          toast.error(createError || 'Failed to create appointment');
+          return;
+        }
+
+        toast.success('Appointment created successfully');
+      }
 
       // Close modal
       setIsFormModalOpen(false);
@@ -222,9 +230,9 @@ export default function AppointmentsPage() {
       setSelectedDate(undefined);
     } catch (err) {
       console.error('Form submit error:', err);
-      setFormError(
-        err instanceof Error ? err.message : 'Failed to save appointment',
-      );
+      const message = err instanceof Error ? err.message : 'Failed to save appointment';
+      setFormError(message);
+      toast.error(message);
     }
   };
 

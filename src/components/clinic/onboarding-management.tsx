@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import {
   Card,
   CardContent,
@@ -12,7 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   ClinicOnboardingQuestion,
   ClinicRequiredDocument,
@@ -28,17 +30,24 @@ export default function OnboardingManagement({
   const [questions, setQuestions] = useState<ClinicOnboardingQuestion[]>([]);
   const [documents, setDocuments] = useState<ClinicRequiredDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     fetchOnboardingData();
   }, [clinicId]);
 
+  const getAuthHeaders = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return { Authorization: `Bearer ${session?.access_token}` };
+  };
+
   const fetchOnboardingData = async () => {
     try {
+      const headers = await getAuthHeaders();
       const [questionsRes, documentsRes] = await Promise.all([
-        fetch(`/api/clinic/${clinicId}/onboarding/questions`),
-        fetch(`/api/clinic/${clinicId}/onboarding/documents`),
+        fetch(`/api/clinic/${clinicId}/onboarding/questions`, { headers }),
+        fetch(`/api/clinic/${clinicId}/onboarding/documents`, { headers }),
       ]);
 
       if (questionsRes.ok) {
@@ -57,20 +66,49 @@ export default function OnboardingManagement({
     }
   };
 
+  const handleLoadTemplate = async () => {
+    setLoadingTemplate(true);
+    try {
+      const headers = await getAuthHeaders();
+      const response = await fetch(
+        `/api/clinic/${clinicId}/onboarding/questions/load-template`,
+        {
+          method: "POST",
+          headers,
+        }
+      );
+      if (response.ok) {
+        toast.success("Template questions loaded");
+        fetchOnboardingData();
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to load template");
+      }
+    } catch {
+      toast.error("Failed to load template");
+    } finally {
+      setLoadingTemplate(false);
+    }
+  };
+
   const deleteQuestion = async (questionId: string) => {
     if (!confirm("Are you sure you want to delete this question?")) return;
 
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `/api/clinic/${clinicId}/onboarding/questions/${questionId}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers }
       );
 
       if (response.ok) {
         setQuestions(questions.filter((q) => q.id !== questionId));
+        toast.success("Question deleted");
+      } else {
+        toast.error("Failed to delete question");
       }
-    } catch (error) {
-      console.error("Error deleting question:", error);
+    } catch {
+      toast.error("Failed to delete question");
     }
   };
 
@@ -79,16 +117,20 @@ export default function OnboardingManagement({
       return;
 
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `/api/clinic/${clinicId}/onboarding/documents/${documentId}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers }
       );
 
       if (response.ok) {
         setDocuments(documents.filter((d) => d.id !== documentId));
+        toast.success("Document requirement deleted");
+      } else {
+        toast.error("Failed to delete document requirement");
       }
-    } catch (error) {
-      console.error("Error deleting document:", error);
+    } catch {
+      toast.error("Failed to delete document requirement");
     }
   };
 
@@ -117,14 +159,24 @@ export default function OnboardingManagement({
         <TabsContent value="questions" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Health History Questions</h2>
-            <Button
-              onClick={() =>
-                router.push(`/clinic/dashboard/onboarding/questions/new`)
-              }
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Question
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLoadTemplate}
+                disabled={loadingTemplate || questions.length > 0}
+              >
+                {loadingTemplate ? "Loading..." : "Load Template"}
+              </Button>
+              <Button
+                onClick={() =>
+                  router.push(`/clinic/dashboard/onboarding/questions/new`)
+                }
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Question
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-4">

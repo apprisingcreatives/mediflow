@@ -50,6 +50,7 @@ function useBookingForm() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [createdAppointment, setCreatedAppointment] = useState<any>(null);
 
   // Memoized selected entities
   const selectedService = useMemo(
@@ -142,35 +143,25 @@ function useBookingForm() {
     setFormData(INITIAL_FORM_DATA);
   }, []);
 
-  // Auth check for booking
-  const checkAuthAndOnboarding = useCallback(() => {
+  const checkAuth = useCallback(() => {
     if (!user) {
       const currentUrl = window.location.href;
       router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
       return false;
     }
-
-    if (patient && !patient.onboarding_completed) {
-      const currentUrl = window.location.href;
-      router.push(
-        `/patient/onboarding?redirect=${encodeURIComponent(currentUrl)}`,
-      );
-      return false;
-    }
-
     return true;
-  }, [user, patient, router]);
+  }, [user, router]);
 
   // Navigation handlers
   const handleNext = useCallback(() => {
-    if (currentStep === 1 && !checkAuthAndOnboarding()) {
+    if (currentStep === 1 && !checkAuth()) {
       return;
     }
 
     if (currentStep < 4) {
       setCurrentStep((prev) => prev + 1);
     }
-  }, [currentStep, checkAuthAndOnboarding]);
+  }, [currentStep, checkAuth]);
 
   const handleBack = useCallback(() => {
     if (currentStep > 1) {
@@ -261,6 +252,7 @@ function useBookingForm() {
         throw new Error(data.error || 'Failed to create appointment');
       }
 
+      setCreatedAppointment(data.appointment);
       setCurrentStep(4);
     } catch (err) {
       console.error('Booking error:', err);
@@ -310,6 +302,7 @@ function useBookingForm() {
 
     // Actions
     submitBooking,
+    createdAppointment,
 
     // Auth
     user,

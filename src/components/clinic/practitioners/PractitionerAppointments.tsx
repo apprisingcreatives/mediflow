@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import {
   format,
   startOfMonth,
@@ -52,6 +53,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Appointment, APPOINTMENT_STATUSES, AppointmentStatus } from '@/hooks/useGetAppointments';
 import { AppointmentActions } from '@/components/appointments/AppointmentActions';
@@ -77,6 +79,10 @@ export function PractitionerAppointments({
   currentMonth,
   onMonthChange,
 }: PractitionerAppointmentsProps) {
+  const params = useParams();
+  const practitionerId = params.practitionerId as string;
+  const clinicId = params.clinicId as string;
+
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -583,6 +589,17 @@ export function PractitionerAppointments({
                       )}
                   </div>
                 </div>
+              )}
+
+              {/* View Documents Link */}
+              {selectedAppointment.patient_id && (
+                <Link
+                  href={`/practitioner/${practitionerId}/clinic/${clinicId}/patients/${selectedAppointment.patient_id}/documents`}
+                  className="flex items-center gap-2 text-sm text-clinic-teal hover:text-clinic-teal/80 font-medium"
+                >
+                  <FileText className="w-4 h-4" />
+                  View Medical Documents
+                </Link>
               )}
 
               {/* Appointment Info */}

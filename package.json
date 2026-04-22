@@ -7,9 +7,11 @@
     "tc": "tsc -b --noEmit",
     "supabase:start": "docker rm -f supabase_vector_mediflow || true && npx supabase stop --no-backup && npx supabase start && bash scripts/seed-super-admin.sh",
     "supabase:restart": "docker rm -f supabase_vector_mediflow || true && npx supabase stop --no-backup && npx supabase start && bash scripts/seed-super-admin.sh",
-    "seed:admin": "bash scripts/seed-super-admin.sh"
+    "seed:admin": "node scripts/seed-super-admin.js",
+    "migrate": "node scripts/migrate.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.87.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -56,6 +58,7 @@
     "lucide-react": "^0.468.0",
     "next": "^14.2.35",
     "next-themes": "^0.2.1",
+    "pdf-parse": "^2.4.5",
     "prettier": "^3.3.3",
     "radix-ui": "^1.1.3",
     "react": "^18",
@@ -73,6 +76,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.19.33",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "postcss": "^8",

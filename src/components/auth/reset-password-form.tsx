@@ -21,18 +21,27 @@ import { toast } from 'sonner';
 interface ResetPasswordFormProps {
   loginHref: string;
   forgotPasswordHref: string;
+  /** When true, determine loginHref dynamically from user_metadata.role */
+  roleBasedRedirect?: boolean;
 }
 
 function validatePassword(pwd: string): string | null {
   if (pwd.length < 8) return 'Password must be at least 8 characters long';
-  if (!/[A-Z]/.test(pwd)) return 'Password must contain at least one uppercase letter';
-  if (!/[a-z]/.test(pwd)) return 'Password must contain at least one lowercase letter';
+  if (!/[A-Z]/.test(pwd))
+    return 'Password must contain at least one uppercase letter';
+  if (!/[a-z]/.test(pwd))
+    return 'Password must contain at least one lowercase letter';
   if (!/[0-9]/.test(pwd)) return 'Password must contain at least one number';
-  if (!/[^A-Za-z0-9]/.test(pwd)) return 'Password must contain at least one special character';
+  if (!/[^A-Za-z0-9]/.test(pwd))
+    return 'Password must contain at least one special character';
   return null;
 }
 
-function passwordStrength(pwd: string): { strength: number; label: string; color: string } {
+function passwordStrength(pwd: string): {
+  strength: number;
+  label: string;
+  color: string;
+} {
   let strength = 0;
   if (pwd.length >= 8) strength++;
   if (pwd.length >= 12) strength++;
@@ -42,13 +51,27 @@ function passwordStrength(pwd: string): { strength: number; label: string; color
   if (/[^A-Za-z0-9]/.test(pwd)) strength++;
 
   if (strength <= 2) return { strength, label: 'Weak', color: 'bg-red-500' };
-  if (strength <= 4) return { strength, label: 'Medium', color: 'bg-yellow-500' };
+  if (strength <= 4)
+    return { strength, label: 'Medium', color: 'bg-yellow-500' };
   return { strength, label: 'Strong', color: 'bg-green-500' };
+}
+
+function getLoginHrefForRole(role?: string): string {
+  switch (role) {
+    case 'clinic_admin':
+      return '/clinic/login';
+    case 'super_admin':
+      return '/super-admin/login';
+    // patient and practitioner share /login
+    default:
+      return '/login';
+  }
 }
 
 export function ResetPasswordForm({
   loginHref,
   forgotPasswordHref,
+  roleBasedRedirect = false,
 }: ResetPasswordFormProps) {
   const router = useRouter();
   const [password, setPassword] = useState('');
@@ -59,6 +82,7 @@ export function ResetPasswordForm({
   const [isSettingSession, setIsSettingSession] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tokenError, setTokenError] = useState(false);
+  const [resolvedLoginHref, setResolvedLoginHref] = useState(loginHref);
 
   useEffect(() => {
     async function setSessionFromUrl() {
@@ -84,6 +108,15 @@ export function ResetPasswordForm({
         setTokenError(true);
         setIsSettingSession(false);
         return;
+      }
+
+      // Resolve login redirect based on user role if needed
+      if (roleBasedRedirect) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        const role = user?.user_metadata?.role;
+        setResolvedLoginHref(getLoginHrefForRole(role));
       }
 
       // Clear hash to avoid re-processing and exposure in browser history
@@ -119,14 +152,15 @@ export function ResetPasswordForm({
 
       if (error) {
         setError(error.message);
+        toast.error(error.message);
         return;
       }
-
       toast.success('Password reset successfully! Redirecting to login...');
       await supabase.auth.signOut();
-      setTimeout(() => router.push(loginHref), 2000);
+      setTimeout(() => router.push(resolvedLoginHref), 2000);
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
+      toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -190,7 +224,10 @@ export function ResetPasswordForm({
           <form onSubmit={handleSubmit} className='space-y-5'>
             {/* New Password */}
             <div className='space-y-2'>
-              <Label htmlFor='password' className='text-clinic-navy dark:text-white'>
+              <Label
+                htmlFor='password'
+                className='text-clinic-navy dark:text-white'
+              >
                 New Password
               </Label>
               <div className='relative'>
@@ -211,7 +248,11 @@ export function ResetPasswordForm({
                   onClick={() => setShowPassword(!showPassword)}
                   className='absolute right-3 top-1/2 -translate-y-1/2 text-clinic-text/40 hover:text-clinic-text/60'
                 >
-                  {showPassword ? <EyeOff className='w-4 h-4' /> : <Eye className='w-4 h-4' />}
+                  {showPassword ? (
+                    <EyeOff className='w-4 h-4' />
+                  ) : (
+                    <Eye className='w-4 h-4' />
+                  )}
                 </button>
               </div>
 
@@ -219,8 +260,12 @@ export function ResetPasswordForm({
               {password && (
                 <div className='space-y-1'>
                   <div className='flex items-center justify-between text-xs'>
-                    <span className='text-clinic-text/60 dark:text-white/60'>Password strength</span>
-                    <span className={`font-medium ${pwdStrength.label === 'Weak' ? 'text-red-500' : pwdStrength.label === 'Medium' ? 'text-yellow-500' : 'text-green-500'}`}>
+                    <span className='text-clinic-text/60 dark:text-white/60'>
+                      Password strength
+                    </span>
+                    <span
+                      className={`font-medium ${pwdStrength.label === 'Weak' ? 'text-red-500' : pwdStrength.label === 'Medium' ? 'text-yellow-500' : 'text-green-500'}`}
+                    >
                       {pwdStrength.label}
                     </span>
                   </div>
@@ -236,7 +281,10 @@ export function ResetPasswordForm({
 
             {/* Confirm Password */}
             <div className='space-y-2'>
-              <Label htmlFor='confirmPassword' className='text-clinic-navy dark:text-white'>
+              <Label
+                htmlFor='confirmPassword'
+                className='text-clinic-navy dark:text-white'
+              >
                 Confirm Password
               </Label>
               <div className='relative'>
@@ -257,7 +305,11 @@ export function ResetPasswordForm({
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className='absolute right-3 top-1/2 -translate-y-1/2 text-clinic-text/40 hover:text-clinic-text/60'
                 >
-                  {showConfirmPassword ? <EyeOff className='w-4 h-4' /> : <Eye className='w-4 h-4' />}
+                  {showConfirmPassword ? (
+                    <EyeOff className='w-4 h-4' />
+                  ) : (
+                    <Eye className='w-4 h-4' />
+                  )}
                 </button>
               </div>
             </div>
@@ -269,23 +321,33 @@ export function ResetPasswordForm({
               </p>
               <ul className='space-y-1 text-xs text-clinic-text/60 dark:text-white/60'>
                 <li className='flex items-center gap-2'>
-                  <div className={`w-1 h-1 rounded-full ${password.length >= 8 ? 'bg-green-500' : 'bg-clinic-text/20'}`} />
+                  <div
+                    className={`w-1 h-1 rounded-full ${password.length >= 8 ? 'bg-green-500' : 'bg-clinic-text/20'}`}
+                  />
                   At least 8 characters
                 </li>
                 <li className='flex items-center gap-2'>
-                  <div className={`w-1 h-1 rounded-full ${/[A-Z]/.test(password) ? 'bg-green-500' : 'bg-clinic-text/20'}`} />
+                  <div
+                    className={`w-1 h-1 rounded-full ${/[A-Z]/.test(password) ? 'bg-green-500' : 'bg-clinic-text/20'}`}
+                  />
                   One uppercase letter
                 </li>
                 <li className='flex items-center gap-2'>
-                  <div className={`w-1 h-1 rounded-full ${/[a-z]/.test(password) ? 'bg-green-500' : 'bg-clinic-text/20'}`} />
+                  <div
+                    className={`w-1 h-1 rounded-full ${/[a-z]/.test(password) ? 'bg-green-500' : 'bg-clinic-text/20'}`}
+                  />
                   One lowercase letter
                 </li>
                 <li className='flex items-center gap-2'>
-                  <div className={`w-1 h-1 rounded-full ${/[0-9]/.test(password) ? 'bg-green-500' : 'bg-clinic-text/20'}`} />
+                  <div
+                    className={`w-1 h-1 rounded-full ${/[0-9]/.test(password) ? 'bg-green-500' : 'bg-clinic-text/20'}`}
+                  />
                   One number
                 </li>
                 <li className='flex items-center gap-2'>
-                  <div className={`w-1 h-1 rounded-full ${/[^A-Za-z0-9]/.test(password) ? 'bg-green-500' : 'bg-clinic-text/20'}`} />
+                  <div
+                    className={`w-1 h-1 rounded-full ${/[^A-Za-z0-9]/.test(password) ? 'bg-green-500' : 'bg-clinic-text/20'}`}
+                  />
                   One special character
                 </li>
               </ul>
@@ -295,7 +357,9 @@ export function ResetPasswordForm({
             {error && (
               <div className='flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg'>
                 <AlertCircle className='w-4 h-4 text-red-500 mt-0.5 flex-shrink-0' />
-                <p className='text-sm text-red-600 dark:text-red-400'>{error}</p>
+                <p className='text-sm text-red-600 dark:text-red-400'>
+                  {error}
+                </p>
               </div>
             )}
 

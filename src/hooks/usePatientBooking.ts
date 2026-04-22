@@ -58,6 +58,9 @@ const usePatientBooking = () => {
   // Error state
   const [error, setError] = useState<string | null>(null);
 
+  // Created appointment (for post-booking redirect to intake)
+  const [createdAppointment, setCreatedAppointment] = useState<Record<string, unknown> | null>(null);
+
   // Fetch practitioners for a clinic
   const fetchPractitioners = useCallback(async (clinicId: string) => {
     if (!clinicId) return;
@@ -157,7 +160,7 @@ const usePatientBooking = () => {
     setSelectedTime('');
   }, []);
 
-  // Book appointment
+  // Book appointment via API route (handles intake_status, patient_clinics, email)
   const bookAppointment = useCallback(
     async (patientId: string): Promise<boolean> => {
       if (
@@ -176,65 +179,35 @@ const usePatientBooking = () => {
         setSubmitting(true);
         setError(null);
 
-        const service = services.find((s) => s.id === selectedServiceId);
-
-        // Check availability
-        const { data: isAvailable, error: availError } = await supabase.rpc(
-          'check_appointment_availability',
-          {
-            p_practitioner_id: selectedPractitionerId,
-            p_appointment_date: format(selectedDate, 'yyyy-MM-dd'),
-            p_appointment_time: selectedTime,
-            p_duration_minutes: service?.duration_minutes || 30,
-            p_exclude_appointment_id: null,
-          }
-        );
-
-        if (availError) throw availError;
-
-        if (!isAvailable) {
-          setError('This time slot is no longer available. Please choose another time.');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          setError('Not authenticated');
           return false;
         }
 
-        // Create the appointment
-        const { error: insertError } = await supabase.from('appointments').insert({
-          clinic_id: selectedClinicId,
-          patient_id: patientId,
-          practitioner_id: selectedPractitionerId,
-          service_id: selectedServiceId,
-          appointment_date: format(selectedDate, 'yyyy-MM-dd'),
-          appointment_time: selectedTime,
-          notes: notes || null,
-          status: 'scheduled',
-          booked_by: 'patient',
+        const res = await fetch('/api/appointments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            clinic_id: selectedClinicId,
+            practitioner_id: selectedPractitionerId,
+            service_id: selectedServiceId,
+            appointment_date: format(selectedDate, 'yyyy-MM-dd'),
+            appointment_time: selectedTime,
+            notes: notes || null,
+          }),
         });
 
-        if (insertError) throw insertError;
-
-        // Log activity
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const service = services.find((s) => s.id === selectedServiceId);
-          const practitioner = practitioners.find((p) => p.id === selectedPractitionerId);
-          await supabase.from('activity_logs').insert({
-            patient_id: patientId,
-            clinic_id: selectedClinicId,
-            actor_id: user.id,
-            actor_role: 'patient',
-            action_type: 'appointment_created',
-            entity_type: 'appointment',
-            entity_id: null,
-            metadata: {
-              practitioner_name: practitioner?.name || '',
-              service_name: service?.name || '',
-              date: format(selectedDate!, 'yyyy-MM-dd'),
-              time: selectedTime,
-            },
-          }).then(({ error: logError }) => {
-            if (logError) console.error('Failed to log activity:', logError);
-          });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Failed to book appointment');
         }
+
+        const { appointment } = await res.json();
+        setCreatedAppointment(appointment);
 
         return true;
       } catch (err) {
@@ -252,7 +225,6 @@ const usePatientBooking = () => {
       selectedDate,
       selectedTime,
       notes,
-      services,
     ]
   );
 
@@ -275,6 +247,7 @@ const usePatientBooking = () => {
     setPractitioners([]);
     setServices([]);
     setError(null);
+    setCreatedAppointment(null);
   }, []);
 
   // Reset form (without closing modal)
@@ -342,6 +315,9 @@ const usePatientBooking = () => {
     bookAppointment,
     resetForm,
     isFormValid,
+
+    // Post-booking
+    createdAppointment,
   };
 };
 

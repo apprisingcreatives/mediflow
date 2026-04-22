@@ -7,6 +7,7 @@ export default function SuperAdminForgotPasswordPage() {
     <ForgotPasswordForm
       redirectTo={redirectTo}
       loginHref='/super-admin/login'
+      allowedRoles={['super_admin']}
       title='Forgot Admin Password'
       subtitle='Enter your super admin email to receive a reset link'
     />

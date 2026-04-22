@@ -30,6 +30,7 @@ interface Clinic {
   slug?: string;
   email_notifications_enabled: boolean;
   appointment_reminders_enabled: boolean;
+  intake_required?: boolean;
 }
 
 interface ClinicAdmin {
@@ -240,7 +241,7 @@ export default function ClinicDashboardLayout({
                         )}
                       </div>
                     </div>
-                    <Link href='/clinic/billing'>
+                    <Link href={`/clinic/${clinic?.id}/billing`}>
                       <Button
                         className={
                           isTrialExpired
@@ -271,7 +272,7 @@ export default function ClinicDashboardLayout({
                     restore access to all features including appointments,
                     patient management, and AI tools.
                   </p>
-                  <Link href='/clinic/billing'>
+                  <Link href={`/clinic/${clinic?.id}/billing`}>
                     <Button
                       size='lg'
                       className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
