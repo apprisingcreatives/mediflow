@@ -109,69 +109,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
-
-    const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!isMounted) return;
-
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      const role = session?.user.user_metadata?.role;
-      if (!role || role === 'patient') {
-        await fetchPatient(`${session?.user.id}`);
-      }
-
-      setIsLoading(false);
-    };
-
-    getSession();
+    let currentUserId: string | null = null;
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
 
-      // Only handle meaningful auth events, not token refreshes
       if (event === 'TOKEN_REFRESHED') {
-        // Token refresh doesn't need to trigger state updates
-        // unless the user actually changed
-        if (session?.user?.id === user?.id) {
-          return;
-        }
+        setSession(session);
+        return;
       }
 
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        // Only fetch patient if user changed
         const role = session.user.user_metadata?.role;
-        if (session.user.id !== user?.id && (!role || role === 'patient')) {
+        if (session.user.id !== currentUserId && (!role || role === 'patient')) {
+          currentUserId = session.user.id;
           await fetchPatient(session.user.id);
         }
       } else {
+        currentUserId = null;
         setPatient(null);
       }
 
-      // Don't reset loading state on every auth event
-      if (
-        event === 'SIGNED_IN' ||
-        event === 'SIGNED_OUT' ||
-        event === 'INITIAL_SESSION'
-      ) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     });
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [user?.id]);
+  }, []);
 
   const signIn = async (
     email: string,

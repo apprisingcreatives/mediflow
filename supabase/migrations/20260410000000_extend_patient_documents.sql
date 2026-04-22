@@ -7,9 +7,15 @@
 -- Section 1: Add new columns
 -- -----------------------------------------------------------------------------
 
--- Make file_url nullable since new uploads use file_path instead
-ALTER TABLE public.patient_documents
-  ALTER COLUMN file_url DROP NOT NULL;
+-- Make file_url nullable if it exists (some schemas may not have this column)
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'patient_documents' AND column_name = 'file_url'
+  ) THEN
+    ALTER TABLE public.patient_documents ALTER COLUMN file_url DROP NOT NULL;
+  END IF;
+END $$;
 
 ALTER TABLE public.patient_documents
   -- Clinic scoping: ties the document to a specific clinic context
@@ -79,6 +85,10 @@ CREATE INDEX IF NOT EXISTS idx_patient_documents_status
 DROP POLICY IF EXISTS "patient_documents_clinic_admins_select" ON public.patient_documents;
 DROP POLICY IF EXISTS "patient_documents_clinic_admins_insert"  ON public.patient_documents;
 DROP POLICY IF EXISTS "patient_documents_clinic_admins_update"  ON public.patient_documents;
+DROP POLICY IF EXISTS "patient_documents_practitioners_select"  ON public.patient_documents;
+DROP POLICY IF EXISTS "patient_documents_practitioners_update"  ON public.patient_documents;
+DROP POLICY IF EXISTS "patient_documents_patients_insert"       ON public.patient_documents;
+DROP POLICY IF EXISTS "patient_documents_patients_delete"       ON public.patient_documents;
 
 
 -- -----------------------------------------------------------------------------

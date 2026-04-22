@@ -60,7 +60,6 @@ export default function PatientLayout({
       </PatientContext.Provider>
     );
   }
-  console.log(`@@@@@@@@@@@@@@@@patient`, patient);
   const patientName = patient
     ? `${patient.first_name} ${patient.last_name}`
     : user.user_metadata?.first_name
