@@ -146,7 +146,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get clinic and service names for email
+    // Check if clinic requires intake and update appointment status
     let clinicName = '';
     let serviceName = '';
     let practitionerName = '';
@@ -154,10 +154,18 @@ export async function POST(request: Request) {
     if (clinic_id) {
       const { data: clinic } = await supabase
         .from('clinics')
-        .select('name')
+        .select('name, intake_required')
         .eq('id', clinic_id)
         .single();
       clinicName = clinic?.name || '';
+
+      if (clinic?.intake_required && appointment) {
+        await supabase
+          .from('appointments')
+          .update({ intake_status: 'pending' })
+          .eq('id', appointment.id);
+        appointment.intake_status = 'pending';
+      }
     }
 
     if (service_id) {
