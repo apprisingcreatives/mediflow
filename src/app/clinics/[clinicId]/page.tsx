@@ -33,7 +33,7 @@ export default function ClinicPage() {
   const params = useParams();
   const clinicId = params.clinicId as string;
   const router = useRouter();
-  const { user, patient } = useAuth();
+  const { user } = useAuth();
   const { user_metadata } = user || {};
   const { role, clinic_id: userClinicId } = user_metadata || {};
   const { clinic, loading: isLoading, error, fetchClinic } = useGetClinic();
@@ -61,14 +61,6 @@ export default function ClinicPage() {
     // If user is not logged in, redirect to login first
     if (!user) {
       router.push(`/login?redirect=${encodeURIComponent(bookingUrl)}`);
-      return;
-    }
-
-    // If patient hasn't completed onboarding, redirect to onboarding
-    if (patient && !patient.onboarding_completed) {
-      router.push(
-        `/patient/onboarding?redirect=${encodeURIComponent(bookingUrl)}`,
-      );
       return;
     }
 
