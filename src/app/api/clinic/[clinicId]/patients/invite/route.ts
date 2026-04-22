@@ -149,7 +149,7 @@ export async function POST(
           invited_by_clinic: clinicId,
           invited_by_clinic_name: clinic.name,
         },
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/patient/onboarding`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/patient/setup-account`,
       });
 
     if (inviteError) {

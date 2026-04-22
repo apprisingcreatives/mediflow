@@ -97,12 +97,35 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         .maybeSingle(),
     ]);
 
+    // If no responses for this appointment, pre-fill from the patient's most recent
+    // responses at the same clinic (from a prior appointment)
+    let finalResponses = responses;
+    if ((!responses || responses.length === 0) && questions && questions.length > 0) {
+      const { data: previousResponses } = await supabaseAdmin
+        .from('patient_question_responses')
+        .select('*, question:clinic_onboarding_questions(*)')
+        .eq('patient_id', appointment.patient_id)
+        .eq('clinic_id', clinicId)
+        .neq('appointment_id', appointmentId)
+        .order('created_at', { ascending: false });
+
+      if (previousResponses && previousResponses.length > 0) {
+        const questionIds = new Set(questions.map((q: any) => q.id));
+        const seen = new Set<string>();
+        finalResponses = previousResponses.filter((r: any) => {
+          if (!questionIds.has(r.question_id) || seen.has(r.question_id)) return false;
+          seen.add(r.question_id);
+          return true;
+        });
+      }
+    }
+
     return NextResponse.json({
       appointment,
       clinic,
       questions,
       documents,
-      responses,
+      responses: finalResponses,
       uploadedDocuments,
       aiPrediction,
     });
@@ -154,8 +177,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { responses, completeIntake } = await request.json();
 
-    // Upsert question responses if provided
+    // Save question responses: delete existing for this appointment, then insert fresh
     if (Array.isArray(responses) && responses.length > 0) {
+      const questionIds = responses.map((r: any) => r.questionId);
+
+      const { error: deleteError } = await supabaseAdmin
+        .from('patient_question_responses')
+        .delete()
+        .eq('patient_id', appointment.patient_id)
+        .eq('appointment_id', appointmentId)
+        .in('question_id', questionIds);
+
+      if (deleteError) {
+        console.error('Intake POST delete error:', deleteError);
+        return NextResponse.json({ error: 'Failed to save responses' }, { status: 500 });
+      }
+
       const responseInserts = responses.map((r: any) => ({
         patient_id: appointment.patient_id,
         clinic_id: appointment.clinic_id,
@@ -165,12 +202,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         appointment_id: appointmentId,
       }));
 
-      const { error: upsertError } = await supabaseAdmin
+      const { error: insertError } = await supabaseAdmin
         .from('patient_question_responses')
-        .upsert(responseInserts, { onConflict: 'patient_id,question_id', ignoreDuplicates: false });
+        .insert(responseInserts);
 
-      if (upsertError) {
-        console.error('Intake POST upsert error:', upsertError);
+      if (insertError) {
+        console.error('Intake POST insert error:', insertError);
         return NextResponse.json({ error: 'Failed to save responses' }, { status: 500 });
       }
     }

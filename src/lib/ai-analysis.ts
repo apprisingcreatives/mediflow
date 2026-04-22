@@ -1,9 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+function getAnthropicClient(): Anthropic | null {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+  return new Anthropic({ apiKey });
+}
 
 interface QuestionWithResponse {
   question_text: string;
@@ -37,6 +39,9 @@ async function extractTextFromPdf(buffer: Buffer): Promise<string> {
 }
 
 async function extractTextFromImage(buffer: Buffer, mimeType: string): Promise<string> {
+  const anthropic = getAnthropicClient();
+  if (!anthropic) return '';
+
   const base64 = buffer.toString('base64');
   const mediaType = mimeType as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
 
@@ -114,6 +119,18 @@ export async function analyzePatientHealth(
   responses: QuestionWithResponse[],
   documents: DocumentForAnalysis[]
 ): Promise<AnalysisResult> {
+  const anthropic = getAnthropicClient();
+  if (!anthropic) {
+    return {
+      recommended_specialty: 'General Practice',
+      recommended_treatments: ['Schedule an initial consultation'],
+      risk_factors: [],
+      predicted_conditions: [],
+      confidence_score: 0.5,
+      summary: 'AI analysis is not available. Please set up the ANTHROPIC_API_KEY to enable health analysis. A general consultation is recommended.',
+    };
+  }
+
   // Build Q&A section
   const qaSection = responses
     .filter((r) => r.response_value || r.response_options)

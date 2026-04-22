@@ -12,23 +12,25 @@ import {
   Shield,
   Save,
   Loader2,
-  CheckCircle,
-  AlertCircle,
   FileText,
+  ClipboardList,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 import { useClinicContext } from '../layout';
+import OnboardingManagement from '@/components/clinic/onboarding-management';
 
 export default function SettingsPage() {
   const { clinic, admin } = useClinicContext();
   const clinicId = clinic?.id;
   const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Form state
   const [clinicName, setClinicName] = useState('');
   const [clinicEmail, setClinicEmail] = useState('');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [appointmentReminders, setAppointmentReminders] = useState(true);
+  const [intakeRequired, setIntakeRequired] = useState(false);
 
   // Initialize form from clinic data
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function SettingsPage() {
       setClinicEmail(clinic.email || '');
       setEmailNotifications(clinic.email_notifications_enabled ?? true);
       setAppointmentReminders(clinic.appointment_reminders_enabled ?? true);
+      setIntakeRequired(clinic.intake_required ?? false);
     }
   }, [clinic]);
 
@@ -50,17 +53,21 @@ export default function SettingsPage() {
   const handleSave = async () => {
     if (!clinicId) return;
     setIsSaving(true);
-    setSaveStatus('idle');
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`/api/clinic/${clinicId}/settings`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
         body: JSON.stringify({
           name: clinicName,
           email: clinicEmail,
           email_notifications_enabled: emailNotifications,
           appointment_reminders_enabled: appointmentReminders,
+          intake_required: intakeRequired,
         }),
       });
 
@@ -68,11 +75,9 @@ export default function SettingsPage() {
         throw new Error('Failed to save settings');
       }
 
-      setSaveStatus('success');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      toast.success('Settings saved successfully');
     } catch {
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      toast.error('Failed to save settings');
     } finally {
       setIsSaving(false);
     }
@@ -200,6 +205,42 @@ export default function SettingsPage() {
         </Link>
       </div>
 
+      {/* Patient Intake */}
+      <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6'>
+        <div className='flex items-center gap-3 mb-6'>
+          <div className='w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center'>
+            <ClipboardList className='w-5 h-5 text-purple-500' />
+          </div>
+          <div className='flex-1'>
+            <h3 className='font-semibold text-clinic-navy dark:text-white'>
+              Patient Intake
+            </h3>
+            <p className='text-sm text-clinic-text/60 dark:text-white/60'>
+              Configure intake questions and documents patients must complete before appointments
+            </p>
+          </div>
+          <div className='flex items-center gap-3'>
+            <span className='text-sm text-clinic-text/60 dark:text-white/60'>
+              {intakeRequired ? 'Enabled' : 'Disabled'}
+            </span>
+            <Switch
+              checked={intakeRequired}
+              onCheckedChange={setIntakeRequired}
+            />
+          </div>
+        </div>
+
+        {intakeRequired && clinicId && (
+          <OnboardingManagement clinicId={clinicId} />
+        )}
+
+        {!intakeRequired && (
+          <p className='text-sm text-clinic-text/50 dark:text-white/50'>
+            Enable patient intake to require patients to complete health questions and upload documents before their appointments.
+          </p>
+        )}
+      </div>
+
       {/* Security */}
       <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6'>
         <div className='flex items-center gap-3 mb-6'>
@@ -225,19 +266,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Save Button */}
-      <div className='flex items-center justify-end gap-3'>
-        {saveStatus === 'success' && (
-          <span className='flex items-center gap-1 text-sm text-green-600 dark:text-green-400'>
-            <CheckCircle className='w-4 h-4' />
-            Settings saved
-          </span>
-        )}
-        {saveStatus === 'error' && (
-          <span className='flex items-center gap-1 text-sm text-red-600 dark:text-red-400'>
-            <AlertCircle className='w-4 h-4' />
-            Failed to save
-          </span>
-        )}
+      <div className='flex items-center justify-end'>
         <Button
           onClick={handleSave}
           disabled={isSaving}

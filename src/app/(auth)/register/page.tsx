@@ -61,7 +61,7 @@ function RegisterContent() {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [clinicLoading, setClinicLoading] = useState(false);
 
-  const redirectUrl = searchParams.get('redirect') || '/patient/onboarding';
+  const redirectUrl = searchParams.get('redirect') || '/patient';
   const clinicId = searchParams.get('clinic');
 
   useEffect(() => {

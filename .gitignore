@@ -61,3 +61,5 @@ CLAUDE.md
 tatus.md
 .mcp.json
 .superpowers/*
+
+supabase/seed.sql

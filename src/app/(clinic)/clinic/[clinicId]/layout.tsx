@@ -30,6 +30,7 @@ interface Clinic {
   slug?: string;
   email_notifications_enabled: boolean;
   appointment_reminders_enabled: boolean;
+  intake_required?: boolean;
 }
 
 interface ClinicAdmin {

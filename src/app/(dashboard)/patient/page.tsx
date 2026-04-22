@@ -4,7 +4,13 @@ import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { parseISO, isBefore, startOfDay } from 'date-fns';
-import { Loader2, Calendar, CheckCircle, AlertCircle, UserCheck } from 'lucide-react';
+import {
+  Loader2,
+  Calendar,
+  CheckCircle,
+  AlertCircle,
+  UserCheck,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import useGetAppointments from '@/hooks/useGetAppointments';
@@ -12,7 +18,6 @@ import useActivityLogs from '@/hooks/useActivityLogs';
 import {
   UpcomingAppointments,
   HealthSummary,
-  IntakeBanner,
   PatientInfo,
 } from '@/components/patient/dashboard';
 import { ActivityTimeline } from '@/components/activity/ActivityTimeline';
@@ -69,8 +74,8 @@ export default function PatientDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-clinic-teal" />
+      <div className='flex items-center justify-center min-h-[60vh]'>
+        <Loader2 className='w-8 h-8 animate-spin text-clinic-teal' />
       </div>
     );
   }
@@ -118,43 +123,40 @@ export default function PatientDashboard() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       {/* Intake Banner */}
-      {patientInfo && (
-        <IntakeBanner patientId={patientInfo.id} />
-      )}
 
       {/* Welcome */}
       <div>
-        <h1 className="font-display text-2xl font-bold text-clinic-navy dark:text-white">
+        <h1 className='font-display text-2xl font-bold text-clinic-navy dark:text-white'>
           Welcome back, {patient?.first_name || 'Patient'}
         </h1>
-        <p className="text-clinic-text/60 dark:text-white/60">
+        <p className='text-clinic-text/60 dark:text-white/60'>
           Here&apos;s your health overview
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className='grid grid-cols-2 lg:grid-cols-4 gap-4'>
         {statsCards.map((stat) => (
           <div
             key={stat.label}
-            className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-4"
+            className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-4'
           >
-            <div className="flex items-center gap-3">
+            <div className='flex items-center gap-3'>
               <div
                 className={cn(
                   'w-10 h-10 rounded-xl flex items-center justify-center',
                   stat.color,
                 )}
               >
-                <stat.icon className="w-5 h-5" />
+                <stat.icon className='w-5 h-5' />
               </div>
               <div>
-                <p className="text-xs text-clinic-text/60 dark:text-white/60">
+                <p className='text-xs text-clinic-text/60 dark:text-white/60'>
                   {stat.label}
                 </p>
-                <p className="text-lg font-bold text-clinic-navy dark:text-white">
+                <p className='text-lg font-bold text-clinic-navy dark:text-white'>
                   {stat.value}
                 </p>
               </div>
@@ -173,28 +175,25 @@ export default function PatientDashboard() {
       />
 
       {/* Recent Activity */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-lg font-semibold text-clinic-navy dark:text-white">
+      <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6'>
+        <div className='flex items-center justify-between mb-4'>
+          <h2 className='font-display text-lg font-semibold text-clinic-navy dark:text-white'>
             Recent Activity
           </h2>
-          <Link href="/patient/history">
-            <Button variant="ghost" size="sm" className="text-clinic-teal">
+          <Link href='/patient/history'>
+            <Button variant='ghost' size='sm' className='text-clinic-teal'>
               View All
             </Button>
           </Link>
         </div>
         {logsLoading ? (
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="w-6 h-6 animate-spin text-clinic-teal" />
+          <div className='flex items-center justify-center p-8'>
+            <Loader2 className='w-6 h-6 animate-spin text-clinic-teal' />
           </div>
         ) : logs.length > 0 ? (
-          <ActivityTimeline
-            logs={logs.slice(0, 10)}
-            perspective="patient"
-          />
+          <ActivityTimeline logs={logs.slice(0, 10)} perspective='patient' />
         ) : (
-          <p className="text-sm text-clinic-text/60 dark:text-white/60 text-center py-8">
+          <p className='text-sm text-clinic-text/60 dark:text-white/60 text-center py-8'>
             No recent activity
           </p>
         )}

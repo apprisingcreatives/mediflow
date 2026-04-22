@@ -13,7 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   ClinicOnboardingQuestion,
   ClinicRequiredDocument,
@@ -36,11 +37,17 @@ export default function OnboardingManagement({
     fetchOnboardingData();
   }, [clinicId]);
 
+  const getAuthHeaders = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return { Authorization: `Bearer ${session?.access_token}` };
+  };
+
   const fetchOnboardingData = async () => {
     try {
+      const headers = await getAuthHeaders();
       const [questionsRes, documentsRes] = await Promise.all([
-        fetch(`/api/clinic/${clinicId}/onboarding/questions`),
-        fetch(`/api/clinic/${clinicId}/onboarding/documents`),
+        fetch(`/api/clinic/${clinicId}/onboarding/questions`, { headers }),
+        fetch(`/api/clinic/${clinicId}/onboarding/documents`, { headers }),
       ]);
 
       if (questionsRes.ok) {
@@ -62,24 +69,23 @@ export default function OnboardingManagement({
   const handleLoadTemplate = async () => {
     setLoadingTemplate(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `/api/clinic/${clinicId}/onboarding/questions/load-template`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${session?.access_token}`,
-          },
+          headers,
         }
       );
       if (response.ok) {
+        toast.success("Template questions loaded");
         fetchOnboardingData();
       } else {
         const data = await response.json();
-        console.error("Error loading template:", data.error);
+        toast.error(data.error || "Failed to load template");
       }
-    } catch (error) {
-      console.error("Error loading template:", error);
+    } catch {
+      toast.error("Failed to load template");
     } finally {
       setLoadingTemplate(false);
     }
@@ -89,16 +95,20 @@ export default function OnboardingManagement({
     if (!confirm("Are you sure you want to delete this question?")) return;
 
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `/api/clinic/${clinicId}/onboarding/questions/${questionId}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers }
       );
 
       if (response.ok) {
         setQuestions(questions.filter((q) => q.id !== questionId));
+        toast.success("Question deleted");
+      } else {
+        toast.error("Failed to delete question");
       }
-    } catch (error) {
-      console.error("Error deleting question:", error);
+    } catch {
+      toast.error("Failed to delete question");
     }
   };
 
@@ -107,16 +117,20 @@ export default function OnboardingManagement({
       return;
 
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch(
         `/api/clinic/${clinicId}/onboarding/documents/${documentId}`,
-        { method: "DELETE" }
+        { method: "DELETE", headers }
       );
 
       if (response.ok) {
         setDocuments(documents.filter((d) => d.id !== documentId));
+        toast.success("Document requirement deleted");
+      } else {
+        toast.error("Failed to delete document requirement");
       }
-    } catch (error) {
-      console.error("Error deleting document:", error);
+    } catch {
+      toast.error("Failed to delete document requirement");
     }
   };
 

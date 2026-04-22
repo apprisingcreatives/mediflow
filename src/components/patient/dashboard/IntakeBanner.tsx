@@ -1,83 +1,128 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ClipboardList } from 'lucide-react';
+import { format, parse } from 'date-fns';
+import { ClipboardList, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/lib/supabase';
+import usePendingIntakes from '@/hooks/usePendingIntakes';
 
 interface IntakeBannerProps {
   patientId: string;
 }
 
-interface PendingIntake {
-  id: string;
-  appointment_date: string;
-  appointment_time: string;
-  clinic_name: string;
+function formatAppointmentDate(dateStr: string): string {
+  try {
+    return format(new Date(dateStr + 'T00:00:00'), 'MMMM d, yyyy');
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatAppointmentTime(timeStr: string): string {
+  try {
+    return format(parse(timeStr, 'HH:mm:ss', new Date()), 'h:mm a');
+  } catch {
+    return timeStr;
+  }
 }
 
 export function IntakeBanner({ patientId }: IntakeBannerProps) {
   const router = useRouter();
-  const [pendingIntakes, setPendingIntakes] = useState<PendingIntake[]>([]);
-
-  useEffect(() => {
-    const fetchPendingIntakes = async () => {
-      const { data } = await supabase
-        .from('appointments')
-        .select('id, appointment_date, appointment_time, clinic_id, clinics(name)')
-        .eq('patient_id', patientId)
-        .eq('intake_status', 'pending')
-        .gte('appointment_date', new Date().toISOString().split('T')[0])
-        .order('appointment_date', { ascending: true });
-
-      if (data) {
-        setPendingIntakes(
-          data.map((a: any) => ({
-            id: a.id,
-            appointment_date: a.appointment_date,
-            appointment_time: a.appointment_time,
-            clinic_name: a.clinics?.name || 'Clinic',
-          }))
-        );
-      }
-    };
-
-    fetchPendingIntakes();
-  }, [patientId]);
+  const { pendingIntakes } = usePendingIntakes(patientId);
+  const [expanded, setExpanded] = useState(false);
 
   if (pendingIntakes.length === 0) return null;
 
+  const nearest = pendingIntakes[0];
+
+  if (pendingIntakes.length === 1) {
+    return (
+      <div className='mb-6'>
+        <div className='flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3'>
+          <div className='flex items-center gap-3 min-w-0'>
+            <div className='w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0'>
+              <ClipboardList className='w-5 h-5 text-amber-600 dark:text-amber-400' />
+            </div>
+            <div className='min-w-0'>
+              <p className='text-sm font-medium text-amber-900 dark:text-amber-100'>
+                Pre-Visit Intake Required
+              </p>
+              <p className='text-xs text-amber-700 dark:text-amber-300 truncate'>
+                {nearest.clinic_name} —{' '}
+                {formatAppointmentDate(nearest.appointment_date)} at{' '}
+                {formatAppointmentTime(nearest.appointment_time)}
+              </p>
+            </div>
+          </div>
+          <Button
+            size='sm'
+            onClick={() => router.push(`/appointments/${nearest.id}/intake`)}
+            className='bg-amber-600 hover:bg-amber-700 text-white shrink-0'
+          >
+            Complete Intake
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-3 mb-8">
-      {pendingIntakes.map((intake) => (
-        <Card key={intake.id} className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                  <ClipboardList className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-                    Pre-Visit Intake Required
-                  </h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    {intake.clinic_name} — {intake.appointment_date} at {intake.appointment_time}
-                  </p>
-                </div>
+    <div className='mb-6 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 overflow-hidden'>
+      <button
+        type='button'
+        onClick={() => setExpanded(!expanded)}
+        className='flex items-center justify-between gap-4 w-full px-4 py-3 text-left'
+      >
+        <div className='flex items-center gap-3 min-w-0'>
+          <div className='w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0'>
+            <ClipboardList className='w-5 h-5 text-amber-600 dark:text-amber-400' />
+          </div>
+          <div className='min-w-0'>
+            <p className='text-sm font-medium text-amber-900 dark:text-amber-100'>
+              You have {pendingIntakes.length} pending intake forms
+            </p>
+            <p className='text-xs text-amber-700 dark:text-amber-300 truncate'>
+              Next: {nearest.clinic_name} —{' '}
+              {formatAppointmentDate(nearest.appointment_date)} at{' '}
+              {formatAppointmentTime(nearest.appointment_time)}
+            </p>
+          </div>
+        </div>
+        {expanded ? (
+          <ChevronUp className='w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0' />
+        ) : (
+          <ChevronDown className='w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0' />
+        )}
+      </button>
+
+      {expanded && (
+        <div className='border-t border-amber-200 dark:border-amber-800 divide-y divide-amber-200 dark:divide-amber-800'>
+          {pendingIntakes.map((intake) => (
+            <div
+              key={intake.id}
+              className='flex items-center justify-between gap-4 px-4 py-2.5 pl-16'
+            >
+              <div className='min-w-0'>
+                <p className='text-sm text-amber-900 dark:text-amber-100'>
+                  {intake.clinic_name}
+                </p>
+                <p className='text-xs text-amber-700 dark:text-amber-300 truncate'>
+                  {formatAppointmentDate(intake.appointment_date)} at{' '}
+                  {formatAppointmentTime(intake.appointment_time)}
+                </p>
               </div>
               <Button
+                size='sm'
                 onClick={() => router.push(`/appointments/${intake.id}/intake`)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className='bg-amber-600 hover:bg-amber-700 text-white shrink-0'
               >
-                Complete Intake
+                Complete
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      ))}
+          ))}
+        </div>
+      )}
     </div>
   );
 }
