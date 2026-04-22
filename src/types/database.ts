@@ -46,6 +46,7 @@ export interface Clinic {
 
   email_notifications_enabled: boolean;
   appointment_reminders_enabled: boolean;
+  intake_required: boolean;
 }
 
 
@@ -153,6 +154,7 @@ export interface Appointment {
   notes: string | null;
   ai_recommended: boolean;
   ai_recommendation_reason: string | null;
+  intake_status: 'none' | 'pending' | 'completed';
   created_at: string;
   updated_at: string;
 }
@@ -199,6 +201,7 @@ export interface PatientQuestionResponse {
   patient_id: string;
   clinic_id: string;
   question_id: string;
+  appointment_id: string | null;
   response_value: string | null;
   response_options: string[] | null;
   responded_at: string;
