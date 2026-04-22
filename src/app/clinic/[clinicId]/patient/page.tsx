@@ -124,18 +124,13 @@ export default function ClinicPatientPortal() {
   const router = useRouter();
   const params = useParams();
   const clinicId = params.clinicId as string;
-  const { user, patient, isLoading, signOut, canAccessClinic } = useAuth();
+  const { user, patient, isLoading, signOut } = useAuth();
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        router.push("/login?redirect=/patient");
-      } else if (!canAccessClinic(clinicId)) {
-        // Patient cannot access this clinic
-        router.push("/patient");
-      }
+    if (!isLoading && !user) {
+      router.push("/login?redirect=/patient");
     }
-  }, [user, patient, isLoading, router, clinicId, canAccessClinic]);
+  }, [user, isLoading, router]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -152,7 +147,7 @@ export default function ClinicPatientPortal() {
     );
   }
 
-  if (!user || !canAccessClinic(clinicId)) {
+  if (!user) {
     return null;
   }
 
@@ -268,37 +263,6 @@ export default function ClinicPatientPortal() {
             Here's an overview of your health and upcoming appointments
           </p>
         </div>
-
-        {/* Onboarding Status */}
-        {patient && !patient.onboarding_completed && (
-          <Card className="mb-8 border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-amber-900 dark:text-amber-100">
-                      Complete Your Health Profile
-                    </h3>
-                    <p className="text-sm text-amber-700 dark:text-amber-300">
-                      Finish your onboarding to get personalized care
-                      recommendations
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  onClick={() =>
-                    router.push(`/clinic/${clinicId}/patient/onboarding`)
-                  }
-                >
-                  Complete Profile
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

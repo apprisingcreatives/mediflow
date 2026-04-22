@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -39,12 +40,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       clinic_id,
+      patient_id: bodyPatientId,
       practitioner_id,
       service_id,
       appointment_date,
       appointment_time,
       notes,
       patient_info,
+      booked_by,
     } = body;
 
     // Validate required fields
@@ -55,14 +58,46 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get patient record
-    const { data: patient, error: patientError } = await supabase
-      .from('patients')
-      .select('id, email, first_name, last_name')
-      .eq('auth_user_id', user.id)
-      .single();
+    // Resolve patient: if patient_id is provided (clinic admin booking), verify the caller
+    // is a clinic admin for that clinic. Otherwise, look up by auth user (patient self-booking).
+    let patient: { id: string; email: string; first_name: string; last_name: string } | null = null;
 
-    if (patientError || !patient) {
+    if (bodyPatientId && clinic_id) {
+      // Clinic admin booking for a patient — verify admin role
+      const { data: adminRecord } = await supabaseAdmin
+        .from('clinic_admins')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .eq('clinic_id', clinic_id)
+        .eq('is_active', true)
+        .single();
+
+      if (!adminRecord) {
+        return NextResponse.json(
+          { error: 'Not authorized to book for this patient' },
+          { status: 403 },
+        );
+      }
+
+      const { data: targetPatient } = await supabaseAdmin
+        .from('patients')
+        .select('id, email, first_name, last_name')
+        .eq('id', bodyPatientId)
+        .single();
+
+      patient = targetPatient;
+    } else {
+      // Patient self-booking
+      const { data: selfPatient } = await supabase
+        .from('patients')
+        .select('id, email, first_name, last_name')
+        .eq('auth_user_id', user.id)
+        .single();
+
+      patient = selfPatient;
+    }
+
+    if (!patient) {
       return NextResponse.json(
         { error: 'Patient record not found' },
         { status: 404 },
@@ -88,7 +123,7 @@ export async function POST(request: Request) {
         }
       }
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from('patients')
         .update(updateData)
         .eq('id', patient.id);
@@ -101,7 +136,7 @@ export async function POST(request: Request) {
 
     // Ensure patient_clinics record exists (for clinic-patient relationship)
     if (clinic_id) {
-      const { error: patientClinicError } = await supabase
+      const { error: patientClinicError } = await supabaseAdmin
         .from('patient_clinics')
         .upsert(
           {
@@ -122,7 +157,7 @@ export async function POST(request: Request) {
     }
 
     // Create appointment
-    const { data: appointment, error: appointmentError } = await supabase
+    const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
       .insert({
         patient_id: patient.id,
@@ -133,7 +168,7 @@ export async function POST(request: Request) {
         appointment_time,
         status: 'scheduled',
         notes: notes || null,
-        booked_by: 'patient',
+        booked_by: booked_by || 'patient',
       })
       .select()
       .single();
@@ -146,7 +181,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get clinic and service names for email
+    // Check if clinic requires intake and update appointment status
     let clinicName = '';
     let serviceName = '';
     let practitionerName = '';
@@ -154,10 +189,96 @@ export async function POST(request: Request) {
     if (clinic_id) {
       const { data: clinic } = await supabase
         .from('clinics')
-        .select('name')
+        .select('name, intake_required')
         .eq('id', clinic_id)
         .single();
       clinicName = clinic?.name || '';
+
+      if (clinic?.intake_required && appointment) {
+        let intakeStatus = 'pending';
+
+        // Check if patient already completed intake for this clinic
+        // and if the clinic's questions/documents haven't changed since
+        const { data: lastCompleted } = await supabaseAdmin
+          .from('appointments')
+          .select('id, updated_at')
+          .eq('patient_id', patient.id)
+          .eq('clinic_id', clinic_id)
+          .eq('intake_status', 'completed')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (lastCompleted) {
+          const completedAt = lastCompleted.updated_at;
+
+          // Check if questions or required documents were modified after last completed intake
+          const [{ data: changedQuestions }, { data: changedDocs }] = await Promise.all([
+            supabaseAdmin
+              .from('clinic_onboarding_questions')
+              .select('id')
+              .eq('clinic_id', clinic_id)
+              .eq('is_active', true)
+              .gt('updated_at', completedAt)
+              .limit(1),
+            supabaseAdmin
+              .from('clinic_required_documents')
+              .select('id')
+              .eq('clinic_id', clinic_id)
+              .eq('is_active', true)
+              .gt('updated_at', completedAt)
+              .limit(1),
+          ]);
+
+          const questionsChanged = (changedQuestions && changedQuestions.length > 0) || false;
+          const docsChanged = (changedDocs && changedDocs.length > 0) || false;
+
+          // Also check for newly added questions the patient never answered
+          const [{ data: activeQuestions }, { data: answeredQuestions }] = await Promise.all([
+            supabaseAdmin
+              .from('clinic_onboarding_questions')
+              .select('id')
+              .eq('clinic_id', clinic_id)
+              .eq('is_active', true),
+            supabaseAdmin
+              .from('patient_question_responses')
+              .select('question_id')
+              .eq('patient_id', patient.id)
+              .eq('appointment_id', lastCompleted.id),
+          ]);
+
+          const answeredIds = new Set((answeredQuestions || []).map((r: any) => r.question_id));
+          const hasNewQuestions = (activeQuestions || []).some((q: any) => !answeredIds.has(q.id));
+
+          if (!questionsChanged && !docsChanged && !hasNewQuestions) {
+            intakeStatus = 'completed';
+
+            // Copy previous responses to new appointment
+            const { data: prevResponses } = await supabaseAdmin
+              .from('patient_question_responses')
+              .select('patient_id, clinic_id, question_id, response_value, response_options')
+              .eq('patient_id', patient.id)
+              .eq('appointment_id', lastCompleted.id);
+
+            if (prevResponses && prevResponses.length > 0) {
+              await supabaseAdmin
+                .from('patient_question_responses')
+                .insert(
+                  prevResponses.map((r: any) => ({
+                    ...r,
+                    appointment_id: appointment.id,
+                  }))
+                );
+            }
+          }
+        }
+
+        await supabaseAdmin
+          .from('appointments')
+          .update({ intake_status: intakeStatus })
+          .eq('id', appointment.id);
+        appointment.intake_status = intakeStatus;
+      }
     }
 
     if (service_id) {

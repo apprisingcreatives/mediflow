@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, Mail, Phone } from 'lucide-react';
+import { FileText as FileTextIcon } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -146,6 +148,7 @@ export default function PatientHistoryPage() {
         <TabsList className="mb-6">
           <TabsTrigger value="visits">Visit History</TabsTrigger>
           <TabsTrigger value="activity">Activity Log</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="visits" className="space-y-3">
@@ -169,6 +172,20 @@ export default function PatientHistoryPage() {
         <TabsContent value="activity">
           <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm">
             <ActivityTimeline logs={logs} perspective="clinic_admin" patientName={patientName} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="documents">
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm text-center">
+            <FileTextIcon className="w-10 h-10 text-clinic-text/20 dark:text-white/20 mx-auto mb-3" />
+            <p className="text-sm text-clinic-text/60 dark:text-white/60 mb-4">
+              View and verify patient documents
+            </p>
+            <Link href={`/clinic/${clinicId}/patients/${patientId}/documents`}>
+              <Button className="bg-clinic-teal hover:bg-clinic-teal/90 text-white">
+                View Documents
+              </Button>
+            </Link>
           </div>
         </TabsContent>
       </Tabs>

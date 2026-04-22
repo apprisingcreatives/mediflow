@@ -1,7 +1,8 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
-import { CalendarIcon, Clock, Loader2 } from 'lucide-react';
+import { CalendarIcon, Check, Clock, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -120,22 +121,12 @@ export function BookingModal({
             </div>
           )}
 
-          {/* Clinic Selection */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Clinic</Label>
-            <Select value={selectedClinicId} onValueChange={onClinicChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a clinic" />
-              </SelectTrigger>
-              <SelectContent>
-                {clinics.map((pc) => (
-                  <SelectItem key={pc.clinic_id} value={pc.clinic_id}>
-                    {pc.clinic.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Clinic Selection (searchable) */}
+          <ClinicAutocomplete
+            clinics={clinics}
+            selectedClinicId={selectedClinicId}
+            onClinicChange={onClinicChange}
+          />
 
           {/* Practitioner Selection */}
           <div className="space-y-2">
@@ -262,6 +253,98 @@ export function BookingModal({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface ClinicAutocompleteProps {
+  clinics: PatientClinicInfo[];
+  selectedClinicId: string;
+  onClinicChange: (clinicId: string) => void;
+}
+
+function ClinicAutocomplete({ clinics, selectedClinicId, onClinicChange }: ClinicAutocompleteProps) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const selectedClinic = clinics.find((c) => c.clinic_id === selectedClinicId);
+
+  const filtered = search
+    ? clinics.filter((c) =>
+        c.clinic.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.clinic.address?.toLowerCase().includes(search.toLowerCase())
+      )
+    : clinics;
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const displayValue = open ? search : (selectedClinic?.clinic.name ?? '');
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">Clinic</Label>
+      <div ref={wrapperRef} className="relative">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={displayValue}
+            placeholder="Search for a clinic..."
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            className="flex h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        </div>
+        {open && (
+          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+            <div className="max-h-[200px] overflow-y-auto p-1">
+              {filtered.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">No clinic found.</p>
+              ) : (
+                filtered.map((pc) => (
+                  <button
+                    key={pc.clinic_id}
+                    type="button"
+                    onClick={() => {
+                      onClinicChange(pc.clinic_id);
+                      setSearch('');
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      'flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground',
+                      selectedClinicId === pc.clinic_id && 'bg-accent'
+                    )}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4 shrink-0',
+                        selectedClinicId === pc.clinic_id ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <div className="text-left">
+                      <span>{pc.clinic.name}</span>
+                      {pc.clinic.address && (
+                        <span className="block text-xs text-muted-foreground">{pc.clinic.address}</span>
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -1,15 +1,26 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { clinicId: string } },
+  { params }: { params: Promise<{ clinicId: string }> },
 ) {
   try {
-    const { clinicId } = params;
+    const { clinicId } = await params;
 
-    // Auth check
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const token = authHeader.substring(7);
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -25,6 +36,7 @@ export async function PATCH(
       email,
       email_notifications_enabled,
       appointment_reminders_enabled,
+      intake_required,
     } = body;
 
     // Build update object with only provided fields
@@ -42,12 +54,15 @@ export async function PATCH(
         updates.appointment_reminders_enabled = appointment_reminders_enabled;
       }
     }
+    if (intake_required !== undefined) {
+      updates.intake_required = intake_required;
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
-    const { data: clinic, error: updateError } = await supabase
+    const { data: clinic, error: updateError } = await supabaseAdmin
       .from('clinics')
       .update(updates)
       .eq('id', clinicId)

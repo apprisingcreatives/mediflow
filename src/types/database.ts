@@ -46,6 +46,7 @@ export interface Clinic {
 
   email_notifications_enabled: boolean;
   appointment_reminders_enabled: boolean;
+  intake_required: boolean;
 }
 
 
@@ -153,6 +154,7 @@ export interface Appointment {
   notes: string | null;
   ai_recommended: boolean;
   ai_recommendation_reason: string | null;
+  intake_status: 'none' | 'pending' | 'completed';
   created_at: string;
   updated_at: string;
 }
@@ -199,6 +201,7 @@ export interface PatientQuestionResponse {
   patient_id: string;
   clinic_id: string;
   question_id: string;
+  appointment_id: string | null;
   response_value: string | null;
   response_options: string[] | null;
   responded_at: string;
@@ -210,20 +213,14 @@ export interface PatientQuestionResponse {
 export interface PatientDocument {
   id: string;
   patient_id: string;
-  clinic_id: string;
-  document_type_id: string;
   file_name: string;
   file_path: string;
   file_size_bytes: number | null;
   mime_type: string | null;
+  description: string | null;
   uploaded_at: string;
-  verified_by: string | null;
-  verified_at: string | null;
-  status: "pending" | "approved" | "rejected";
-  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
-  document_type?: ClinicRequiredDocument;
 }
 
 export interface AITreatmentPrediction {
@@ -235,6 +232,7 @@ export interface AITreatmentPrediction {
   recommended_treatments: any;
   risk_factors: any;
   predicted_conditions: any;
+  recommended_specialty: string | null;
   generated_at: string;
   reviewed_by: string | null;
   reviewed_at: string | null;

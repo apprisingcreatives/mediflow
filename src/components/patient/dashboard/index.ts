@@ -7,7 +7,7 @@ export { HealthSummary } from './HealthSummary';
 export { PatientClinicsCard } from './PatientClinicsCard';
 export { MessagesCard } from './MessagesCard';
 export { ContactCard } from './ContactCard';
-export { OnboardingBanner } from './OnboardingBanner';
+export { IntakeBanner } from './IntakeBanner';
 export { BookingModal } from './BookingModal';
 export { RecentVisitsCard } from './RecentVisitsCard';
 

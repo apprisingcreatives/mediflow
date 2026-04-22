@@ -4,9 +4,10 @@ import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { parseISO, isBefore, startOfDay } from 'date-fns';
 import { Calendar, Loader2, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import useGetAppointments from '@/hooks/useGetAppointments';
-import usePatientClinics from '@/hooks/usePatientClinics';
+import useAllClinics from '@/hooks/useAllClinics';
 import usePatientBooking from '@/hooks/usePatientBooking';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,12 +28,12 @@ export default function PatientAppointmentsPage() {
     unsubscribe: unsubscribeAppointments,
   } = useGetAppointments({ enableRealtime: true });
 
-  // Patient clinics hook
+  // All clinics for open booking
   const {
-    clinics: patientClinics,
+    clinics: allClinics,
     loading: clinicsLoading,
-    fetchClinics: fetchPatientClinics,
-  } = usePatientClinics();
+    fetchClinics: fetchAllClinics,
+  } = useAllClinics();
 
   // Booking hook
   const booking = usePatientBooking();
@@ -48,13 +49,18 @@ export default function PatientAppointmentsPage() {
   useEffect(() => {
     if (patient?.id) {
       fetchAppointments({ patientId: patient.id });
-      fetchPatientClinics(patient.id);
+      fetchAllClinics();
     }
 
     return () => {
       unsubscribeAppointments();
     };
-  }, [patient?.id, fetchAppointments, fetchPatientClinics, unsubscribeAppointments]);
+  }, [
+    patient?.id,
+    fetchAppointments,
+    fetchAllClinics,
+    unsubscribeAppointments,
+  ]);
 
   // Filter appointments into upcoming and past
   const { upcomingAppointments, pastAppointments } = useMemo(() => {
@@ -62,12 +68,12 @@ export default function PatientAppointmentsPage() {
     const upcoming = appointments.filter(
       (apt) =>
         !['cancelled', 'completed', 'no-show'].includes(apt.status) &&
-        !isBefore(parseISO(apt.appointment_date), today)
+        !isBefore(parseISO(apt.appointment_date), today),
     );
     const past = appointments.filter(
       (apt) =>
         ['completed', 'cancelled', 'no-show'].includes(apt.status) ||
-        isBefore(parseISO(apt.appointment_date), today)
+        isBefore(parseISO(apt.appointment_date), today),
     );
     return { upcomingAppointments: upcoming, pastAppointments: past };
   }, [appointments]);
@@ -78,19 +84,29 @@ export default function PatientAppointmentsPage() {
 
     const success = await booking.bookAppointment(patient.id);
     if (success) {
+      const apt = booking.createdAppointment;
       booking.closeModal();
-      await fetchAppointments({ patientId: patient.id });
+
+      if (apt && apt.intake_status === 'pending') {
+        toast.success('Appointment booked! Please complete the pre-visit intake form.');
+        router.push(`/appointments/${apt.id}/intake`);
+      } else {
+        toast.success('Appointment booked successfully');
+        await fetchAppointments({ patientId: patient.id });
+      }
+    } else {
+      toast.error(booking.error || 'Failed to book appointment');
     }
   };
 
-  const canBookAppointment = patientClinics.length > 0;
+  const canBookAppointment = allClinics.length > 0;
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center">
-        <div className="flex items-center gap-2 text-clinic-navy dark:text-white">
-          <Loader2 className="w-5 h-5 animate-spin" />
+      <div className='min-h-screen bg-clinic-bg dark:bg-slate-900 flex items-center justify-center'>
+        <div className='flex items-center gap-2 text-clinic-navy dark:text-white'>
+          <Loader2 className='w-5 h-5 animate-spin' />
           Loading...
         </div>
       </div>
@@ -103,33 +119,33 @@ export default function PatientAppointmentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-clinic-bg dark:bg-slate-900">
-      <main className="container mx-auto px-4 py-8">
+    <div className='min-h-screen bg-clinic-bg dark:bg-slate-900'>
+      <main className='container mx-auto px-4 py-8'>
         {/* Page Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-7 h-7 text-clinic-teal" />
+        <div className='flex items-center justify-between mb-8'>
+          <div className='flex items-center gap-3'>
+            <Calendar className='w-7 h-7 text-clinic-teal' />
             <div>
-              <h1 className="font-display text-2xl sm:text-3xl font-bold text-clinic-navy dark:text-white">
+              <h1 className='font-display text-2xl sm:text-3xl font-bold text-clinic-navy dark:text-white'>
                 Appointments
               </h1>
-              <p className="text-clinic-text/60 dark:text-white/60 text-sm">
+              <p className='text-clinic-text/60 dark:text-white/60 text-sm'>
                 Manage your upcoming and past appointments
               </p>
             </div>
           </div>
           <Button
-            className="bg-clinic-teal hover:bg-clinic-teal/90 text-white"
+            className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
             onClick={booking.openModal}
             disabled={!canBookAppointment}
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className='w-4 h-4 mr-2' />
             Book Appointment
           </Button>
         </div>
 
         {/* Upcoming Appointments */}
-        <div className="space-y-6">
+        <div className='space-y-6'>
           <UpcomingAppointments
             appointments={upcomingAppointments}
             loading={appointmentsLoading}
@@ -150,7 +166,7 @@ export default function PatientAppointmentsPage() {
         isOpen={booking.isOpen}
         onClose={booking.closeModal}
         onSubmit={handleBookAppointment}
-        clinics={patientClinics}
+        clinics={allClinics}
         selectedClinicId={booking.selectedClinicId}
         selectedPractitionerId={booking.selectedPractitionerId}
         selectedServiceId={booking.selectedServiceId}

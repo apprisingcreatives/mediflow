@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function PatientSettingsPage() {
@@ -56,9 +56,17 @@ export default function PatientSettingsPage() {
 
       {/* Profile Section */}
       <div className='bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6 mb-6'>
-        <h3 className='font-display font-semibold text-clinic-navy dark:text-white mb-4'>
-          Profile
-        </h3>
+        <div className='flex items-center justify-between mb-4'>
+          <h3 className='font-display font-semibold text-clinic-navy dark:text-white'>
+            Profile
+          </h3>
+          <Link href='/patient/profile/setup'>
+            <Button variant='outline' size='sm' className='border-clinic-navy/10 dark:border-white/10'>
+              <Pencil className='w-4 h-4 mr-2' />
+              Edit Profile
+            </Button>
+          </Link>
+        </div>
 
         <div className='space-y-4'>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
