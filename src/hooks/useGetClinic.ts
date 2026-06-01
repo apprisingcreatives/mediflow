@@ -19,10 +19,14 @@ interface Clinic {
   is_trial_active?: boolean;
   is_subscription_active?: boolean;
   payment_status?: string;
+  last_payment_date?: string;
+  next_billing_date?: string;
   slug?: string;
   email_notifications_enabled: boolean;
   appointment_reminders_enabled: boolean;
   intake_required: boolean;
+  paymongo_merchant_id?: string | null;
+  paymongo_merchant_status?: string | null;
   clinic_services?: Array<{
     id: string;
     name: string;
@@ -72,10 +76,14 @@ const useGetClinic = () => {
           is_trial_active,
           is_subscription_active,
           payment_status,
+          last_payment_date,
+          next_billing_date,
           slug,
           email_notifications_enabled,
           appointment_reminders_enabled,
           intake_required,
+          paymongo_merchant_id,
+          paymongo_merchant_status,
           clinic_services (
             id,
             name,
