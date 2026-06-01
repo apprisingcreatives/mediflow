@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Check, Shield, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Check, Shield, Loader2, CheckCircle, XCircle, Info, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinicContext } from '../layout';
 import { useAuth } from '@/hooks/use-auth';
@@ -71,6 +71,7 @@ export default function BillingPage() {
   const [merchantId, setMerchantId] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [showPaymongoGuide, setShowPaymongoGuide] = useState(false);
 
   const paymentStatus = searchParams.get('payment');
 
@@ -225,12 +226,37 @@ export default function BillingPage() {
 
       {/* PayMongo Connection */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-6">
-        <h3 className="text-lg font-semibold text-clinic-navy dark:text-white mb-2">
-          Collect Online Payments
-        </h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-semibold text-clinic-navy dark:text-white">
+            Collect Online Payments
+          </h3>
+          <button
+            onClick={() => setShowPaymongoGuide(!showPaymongoGuide)}
+            className="flex items-center gap-1 text-xs text-clinic-teal hover:text-clinic-teal/80 transition-colors"
+          >
+            {showPaymongoGuide ? <X className="w-3.5 h-3.5" /> : <Info className="w-3.5 h-3.5" />}
+            {showPaymongoGuide ? 'Close' : 'How to set up'}
+          </button>
+        </div>
         <p className="text-sm text-clinic-text/60 dark:text-white/60 mb-4">
           Connect your PayMongo account to receive appointment payments directly from patients.
         </p>
+
+        {showPaymongoGuide && (
+          <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-sm space-y-3">
+            <p className="font-medium text-blue-800 dark:text-blue-300">How to get your PayMongo Organization ID:</p>
+            <ol className="list-decimal list-inside space-y-2 text-blue-700 dark:text-blue-400">
+              <li>Go to <a href="https://dashboard.paymongo.com/signup" target="_blank" rel="noopener noreferrer" className="underline font-medium">dashboard.paymongo.com/signup</a> and create an account (or log in if you already have one).</li>
+              <li>Complete your business verification (KYC) — PayMongo will ask for business details, valid ID, and bank account information.</li>
+              <li>Once verified, go to <strong>Settings</strong> in your PayMongo dashboard.</li>
+              <li>Find your <strong>Organization ID</strong> — it starts with <code className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-800 rounded text-xs">org_</code></li>
+              <li>Copy and paste it in the field below.</li>
+            </ol>
+            <p className="text-blue-600 dark:text-blue-400 text-xs">
+              Verification usually takes 1-3 business days. Once connected, patients can pay online and funds go directly to your bank account.
+            </p>
+          </div>
+        )}
 
         {isPaymongoConnected ? (
           <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
