@@ -39,8 +39,10 @@ export interface Clinic {
   last_payment_date: string | null;
   next_billing_date: string | null;
 
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
+  paymongo_customer_id: string | null;
+  paymongo_checkout_session_id: string | null;
+  paymongo_merchant_id: string | null;
+  paymongo_merchant_status: 'pending' | 'activated' | 'declined' | null;
 
   slug: string | null;
 
