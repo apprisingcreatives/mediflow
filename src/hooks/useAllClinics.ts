@@ -16,7 +16,7 @@ const useAllClinics = () => {
 
       const { data, error: queryError } = await supabase
         .from('clinics')
-        .select('id, name, address, phone')
+        .select('id, name, address, phone, paymongo_merchant_id')
         .eq('is_active', true)
         .order('name');
 
@@ -32,6 +32,7 @@ const useAllClinics = () => {
           name: c.name,
           address: c.address,
           phone: c.phone,
+          paymongo_merchant_id: c.paymongo_merchant_id ?? null,
         },
       }));
 
