@@ -1,7 +1,7 @@
 ---
 title: "feat: Phase 1 Revenue Protection — Smart Reminders, Auto Rebooking, Waitlist, Basic Analytics"
 type: feat
-status: active
+status: completed
 date: 2026-04-24
 origin: docs/brainstorms/2026-04-24-phase1-revenue-protection-brainstorm.md
 ---

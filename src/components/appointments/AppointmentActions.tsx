@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Appointment } from '@/hooks/useGetAppointments';
 import { supabase } from '@/lib/supabase';
+import axios from 'axios';
 
 type ViewerRole = 'patient' | 'practitioner' | 'clinic_admin';
 
@@ -55,53 +56,66 @@ export function AppointmentActions({
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const cancelViaApi = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error('Not authenticated');
+
+    await axios.post(
+      `/api/appointments/${appointment.id}/cancel`,
+      { reason: 'Cancelled by patient', source: 'web' },
+      { headers: { Authorization: `Bearer ${session.access_token}` } },
+    );
+  };
+
   const updateStatus = async (newStatus: string) => {
     setLoading(newStatus);
     setError(null);
     try {
-      const { error: updateError } = await supabase
-        .from('appointments')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', appointment.id);
+      if (newStatus === 'cancelled') {
+        await cancelViaApi();
+      } else {
+        const { error: updateError } = await supabase
+          .from('appointments')
+          .update({ status: newStatus, updated_at: new Date().toISOString() })
+          .eq('id', appointment.id);
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
 
-      // Log activity
-      const actionMap: Record<string, string> = {
-        confirmed: 'appointment_confirmed',
-        completed: 'appointment_completed',
-        'no-show': 'appointment_no_show',
-        cancelled: 'appointment_cancelled',
-      };
-      const actionType = actionMap[newStatus];
-      if (actionType) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const metadata: Record<string, string> = {};
-          if (newStatus === 'confirmed') metadata.confirmed_by = viewerRole;
-          if (newStatus === 'completed') metadata.completed_by = viewerRole;
-          if (newStatus === 'cancelled') metadata.cancelled_by = viewerRole;
-          if (newStatus === 'no-show') metadata.source = 'manual';
+        const actionMap: Record<string, string> = {
+          confirmed: 'appointment_confirmed',
+          completed: 'appointment_completed',
+          'no-show': 'appointment_no_show',
+        };
+        const actionType = actionMap[newStatus];
+        if (actionType) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const metadata: Record<string, string> = {};
+            if (newStatus === 'confirmed') metadata.confirmed_by = viewerRole;
+            if (newStatus === 'completed') metadata.completed_by = viewerRole;
+            if (newStatus === 'no-show') metadata.source = 'manual';
 
-          await supabase.from('activity_logs').insert({
-            patient_id: appointment.patient_id,
-            clinic_id: appointment.clinic_id,
-            actor_id: user.id,
-            actor_role: viewerRole,
-            action_type: actionType,
-            entity_type: 'appointment',
-            entity_id: appointment.id,
-            metadata,
-          }).then(({ error: logError }) => {
-            if (logError) console.error('Failed to log activity:', logError);
-          });
+            await supabase.from('activity_logs').insert({
+              patient_id: appointment.patient_id,
+              clinic_id: appointment.clinic_id,
+              actor_id: user.id,
+              actor_role: viewerRole,
+              action_type: actionType,
+              entity_type: 'appointment',
+              entity_id: appointment.id,
+              metadata,
+            }).then(({ error: logError }) => {
+              if (logError) console.error('Failed to log activity:', logError);
+            });
+          }
         }
       }
 
       onStatusChange?.();
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Failed to update status to ${newStatus}:`, err);
-      setError('Failed to update. Please try again.');
+      const msg = err?.response?.data?.error || 'Failed to update. Please try again.';
+      setError(msg);
     } finally {
       setLoading(null);
     }

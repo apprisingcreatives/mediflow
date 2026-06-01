@@ -85,6 +85,12 @@ export default function PatientAppointmentsPage() {
     const success = await booking.bookAppointment(patient.id);
     if (success) {
       const apt = booking.createdAppointment;
+
+      if (booking.paymentMethod === 'online') {
+        toast.success('Redirecting to payment...');
+        return;
+      }
+
       booking.closeModal();
 
       if (apt && apt.intake_status === 'pending') {
@@ -179,6 +185,9 @@ export default function PatientAppointmentsPage() {
         onDateChange={booking.handleDateChange}
         onTimeChange={booking.setSelectedTime}
         onNotesChange={booking.setNotes}
+        paymentMethod={booking.paymentMethod}
+        onPaymentMethodChange={booking.setPaymentMethod}
+        selectedServicePrice={booking.services.find(s => s.id === booking.selectedServiceId)?.price}
         practitioners={booking.practitioners}
         services={booking.services}
         timeSlots={booking.timeSlots}
