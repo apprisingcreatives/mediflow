@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
-import { CalendarIcon, Check, Clock, Loader2, Search } from 'lucide-react';
+import { CalendarIcon, Check, Clock, Loader2, Search, CreditCard, Banknote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -57,6 +57,11 @@ interface BookingModalProps {
   onTimeChange: (time: string) => void;
   onNotesChange: (notes: string) => void;
 
+  // Payment
+  paymentMethod: 'online' | 'cash';
+  onPaymentMethodChange: (method: 'online' | 'cash') => void;
+  selectedServicePrice?: number;
+
   // Data
   practitioners: BookingPractitioner[];
   services: BookingService[];
@@ -92,6 +97,9 @@ export function BookingModal({
   onDateChange,
   onTimeChange,
   onNotesChange,
+  paymentMethod,
+  onPaymentMethodChange,
+  selectedServicePrice,
   practitioners,
   services,
   timeSlots,
@@ -102,6 +110,15 @@ export function BookingModal({
   error,
   isFormValid,
 }: BookingModalProps) {
+  const selectedClinic = clinics.find((c) => c.clinic_id === selectedClinicId);
+  const clinicSupportsOnlinePayment = !!selectedClinic?.clinic.paymongo_merchant_id;
+
+  useEffect(() => {
+    if (!clinicSupportsOnlinePayment && paymentMethod === 'online') {
+      onPaymentMethodChange('cash');
+    }
+  }, [clinicSupportsOnlinePayment, paymentMethod, onPaymentMethodChange]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px] bg-white dark:bg-slate-800 max-h-[90vh] overflow-y-auto">
@@ -229,6 +246,61 @@ export function BookingModal({
               rows={3}
             />
           </div>
+
+          {/* Payment Method */}
+          {selectedServicePrice != null && selectedServicePrice > 0 && clinicSupportsOnlinePayment && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Payment Method</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => onPaymentMethodChange('online')}
+                  className={cn(
+                    'flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all text-sm',
+                    paymentMethod === 'online'
+                      ? 'border-clinic-teal bg-clinic-teal/5 text-clinic-teal'
+                      : 'border-gray-200 dark:border-slate-600 hover:border-clinic-teal/30'
+                  )}
+                >
+                  <CreditCard className="w-5 h-5" />
+                  <span className="font-medium">Pay Online</span>
+                  <span className="text-xs text-clinic-text/50 dark:text-white/50">
+                    GCash, Maya, Card
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPaymentMethodChange('cash')}
+                  className={cn(
+                    'flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all text-sm',
+                    paymentMethod === 'cash'
+                      ? 'border-clinic-teal bg-clinic-teal/5 text-clinic-teal'
+                      : 'border-gray-200 dark:border-slate-600 hover:border-clinic-teal/30'
+                  )}
+                >
+                  <Banknote className="w-5 h-5" />
+                  <span className="font-medium">Pay at Clinic</span>
+                  <span className="text-xs text-clinic-text/50 dark:text-white/50">
+                    Cash on visit
+                  </span>
+                </button>
+              </div>
+              <p className="text-xs text-clinic-text/50 dark:text-white/50">
+                Service fee: ₱{selectedServicePrice.toLocaleString()}
+              </p>
+            </div>
+          )}
+          {selectedServicePrice != null && selectedServicePrice > 0 && !clinicSupportsOnlinePayment && (
+            <div className="p-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg">
+              <p className="text-sm text-clinic-text/70 dark:text-white/70">
+                <Banknote className="w-4 h-4 inline mr-1.5 -mt-0.5" />
+                Payment will be collected at the clinic.
+              </p>
+              <p className="text-xs text-clinic-text/50 dark:text-white/50 mt-1">
+                Service fee: ₱{selectedServicePrice.toLocaleString()}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -244,8 +316,10 @@ export function BookingModal({
             {submitting ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Booking...
+                {paymentMethod === 'online' ? 'Redirecting to payment...' : 'Booking...'}
               </>
+            ) : paymentMethod === 'online' ? (
+              'Book & Pay Online'
             ) : (
               'Book Appointment'
             )}
