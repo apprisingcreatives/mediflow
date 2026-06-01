@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sendSMS } from '@/lib/twilio';
+import { sendSMS } from '@/lib/unisms';
 import { normalizeToE164, isValidPHMobile } from '@/lib/phone';
 import jwt from 'jsonwebtoken';
 
@@ -149,11 +149,15 @@ export async function POST(
   }
 }
 
-async function tryWaitlistAutoBook(appointment: Record<string, any>): Promise<boolean> {
+async function tryWaitlistAutoBook(
+  appointment: Record<string, any>,
+): Promise<boolean> {
   // Find matching waitlist entry using raw SQL for FOR UPDATE SKIP LOCKED
   const { data: waitlistEntries, error: wlError } = await supabaseAdmin
     .from('appointment_waitlist')
-    .select('*, patient:patients(id, first_name, last_name, phone, auth_user_id)')
+    .select(
+      '*, patient:patients(id, first_name, last_name, phone, auth_user_id)',
+    )
     .eq('clinic_id', appointment.clinic_id)
     .eq('status', 'waiting')
     .lte('preferred_date_start', appointment.appointment_date)
@@ -165,17 +169,26 @@ async function tryWaitlistAutoBook(appointment: Record<string, any>): Promise<bo
 
   // Filter by practitioner match (null = any practitioner)
   const matches = waitlistEntries.filter((entry: any) => {
-    if (entry.practitioner_id && entry.practitioner_id !== appointment.practitioner_id) {
+    if (
+      entry.practitioner_id &&
+      entry.practitioner_id !== appointment.practitioner_id
+    ) {
       return false;
     }
     if (entry.service_id && entry.service_id !== appointment.service_id) {
       return false;
     }
     // Check time preferences if specified
-    if (entry.preferred_time_start && appointment.appointment_time < entry.preferred_time_start) {
+    if (
+      entry.preferred_time_start &&
+      appointment.appointment_time < entry.preferred_time_start
+    ) {
       return false;
     }
-    if (entry.preferred_time_end && appointment.appointment_time > entry.preferred_time_end) {
+    if (
+      entry.preferred_time_end &&
+      appointment.appointment_time > entry.preferred_time_end
+    ) {
       return false;
     }
     return true;
@@ -237,9 +250,13 @@ async function tryWaitlistAutoBook(appointment: Record<string, any>): Promise<bo
     if (phone) {
       const patientName = match.patient?.first_name || 'there';
       const clinicName = appointment.clinic?.name || 'the clinic';
-      const msgBody = `Hi ${patientName}, great news! You've been booked for ${appointment.appointment_date} at ${appointment.appointment_time} at ${clinicName}. Reply X to cancel.`;
+      const [hh, mm] = (appointment.appointment_time || '00:00').split(':').map(Number);
+      const time = `${hh % 12 || 12}:${String(mm).padStart(2, '0')} ${hh >= 12 ? 'PM' : 'AM'}`;
+      const dateObj = new Date(appointment.appointment_date + 'T00:00:00');
+      const dateStr = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      const msgBody = `Hi ${patientName}, great news! You've been booked for ${dateStr} at ${time} at ${clinicName}.`;
 
-      const { sid } = await sendSMS(phone, msgBody);
+      const { messageId } = await sendSMS(phone, msgBody);
       await supabaseAdmin.from('sms_notifications').insert({
         appointment_id: newAppointment.id,
         patient_id: match.patient_id,
@@ -247,7 +264,7 @@ async function tryWaitlistAutoBook(appointment: Record<string, any>): Promise<bo
         phone_e164: phone,
         message_body: msgBody,
         reminder_type: 'waitlist_booked',
-        twilio_sid: sid,
+        provider_message_id: messageId,
         status: 'sent',
         sent_at: new Date().toISOString(),
         idempotency_key: `waitlist:${match.id}:${newAppointment.id}`,
@@ -260,7 +277,9 @@ async function tryWaitlistAutoBook(appointment: Record<string, any>): Promise<bo
   return true;
 }
 
-async function sendRebookingSMS(appointment: Record<string, any>): Promise<void> {
+async function sendRebookingSMS(
+  appointment: Record<string, any>,
+): Promise<void> {
   const patient = appointment.patient;
   if (!patient) return;
 
@@ -276,7 +295,10 @@ async function sendRebookingSMS(appointment: Record<string, any>): Promise<void>
   });
 
   // Generate rebooking token
-  const jwtSecret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'mediflow-rebook-secret';
+  const jwtSecret =
+    process.env.JWT_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    'mediflow-rebook-secret';
   const rebookToken = jwt.sign(
     {
       appointmentId: appointment.id,
@@ -289,21 +311,25 @@ async function sendRebookingSMS(appointment: Record<string, any>): Promise<void>
     { expiresIn: '72h' },
   );
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mediflow.apprisingcreatives.com';
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    'https://mediflow.apprisingcreatives.com';
   const rebookUrl = `${appUrl}/rebook/${rebookToken}`;
 
   const patientName = patient.first_name || 'there';
   const clinicName = appointment.clinic?.name || 'the clinic';
+  const cancelDateObj = new Date(appointment.appointment_date + 'T00:00:00');
+  const cancelDateStr = cancelDateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
   let msgBody: string;
   if (slots && slots.length > 0) {
     msgBody = `Hi ${patientName}, your appt at ${clinicName} was cancelled. Rebook here: ${rebookUrl}`;
   } else {
-    msgBody = `Hi ${patientName}, your appt at ${clinicName} on ${appointment.appointment_date} has been cancelled. Call the clinic to reschedule.`;
+    msgBody = `Hi ${patientName}, your appt at ${clinicName} on ${cancelDateStr} has been cancelled. Call the clinic to reschedule.`;
   }
 
   try {
-    const { sid } = await sendSMS(phone, msgBody);
+    const { messageId } = await sendSMS(phone, msgBody);
     await supabaseAdmin.from('sms_notifications').insert({
       appointment_id: appointment.id,
       patient_id: patient.id,
@@ -311,7 +337,7 @@ async function sendRebookingSMS(appointment: Record<string, any>): Promise<void>
       phone_e164: phone,
       message_body: msgBody,
       reminder_type: 'rebooking',
-      twilio_sid: sid,
+      provider_message_id: messageId,
       status: 'sent',
       sent_at: new Date().toISOString(),
       idempotency_key: `rebook:${appointment.id}`,

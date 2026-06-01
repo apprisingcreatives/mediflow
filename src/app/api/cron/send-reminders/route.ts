@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sendSMS } from '@/lib/twilio';
+import { sendSMS } from '@/lib/unisms';
 import { normalizeToE164, isValidPHMobile } from '@/lib/phone';
+import jwt from 'jsonwebtoken';
+
+const jwtSecret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'mediflow-rebook-secret';
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mediflow.apprisingcreatives.com';
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -102,17 +106,34 @@ async function processReminder(
 
   const patientName = appt.patient?.first_name || 'there';
   const clinicName = appt.clinic?.name || 'the clinic';
-  const time = appt.appointment_time?.slice(0, 5);
+  const [h, m] = (appt.appointment_time || '00:00').split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 || 12;
+  const time = `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
+
+  const confirmToken = jwt.sign(
+    { appointmentId: appt.id, patientId: appt.patient_id, action: 'confirm' },
+    jwtSecret,
+    { expiresIn: '48h' },
+  );
+  const cancelToken = jwt.sign(
+    { appointmentId: appt.id, patientId: appt.patient_id, action: 'cancel' },
+    jwtSecret,
+    { expiresIn: '48h' },
+  );
+
+  const confirmUrl = `${appUrl}/confirm/${confirmToken}`;
+  const cancelUrl = `${appUrl}/cancel/${cancelToken}`;
 
   let msgBody: string;
   if (type === '24h') {
-    msgBody = `Hi ${patientName}, reminder: ${clinicName} appt tomorrow ${appt.appointment_date} at ${time}. Reply C to confirm, X to cancel. Reply STOP to opt out.`;
+    msgBody = `Hi ${patientName}, reminder: ${clinicName} appt tomorrow at ${time}.\nConfirm: ${confirmUrl}\nCancel: ${cancelUrl}`;
   } else {
-    msgBody = `Hi ${patientName}, your appt at ${clinicName} is in 2 hours (${time}). Reply C to confirm, X to cancel.`;
+    msgBody = `Hi ${patientName}, your appt at ${clinicName} is in 2 hours (${time}).\nConfirm: ${confirmUrl}\nCancel: ${cancelUrl}`;
   }
 
   try {
-    const { sid } = await sendSMS(phone, msgBody);
+    const { messageId } = await sendSMS(phone, msgBody);
 
     await supabaseAdmin.from('sms_notifications').insert({
       appointment_id: appt.id,
@@ -121,7 +142,7 @@ async function processReminder(
       phone_e164: phone,
       message_body: msgBody,
       reminder_type: type,
-      twilio_sid: sid,
+      provider_message_id: messageId,
       status: 'sent',
       sent_at: new Date().toISOString(),
       idempotency_key: idempotencyKey,
