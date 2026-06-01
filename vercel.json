@@ -1,16 +1,2 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/send-reminders",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/expire-waitlist",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/process-emails",
-      "schedule": "*/5 * * * *"
-    }
-  ]
 }
