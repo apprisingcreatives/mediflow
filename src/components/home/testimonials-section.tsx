@@ -4,6 +4,7 @@ import { useRef, useEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Quote } from "lucide-react";
+import Image from "next/image";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -141,9 +142,11 @@ export function TestimonialsSection() {
 
               {/* Author */}
               <div className="flex items-center gap-4">
-                <img
+                <Image
                   src={testimonial.image}
                   alt={testimonial.author}
+                  width={56}
+                  height={56}
                   className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-md"
                 />
                 <div>
