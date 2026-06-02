@@ -245,3 +245,161 @@ CREATE TABLE IF NOT EXISTS sent_notifications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sent_notifications_patient ON sent_notifications(patient_id);
+
+-- ============================================
+-- ROW LEVEL SECURITY (RLS) & POLICIES
+-- ============================================
+
+-- 1. Enable RLS on all tables
+ALTER TABLE public.patients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.practitioners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clinic_services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.practitioner_services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.patient_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.onboarding_questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.required_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.patient_question_responses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_treatment_predictions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sent_notifications ENABLE ROW LEVEL SECURITY;
+
+-- 2. Patients table policies
+CREATE POLICY "patients_select_own" ON public.patients
+  FOR SELECT TO authenticated USING (auth.uid() = auth_user_id);
+
+CREATE POLICY "patients_insert_own" ON public.patients
+  FOR INSERT TO authenticated WITH CHECK (auth.uid() = auth_user_id);
+
+CREATE POLICY "patients_update_own" ON public.patients
+  FOR UPDATE TO authenticated USING (auth.uid() = auth_user_id) WITH CHECK (auth.uid() = auth_user_id);
+
+-- 3. Appointments table policies
+CREATE POLICY "appointments_select_own" ON public.appointments
+  FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = appointments.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "appointments_insert_own" ON public.appointments
+  FOR INSERT TO authenticated WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = appointments.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "appointments_update_own" ON public.appointments
+  FOR UPDATE TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = appointments.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  ) WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = appointments.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
+
+-- 4. Patient Documents policies
+CREATE POLICY "patient_documents_select_own" ON public.patient_documents
+  FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = patient_documents.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "patient_documents_insert_own" ON public.patient_documents
+  FOR INSERT TO authenticated WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = patient_documents.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "patient_documents_modify_own" ON public.patient_documents
+  FOR ALL TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = patient_documents.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
+
+-- 5. Patient Question Responses policies
+CREATE POLICY "patient_responses_all_own" ON public.patient_question_responses
+  FOR ALL TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = patient_question_responses.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
+
+-- 6. AI Treatment Predictions policies
+CREATE POLICY "ai_predictions_select_own" ON public.ai_treatment_predictions
+  FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = ai_treatment_predictions.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
+
+-- 7. Audit Logs policies
+CREATE POLICY "audit_logs_select_own" ON public.audit_logs
+  FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = audit_logs.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
+
+-- 8. Notification Preferences policies
+CREATE POLICY "notification_preferences_all_own" ON public.notification_preferences
+  FOR ALL TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = notification_preferences.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
+
+-- 9. Sent Notifications policies
+CREATE POLICY "sent_notifications_select_own" ON public.sent_notifications
+  FOR SELECT TO authenticated USING (
+    EXISTS (
+      SELECT 1 FROM public.patients p
+      WHERE p.id = sent_notifications.patient_id
+        AND p.auth_user_id = auth.uid()
+    )
+  );
+
+-- 10. Public metadata read access
+CREATE POLICY "practitioners_read_all" ON public.practitioners
+  FOR SELECT TO authenticated, anon USING (is_active = true);
+
+CREATE POLICY "clinic_services_read_all" ON public.clinic_services
+  FOR SELECT TO authenticated, anon USING (is_active = true);
+
+CREATE POLICY "practitioner_services_read_all" ON public.practitioner_services
+  FOR SELECT TO authenticated, anon USING (true);
+
+CREATE POLICY "onboarding_questions_read_all" ON public.onboarding_questions
+  FOR SELECT TO authenticated, anon USING (is_active = true);
+
+CREATE POLICY "required_documents_read_all" ON public.required_documents
+  FOR SELECT TO authenticated, anon USING (is_active = true);
+

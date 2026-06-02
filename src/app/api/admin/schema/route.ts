@@ -1,8 +1,53 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
   try {
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "");
+
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Create authenticated client with user's JWT token
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+    const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    });
+
+    // Verify the user is authenticated
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseWithAuth.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify the requester is an active super admin using RLS
+    const { data: requester, error: requesterError } = await supabaseWithAuth
+      .from("super_admins")
+      .select("id, status")
+      .eq("auth_user_id", user.id)
+      .eq("status", "active")
+      .single();
+
+    if (requesterError || !requester) {
+      return NextResponse.json(
+        { error: "Only active super admins can perform schema operations" },
+        { status: 403 }
+      );
+    }
+
     const { action } = await request.json();
 
     if (action === "check_schema") {
@@ -65,3 +110,4 @@ export async function POST(request: Request) {
     );
   }
 }
+
