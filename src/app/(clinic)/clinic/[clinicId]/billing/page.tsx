@@ -5,7 +5,7 @@ import { useSearchParams, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Check, Shield, Loader2, CheckCircle, XCircle, Info, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 import { useAuth } from '@/hooks/use-auth';
 import axios from 'axios';
 

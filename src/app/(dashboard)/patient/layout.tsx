@@ -31,7 +31,6 @@ export default function PatientLayout({
   const router = useRouter();
   const { user, patient, isLoading: authLoading, refreshPatient } = useAuth();
 
-  const isFullScreenFlow = pathname.startsWith('/patient/setup-account');
 
   // Loading state
   if (authLoading) {
@@ -51,7 +50,12 @@ export default function PatientLayout({
     return null;
   }
 
-  if (isFullScreenFlow) {
+  // Determine if we're in a full-screen flow (no sidebar)
+  const isOnboardingFlow =
+    pathname.startsWith('/patient/profile/setup') ||
+    pathname.startsWith('/patient/setup-account');
+
+  if (isOnboardingFlow) {
     return (
       <PatientContext.Provider
         value={{ patient, isLoading: authLoading, refreshPatient }}
@@ -59,6 +63,12 @@ export default function PatientLayout({
         {children}
       </PatientContext.Provider>
     );
+  }
+
+  // Guard: redirect active patients who haven't completed onboarding
+  if (patient && patient.is_active && !patient.onboarding_completed) {
+    router.push('/patient/profile/setup');
+    return null;
   }
   const patientName = patient
     ? `${patient.first_name} ${patient.last_name}`

@@ -26,7 +26,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 import { useGetAppointments } from '@/hooks';
 import useClinicAnalytics from '@/hooks/useClinicAnalytics';
 import { supabase } from '@/lib/supabase';

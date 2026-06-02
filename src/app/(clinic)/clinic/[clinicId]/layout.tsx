@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -16,55 +16,7 @@ import {
 import { ClinicSidebar } from '@/components/clinic/ClinicSidebar';
 import { requireClinicAdmin, clinicAdminSignOut } from '@/lib/admin-auth';
 import { useGetClinicFeatures, useGetClinic } from '@/hooks';
-
-interface Clinic {
-  id: string;
-  name: string;
-  email: string;
-  subscription_plan: string;
-  trial_start_date?: string;
-  trial_end_date?: string;
-  is_trial_active?: boolean;
-  is_subscription_active?: boolean;
-  payment_status?: string;
-  last_payment_date?: string;
-  next_billing_date?: string;
-  slug?: string;
-  email_notifications_enabled: boolean;
-  appointment_reminders_enabled: boolean;
-  intake_required?: boolean;
-  paymongo_merchant_id?: string | null;
-  paymongo_merchant_status?: string | null;
-}
-
-interface ClinicAdmin {
-  id: string;
-  email: string;
-  name: string;
-  clinic_id: string;
-  is_active: boolean;
-}
-
-// Context to share clinic data with child pages
-interface ClinicContextType {
-  clinic: Clinic | null;
-  admin: ClinicAdmin | null;
-  clinicFeatures: any[];
-  featuresLoading: boolean;
-  isTrialExpired: boolean;
-  trialDaysRemaining: number | null;
-}
-
-const ClinicContext = createContext<ClinicContextType>({
-  clinic: null,
-  admin: null,
-  clinicFeatures: [],
-  featuresLoading: false,
-  isTrialExpired: false,
-  trialDaysRemaining: null,
-});
-
-export const useClinicContext = () => useContext(ClinicContext);
+import { ClinicContext, type Clinic, type ClinicAdmin } from './clinic-context';
 
 export default function ClinicDashboardLayout({
   children,
