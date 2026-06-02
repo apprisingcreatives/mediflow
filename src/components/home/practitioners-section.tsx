@@ -4,6 +4,7 @@ import { useRef, useEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Star, Users } from "lucide-react";
+import Image from "next/image";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -136,9 +137,11 @@ export function PractitionersSection() {
             >
               {/* Image */}
               <div className="relative h-48 overflow-hidden">
-                <img
+                <Image
                   src={practitioner.image}
                   alt={practitioner.name}
+                  width={400}
+                  height={192}
                   className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-clinic-navy/80 via-clinic-navy/20 to-transparent" />

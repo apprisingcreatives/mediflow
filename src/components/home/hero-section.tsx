@@ -8,6 +8,8 @@ import { ArrowRight, Play, Sparkles, Shield, Clock } from "lucide-react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
+import Image from "next/image";
+
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
@@ -198,9 +200,12 @@ export function HeroSection() {
             <div className="relative h-full">
               {/* Main Dashboard Preview */}
               <div className="relative rounded-2xl overflow-hidden shadow-glass-lg border border-white/50 dark:border-slate-700/50 bg-white dark:bg-slate-800">
-                <img
+                <Image
                   src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80"
                   alt="Healthcare dashboard preview"
+                  width={800}
+                  height={533}
+                  priority
                   className="w-full h-auto"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-clinic-navy/80 via-transparent to-transparent" />

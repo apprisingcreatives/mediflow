@@ -1,8 +1,7 @@
-"use client";
-
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Activity, ArrowLeft, Calendar, Clock, ArrowRight } from "lucide-react";
+import Image from "next/image";
 
 const posts = [
   {
@@ -96,9 +95,11 @@ export default function BlogPage() {
           <div className="mb-12 p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass overflow-hidden">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="aspect-video md:aspect-auto rounded-xl overflow-hidden">
-                <img
+                <Image
                   src={posts[0].image}
                   alt={posts[0].title}
+                  width={600}
+                  height={400}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -138,9 +139,11 @@ export default function BlogPage() {
                 className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass overflow-hidden hover:shadow-glass-lg transition-all cursor-pointer group"
               >
                 <div className="aspect-video overflow-hidden">
-                  <img
+                  <Image
                     src={post.image}
                     alt={post.title}
+                    width={400}
+                    height={225}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>

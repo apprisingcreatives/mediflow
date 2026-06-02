@@ -1,8 +1,7 @@
-"use client";
-
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Activity, ArrowLeft, Heart, Target, Users, Award } from "lucide-react";
+import Image from "next/image";
 
 const team = [
   {
@@ -142,9 +141,11 @@ export default function AboutPage() {
               {team.map((member) => (
                 <div key={member.name} className="text-center">
                   <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden bg-clinic-navy/10">
-                    <img
+                    <Image
                       src={member.image}
                       alt={member.name}
+                      width={96}
+                      height={96}
                       className="w-full h-full object-cover"
                     />
                   </div>
