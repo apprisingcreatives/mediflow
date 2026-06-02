@@ -11,7 +11,7 @@ import {
   AlertTriangle,
   Loader2,
 } from 'lucide-react';
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 import { useGetAppointments } from '@/hooks';
 import { supabase } from '@/lib/supabase';
 import { formatTimeToAMPM } from '@/lib/utils';

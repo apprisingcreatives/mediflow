@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 import OnboardingManagement from '@/components/clinic/onboarding-management';
 
 export default function SettingsPage() {

@@ -138,6 +138,7 @@ export interface Patient {
   insurance_provider: string | null;
   insurance_policy_number: string | null;
   onboarding_completed: boolean;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }

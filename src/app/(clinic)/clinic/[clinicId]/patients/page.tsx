@@ -44,7 +44,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 import { useGetPatients, type Patient } from '@/hooks';
 import { supabase } from '@/lib/supabase';
 

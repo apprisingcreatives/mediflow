@@ -86,7 +86,20 @@ export default function SetupPatientAccount() {
 
       if (passwordError) throw passwordError;
 
-      router.push('/patient');
+      // Activate the patient record now that they've accepted the invite
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        await supabase
+          .from('patients')
+          .update({ is_active: true })
+          .eq('auth_user_id', user.id);
+      }
+
+      // Redirect to onboarding so the patient completes their profile
+      router.push('/patient/profile/setup');
     } catch (err) {
       console.error('Setup error:', err);
       setError(
@@ -123,10 +136,11 @@ export default function SetupPatientAccount() {
                   <span className="font-medium text-clinic-navy">
                     {clinicName}
                   </span>
-                  . Set up your password to access your account.
+                  . Set a password to activate your account and complete your
+                  profile.
                 </>
               ) : (
-                'Set up your password to access your account.'
+                'Set a password to activate your account and complete your profile.'
               )}
             </p>
           </div>
@@ -273,7 +287,7 @@ export default function SetupPatientAccount() {
                   Setting up...
                 </>
               ) : (
-                'Complete Setup'
+                'Activate Account'
               )}
             </Button>
           </form>

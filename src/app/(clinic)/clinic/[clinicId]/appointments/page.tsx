@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 import { AppointmentCalendar } from '@/components/appointments/AppointmentCalendar';
 import {
   AppointmentFormModal,

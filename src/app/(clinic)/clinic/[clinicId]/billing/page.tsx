@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { CreditCard, Check, Shield, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 
 const plans = [
   {

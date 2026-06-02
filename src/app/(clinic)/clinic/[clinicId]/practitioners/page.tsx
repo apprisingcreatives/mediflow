@@ -31,7 +31,7 @@ import {
   Clock,
   UserX,
 } from 'lucide-react';
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 import { useGetPractitioners, type Practitioner } from '@/hooks';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';

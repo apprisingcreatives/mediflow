@@ -7,7 +7,7 @@ import {
   Lock,
   Crown,
 } from 'lucide-react';
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 
 export default function AIFeaturesPage() {
   const { clinicFeatures, featuresLoading, isTrialExpired } =
