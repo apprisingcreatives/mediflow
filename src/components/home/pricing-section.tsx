@@ -6,7 +6,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Sparkles, Building2, Rocket } from "lucide-react";
+import { Check, Sparkles, Building2, Rocket, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 if (typeof window !== "undefined") {
@@ -15,59 +15,64 @@ if (typeof window !== "undefined") {
 
 const plans = [
   {
-    name: "Starter",
-    description: "Perfect for solo practitioners and small clinics",
+    name: "Basic",
+    description: "Everything you need to run your clinic digitally.",
     price: "₱5,000",
     period: "/month",
     icon: Rocket,
     features: [
-      "Up to 500 patients",
-      "AI intake forms",
-      "Basic scheduling",
-      "Secure messaging",
-      "Email support",
-      "HIPAA compliant",
+      "Appointment Management",
+      "Patient Records (EMR)",
+      "Staff Management",
+      "Smart Scheduling & Calendar",
+      "Reporting Dashboard",
+      "Mobile Access",
+      "Automated SMS Reminders",
+      "HIPAA-Compliant Security",
     ],
-    cta: "Get Started",
+    cta: "Start Free Trial",
+    href: "/register",
     highlighted: false,
   },
   {
-    name: "Professional",
-    description: "For growing practices that need more power",
+    name: "AI Professional",
+    description: "AI-powered productivity for growing practices.",
     price: "₱10,000",
     period: "/month",
     icon: Sparkles,
     features: [
-      "Up to 2,000 patients",
-      "Advanced AI intake",
-      "Smart scheduling",
-      "Team collaboration",
-      "Analytics dashboard",
-      "Priority support",
-      "EHR integration",
-      "Custom branding",
+      "Everything in Basic, plus:",
+      "AI Consultation Summaries",
+      "AI Medical Notes",
+      "AI Patient Follow-Up Recommendations",
+      "AI Clinic Analytics & Insights",
+      "AI Productivity Assistant",
+      "AI Reporting Insights",
+      "Priority Support",
     ],
-    cta: "Get Started",
+    cta: "Start Free Trial",
+    href: "/register",
     highlighted: true,
-    badge: "Most Popular",
+    badge: "Recommended",
   },
   {
     name: "Enterprise",
-    description: "For large clinics and healthcare networks",
+    description: "For larger clinics and medical groups.",
     price: "Custom",
     period: "",
     icon: Building2,
     features: [
-      "Unlimited patients",
-      "Multi-clinic support",
-      "Advanced analytics",
-      "Dedicated success manager",
-      "Custom integrations",
-      "SLA guarantee",
-      "White-label option",
-      "24/7 phone support",
+      "Everything in AI Professional, plus:",
+      "Multi-branch Management",
+      "Unlimited Practitioners",
+      "Dedicated Success Manager",
+      "Custom Integrations & API",
+      "SLA Guarantee (99.9%)",
+      "White-Label Option",
+      "24/7 Phone & Chat Support",
     ],
     cta: "Contact Sales",
+    href: "tel:+639204786075",
     highlighted: false,
   },
 ];
@@ -131,14 +136,14 @@ export function PricingSection() {
         <div ref={headerRef} className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-clinic-navy/10 dark:bg-white/10 rounded-full text-clinic-navy dark:text-white text-sm font-medium mb-4">
             <Sparkles className="w-4 h-4" />
-            Simple Pricing
+            Transparent Pricing
           </div>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-clinic-navy dark:text-white tracking-tight mb-4">
-            Plans That Scale With You
+            Choose the Plan That Fits Your Clinic
           </h2>
           <p className="text-lg text-clinic-text/70 dark:text-white/70">
-            No hidden fees. No long-term contracts. Start free and upgrade as
-            your practice grows.
+            No hidden fees. No long-term contracts. Start with a 14-day free
+            trial and upgrade as your practice grows.
           </p>
         </div>
 
@@ -159,7 +164,7 @@ export function PricingSection() {
             >
               {/* Badge */}
               {plan.badge && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-clinic-teal text-white px-4">
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-clinic-teal text-white px-4 py-1">
                   {plan.badge}
                 </Badge>
               )}
@@ -234,7 +239,7 @@ export function PricingSection() {
                     <Check
                       className={cn(
                         "w-5 h-5 flex-shrink-0 mt-0.5",
-                        plan.highlighted ? "text-clinic-teal" : "text-clinic-teal"
+                        "text-clinic-teal"
                       )}
                     />
                     <span
@@ -254,7 +259,7 @@ export function PricingSection() {
               {/* CTA */}
               <Button
                 className={cn(
-                  "w-full h-12",
+                  "w-full h-12 group",
                   plan.highlighted
                     ? "bg-clinic-teal hover:bg-clinic-teal/90 text-white"
                     : "bg-clinic-navy hover:bg-clinic-navy/90 text-white"
@@ -262,9 +267,12 @@ export function PricingSection() {
                 asChild
               >
                 {plan.name === "Enterprise" ? (
-                  <a href="tel:+639204786075">{plan.cta}</a>
+                  <a href={plan.href}>{plan.cta}</a>
                 ) : (
-                  <Link href="/demo">{plan.cta}</Link>
+                  <Link href={plan.href}>
+                    {plan.cta}
+                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
                 )}
               </Button>
             </div>
