@@ -259,6 +259,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
         } else if (role === 'clinic_admin') {
           // Clinic admins go to their clinic dashboard
+          const clinicId = authData.user.user_metadata?.clinic_id;
+          if (clinicId) {
+            return { error: null, redirectTo: `/clinic/${clinicId}/dashboard` };
+          }
+          
+          // Fallback to fetch from database if not in metadata
+          const { data: adminData } = await supabase
+            .from('clinic_admins')
+            .select('clinic_id')
+            .eq('auth_user_id', authData.user.id)
+            .single();
+            
+          if (adminData?.clinic_id) {
+            return { error: null, redirectTo: `/clinic/${adminData.clinic_id}/dashboard` };
+          }
+          
           return { error: null, redirectTo: '/clinic' };
         }
       }
