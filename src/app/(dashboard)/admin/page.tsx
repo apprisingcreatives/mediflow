@@ -76,7 +76,7 @@ const patientQueue = [
   {
     id: 1,
     name: "Sarah Johnson",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80&auto=format&fit=crop",
     reason: "Annual checkup",
     time: "9:00 AM",
     status: "in-progress",
@@ -86,7 +86,7 @@ const patientQueue = [
   {
     id: 2,
     name: "Michael Chen",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80&auto=format&fit=crop",
     reason: "Chest pain, shortness of breath",
     time: "9:30 AM",
     status: "waiting",
@@ -96,7 +96,7 @@ const patientQueue = [
   {
     id: 3,
     name: "Emily Rodriguez",
-    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=80",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=80&auto=format&fit=crop",
     reason: "Follow-up appointment",
     time: "10:00 AM",
     status: "waiting",
@@ -106,7 +106,7 @@ const patientQueue = [
   {
     id: 4,
     name: "David Kim",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80&auto=format&fit=crop",
     reason: "Persistent headaches",
     time: "10:30 AM",
     status: "waiting",
@@ -184,7 +184,7 @@ export default function AdminDashboard() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex items-center gap-2 px-2">
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80" />
+                    <AvatarImage src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80&auto=format&fit=crop" />
                     <AvatarFallback>DR</AvatarFallback>
                   </Avatar>
                   <span className="hidden md:block text-sm font-medium">
