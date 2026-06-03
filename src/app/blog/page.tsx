@@ -15,7 +15,7 @@ const posts = [
   {
     title: "5 Ways to Reduce Patient No-Shows",
     excerpt: "Practical strategies to minimize appointment cancellations and keep your schedule running smoothly.",
-    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&q=80",
     date: "Dec 10, 2024",
     readTime: "5 min read",
     category: "Best Practices",
@@ -100,6 +100,7 @@ export default function BlogPage() {
                   alt={posts[0].title}
                   width={600}
                   height={400}
+                  priority
                   className="w-full h-full object-cover"
                 />
               </div>
