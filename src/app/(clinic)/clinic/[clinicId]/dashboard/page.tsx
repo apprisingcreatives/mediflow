@@ -10,9 +10,25 @@ import {
   CheckCircle,
   AlertTriangle,
   Loader2,
+  UserX,
+  DollarSign,
+  Clock,
+  BarChart3,
 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { useClinicContext } from '../layout';
 import { useGetAppointments } from '@/hooks';
+import useClinicAnalytics from '@/hooks/useClinicAnalytics';
 import { supabase } from '@/lib/supabase';
 import { formatTimeToAMPM } from '@/lib/utils';
 
@@ -31,6 +47,12 @@ export default function ClinicDashboardPage() {
   const [patientCount, setPatientCount] = useState<number | null>(null);
   const [monthlyRevenue, setMonthlyRevenue] = useState<number | null>(null);
   const [completedThisMonth, setCompletedThisMonth] = useState<number | null>(null);
+
+  const {
+    analytics,
+    loading: analyticsLoading,
+    fetchAnalytics,
+  } = useClinicAnalytics(clinic?.id || '');
 
   useEffect(() => {
     if (!clinic?.id) return;
@@ -89,6 +111,10 @@ export default function ClinicDashboardPage() {
 
     fetchStats();
   }, [clinic?.id]);
+
+  useEffect(() => {
+    if (clinic?.id) fetchAnalytics('30d');
+  }, [clinic?.id, fetchAnalytics]);
 
   const enabledFeatures = clinicFeatures.filter((f) => f.is_enabled);
   const disabledFeatures = clinicFeatures.filter((f) => !f.is_enabled);
@@ -149,6 +175,141 @@ export default function ClinicDashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Revenue Protection Analytics */}
+      {!isTrialExpired && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-5 h-5 text-clinic-teal" />
+            <h2 className="font-display text-lg font-bold text-clinic-navy dark:text-white">
+              Revenue Protection (Last 30 Days)
+            </h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {[
+              {
+                label: 'No-Show Rate',
+                value: analyticsLoading ? null : `${analytics?.no_show_rate ?? 0}%`,
+                subtitle: `${analytics?.no_show_count ?? 0} of ${analytics?.total_appointments ?? 0}`,
+                icon: UserX,
+                iconBg: 'bg-red-500/10',
+                iconColor: 'text-red-500',
+              },
+              {
+                label: 'Revenue Lost',
+                value: analyticsLoading ? null : formatCurrency(analytics?.revenue_lost ?? 0),
+                subtitle: 'From no-shows',
+                icon: DollarSign,
+                iconBg: 'bg-orange-500/10',
+                iconColor: 'text-orange-500',
+              },
+              {
+                label: 'Confirmation Rate',
+                value: analyticsLoading ? null : `${analytics?.confirmation_rate ?? 0}%`,
+                subtitle: 'Confirmed or completed',
+                icon: CheckCircle,
+                iconBg: 'bg-green-500/10',
+                iconColor: 'text-green-500',
+              },
+              {
+                label: 'Peak Hour',
+                value: analyticsLoading
+                  ? null
+                  : analytics?.peak_hours && analytics.peak_hours.length > 0
+                    ? `${analytics.peak_hours.reduce((a, b) => (b.count > a.count ? b : a)).hour}:00`
+                    : 'N/A',
+                subtitle: 'Busiest time',
+                icon: Clock,
+                iconBg: 'bg-blue-500/10',
+                iconColor: 'text-blue-500',
+              },
+            ].map((stat) => (
+              <div key={stat.label} className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg ${stat.iconBg} flex items-center justify-center shrink-0`}>
+                    <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-clinic-text/60 dark:text-white/60">{stat.label}</p>
+                    <p className="text-lg font-bold text-clinic-navy dark:text-white">
+                      {stat.value === null ? <Loader2 className="w-4 h-4 animate-spin" /> : stat.value}
+                    </p>
+                    <p className="text-xs text-clinic-text/40 dark:text-white/40">{stat.subtitle}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {analytics && !analyticsLoading && (
+            <div className="grid lg:grid-cols-2 gap-4">
+              {/* Peak Hours Chart */}
+              {analytics.peak_hours.length > 0 && (
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-4">
+                  <h3 className="text-sm font-medium text-clinic-text/60 dark:text-white/60 mb-3">
+                    Appointments by Hour
+                  </h3>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={analytics.peak_hours}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                      <XAxis
+                        dataKey="hour"
+                        tickFormatter={(h) => `${h}:00`}
+                        fontSize={11}
+                        tick={{ fill: '#64748b' }}
+                      />
+                      <YAxis fontSize={11} tick={{ fill: '#64748b' }} />
+                      <Tooltip
+                        labelFormatter={(h) => `${h}:00`}
+                        formatter={(v: number) => [v, 'Appointments']}
+                      />
+                      <Bar dataKey="count" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* No-Show Trend */}
+              {analytics.trends.dates.length > 0 && (
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-4">
+                  <h3 className="text-sm font-medium text-clinic-text/60 dark:text-white/60 mb-3">
+                    No-Show Rate Trend
+                  </h3>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart
+                      data={analytics.trends.dates.map((date, i) => ({
+                        date: date.slice(5),
+                        rate: analytics.trends.no_show_rates[i],
+                        count: analytics.trends.appointment_counts[i],
+                      }))}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                      <XAxis dataKey="date" fontSize={11} tick={{ fill: '#64748b' }} />
+                      <YAxis
+                        fontSize={11}
+                        tick={{ fill: '#64748b' }}
+                        tickFormatter={(v) => `${v}%`}
+                      />
+                      <Tooltip formatter={(v: number, name: string) => [
+                        name === 'rate' ? `${v}%` : v,
+                        name === 'rate' ? 'No-Show Rate' : 'Appointments'
+                      ]} />
+                      <Line
+                        type="monotone"
+                        dataKey="rate"
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className='grid lg:grid-cols-2 gap-8'>
         {/* AI Features Status */}

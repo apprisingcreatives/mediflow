@@ -27,10 +27,14 @@ interface Clinic {
   is_trial_active?: boolean;
   is_subscription_active?: boolean;
   payment_status?: string;
+  last_payment_date?: string;
+  next_billing_date?: string;
   slug?: string;
   email_notifications_enabled: boolean;
   appointment_reminders_enabled: boolean;
   intake_required?: boolean;
+  paymongo_merchant_id?: string | null;
+  paymongo_merchant_status?: string | null;
 }
 
 interface ClinicAdmin {

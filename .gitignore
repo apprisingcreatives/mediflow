@@ -53,7 +53,7 @@ node_modules/
 **/tempobook/**
 node_modules
 
-docs/
+docs/*
 
 CLAUDE.md
 
@@ -63,3 +63,4 @@ tatus.md
 .superpowers/*
 
 supabase/seed.sql
+

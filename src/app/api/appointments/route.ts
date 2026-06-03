@@ -1,9 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { sendSMS } from '@/lib/unisms';
+import { normalizeToE164, isValidPHMobile } from '@/lib/phone';
+import jwt from 'jsonwebtoken';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const jwtSecret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'mediflow-rebook-secret';
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mediflow.apprisingcreatives.com';
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function formatTime(timeStr: string): string {
+  const [h, m] = timeStr.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
 
 // POST - Create appointment (patients only)
 export async function POST(request: Request) {
@@ -48,6 +65,7 @@ export async function POST(request: Request) {
       notes,
       patient_info,
       booked_by,
+      payment_method,
     } = body;
 
     // Validate required fields
@@ -60,7 +78,7 @@ export async function POST(request: Request) {
 
     // Resolve patient: if patient_id is provided (clinic admin booking), verify the caller
     // is a clinic admin for that clinic. Otherwise, look up by auth user (patient self-booking).
-    let patient: { id: string; email: string; first_name: string; last_name: string } | null = null;
+    let patient: { id: string; email: string; first_name: string; last_name: string; phone: string | null } | null = null;
 
     if (bodyPatientId && clinic_id) {
       // Clinic admin booking for a patient — verify admin role
@@ -81,7 +99,7 @@ export async function POST(request: Request) {
 
       const { data: targetPatient } = await supabaseAdmin
         .from('patients')
-        .select('id, email, first_name, last_name')
+        .select('id, email, first_name, last_name, phone')
         .eq('id', bodyPatientId)
         .single();
 
@@ -90,7 +108,7 @@ export async function POST(request: Request) {
       // Patient self-booking
       const { data: selfPatient } = await supabase
         .from('patients')
-        .select('id, email, first_name, last_name')
+        .select('id, email, first_name, last_name, phone')
         .eq('auth_user_id', user.id)
         .single();
 
@@ -156,6 +174,20 @@ export async function POST(request: Request) {
       }
     }
 
+    // Resolve service price for payment
+    let servicePrice: number | null = null;
+    if (service_id) {
+      const { data: svc } = await supabaseAdmin
+        .from('clinic_services')
+        .select('price')
+        .eq('id', service_id)
+        .single();
+      servicePrice = svc?.price ?? null;
+    }
+
+    const isCash = payment_method === 'cash';
+    const isOnline = payment_method === 'online';
+
     // Create appointment
     const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
@@ -169,6 +201,9 @@ export async function POST(request: Request) {
         status: 'scheduled',
         notes: notes || null,
         booked_by: booked_by || 'patient',
+        payment_status: isCash ? 'pay_at_clinic' : isOnline ? 'pending' : 'pending',
+        payment_method: isCash ? 'cash' : null,
+        payment_amount: servicePrice,
       })
       .select()
       .single();
@@ -317,19 +352,110 @@ export async function POST(request: Request) {
       },
     });
 
-    // Queue confirmation email
-    await supabase.from('email_notifications').insert({
-      recipient_email: patient.email,
-      recipient_name: `${patient.first_name} ${patient.last_name}`,
-      recipient_type: 'patient',
-      subject: 'Appointment Confirmed - MediFlow',
-      body: `Dear ${patient.first_name}, Your appointment has been confirmed for ${appointment_date} at ${appointment_time}${clinicName ? ` at ${clinicName}` : ''}${practitionerName ? ` with ${practitionerName}` : ''}.`,
-      html_body: `<h1>Appointment Confirmed</h1><p>Dear ${patient.first_name},</p><p>Your appointment has been confirmed:</p><ul><li><strong>Date:</strong> ${appointment_date}</li><li><strong>Time:</strong> ${appointment_time}</li>${clinicName ? `<li><strong>Clinic:</strong> ${clinicName}</li>` : ''}${practitionerName ? `<li><strong>Doctor:</strong> ${practitionerName}</li>` : ''}${serviceName ? `<li><strong>Service:</strong> ${serviceName}</li>` : ''}</ul><p>Please arrive 15 minutes before your appointment time.</p>`,
-      notification_type: 'appointment_confirmation',
-      related_entity_type: 'appointment',
-      related_entity_id: appointment.id,
-      status: 'pending',
-    });
+    // Generate confirm/cancel tokens for email links
+    const confirmToken = jwt.sign(
+      { appointmentId: appointment.id, patientId: patient.id, action: 'confirm' },
+      jwtSecret,
+      { expiresIn: '48h' },
+    );
+    const cancelToken = jwt.sign(
+      { appointmentId: appointment.id, patientId: patient.id, action: 'cancel' },
+      jwtSecret,
+      { expiresIn: '48h' },
+    );
+    const confirmUrl = `${appUrl}/confirm/${confirmToken}`;
+    const cancelUrl = `${appUrl}/cancel/${cancelToken}`;
+    const dateFormatted = formatDate(appointment_date);
+    const timeFormatted = formatTime(appointment_time);
+    const bookedBy = booked_by || 'patient';
+    const patientFullName = `${patient.first_name} ${patient.last_name}`;
+
+    const detailsList = `<ul><li><strong>Date:</strong> ${dateFormatted}</li><li><strong>Time:</strong> ${timeFormatted}</li>${clinicName ? `<li><strong>Clinic:</strong> ${clinicName}</li>` : ''}${practitionerName ? `<li><strong>Doctor:</strong> ${practitionerName}</li>` : ''}${serviceName ? `<li><strong>Service:</strong> ${serviceName}</li>` : ''}</ul>`;
+    const actionButtons = `<p><a href="${confirmUrl}" style="display:inline-block;padding:12px 24px;background:#14b8a6;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;margin-right:12px">Confirm Appointment</a> <a href="${cancelUrl}" style="display:inline-block;padding:12px 24px;background:#ef4444;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">Cancel Appointment</a></p>`;
+
+    if (bookedBy === 'patient') {
+      // Patient booked → notify clinic admin to confirm
+      const { data: clinicAdmin } = await supabaseAdmin
+        .from('clinic_admins')
+        .select('email, name')
+        .eq('clinic_id', clinic_id)
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+
+      if (clinicAdmin) {
+        await supabaseAdmin.from('email_notifications').insert({
+          recipient_email: clinicAdmin.email,
+          recipient_name: clinicAdmin.name,
+          recipient_type: 'clinic',
+          subject: `New Appointment Request from ${patientFullName} - MediFlow`,
+          body: `Dear ${clinicAdmin.name}, ${patientFullName} has booked an appointment on ${dateFormatted} at ${timeFormatted}. Please confirm or cancel: Confirm: ${confirmUrl} Cancel: ${cancelUrl}`,
+          html_body: `<h1>New Appointment Request</h1><p>Dear ${clinicAdmin.name},</p><p><strong>${patientFullName}</strong> has booked an appointment:</p>${detailsList}<p>Please confirm or cancel this appointment:</p>${actionButtons}`,
+          notification_type: 'appointment_booked',
+          related_entity_type: 'appointment',
+          related_entity_id: appointment.id,
+          status: 'pending',
+        });
+      }
+
+      // Also send a receipt email to the patient (no action buttons)
+      await supabaseAdmin.from('email_notifications').insert({
+        recipient_email: patient.email,
+        recipient_name: patientFullName,
+        recipient_type: 'patient',
+        subject: 'Appointment Booked - MediFlow',
+        body: `Dear ${patient.first_name}, Your appointment on ${dateFormatted} at ${timeFormatted}${clinicName ? ` at ${clinicName}` : ''} has been booked. You will receive a confirmation once the clinic confirms.`,
+        html_body: `<h1>Appointment Booked</h1><p>Dear ${patient.first_name},</p><p>Your appointment has been booked:</p>${detailsList}<p>You will receive a confirmation email once the clinic confirms your appointment.</p>`,
+        notification_type: 'appointment_booked',
+        related_entity_type: 'appointment',
+        related_entity_id: appointment.id,
+        status: 'pending',
+      });
+    } else {
+      // Clinic admin booked → notify patient to confirm
+      await supabaseAdmin.from('email_notifications').insert({
+        recipient_email: patient.email,
+        recipient_name: patientFullName,
+        recipient_type: 'patient',
+        subject: 'New Appointment Scheduled for You - MediFlow',
+        body: `Dear ${patient.first_name}, An appointment has been scheduled for you on ${dateFormatted} at ${timeFormatted}${clinicName ? ` at ${clinicName}` : ''}. Please confirm: ${confirmUrl} or cancel: ${cancelUrl}`,
+        html_body: `<h1>New Appointment Scheduled</h1><p>Dear ${patient.first_name},</p><p>An appointment has been scheduled for you:</p>${detailsList}<p>Please confirm or cancel your appointment:</p>${actionButtons}`,
+        notification_type: 'appointment_booked',
+        related_entity_type: 'appointment',
+        related_entity_id: appointment.id,
+        status: 'pending',
+      });
+    }
+
+    // Send booking confirmation SMS
+    try {
+      const phone = await getPatientPhone(patient.id, patient.phone);
+      if (phone) {
+        let msgBody = `Hi ${patient.first_name}, your appointment at ${clinicName || 'the clinic'} on ${dateFormatted} at ${timeFormatted} is booked.`;
+
+        if (isCash && servicePrice) {
+          msgBody += ` Please pay PHP ${servicePrice.toLocaleString()} at the clinic.`;
+        } else if (isOnline && servicePrice) {
+          msgBody += ` Complete your payment online.`;
+        }
+
+        const { messageId } = await sendSMS(phone, msgBody);
+        await supabaseAdmin.from('sms_notifications').insert({
+          appointment_id: appointment.id,
+          patient_id: patient.id,
+          clinic_id: clinic_id || null,
+          phone_e164: phone,
+          message_body: msgBody,
+          reminder_type: 'booking_confirmation',
+          provider_message_id: messageId,
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          idempotency_key: `booking:${appointment.id}`,
+        });
+      }
+    } catch (smsErr) {
+      console.error('Booking confirmation SMS error:', smsErr);
+    }
 
     return NextResponse.json({ appointment }, { status: 201 });
   } catch (error) {
@@ -455,4 +581,25 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
+}
+
+async function getPatientPhone(
+  patientId: string,
+  fallbackPhone?: string | null,
+): Promise<string | null> {
+  const { data: prefs } = await supabaseAdmin
+    .from('patient_notification_preferences')
+    .select('phone_e164, sms_enabled, sms_opted_out')
+    .eq('patient_id', patientId)
+    .single();
+
+  if (prefs?.sms_opted_out || prefs?.sms_enabled === false) return null;
+
+  if (prefs?.phone_e164 && isValidPHMobile(prefs.phone_e164)) {
+    return prefs.phone_e164;
+  }
+
+  const normalized = normalizeToE164(fallbackPhone);
+  if (normalized && isValidPHMobile(normalized)) return normalized;
+  return null;
 }

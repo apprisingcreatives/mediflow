@@ -1,104 +1,111 @@
-import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createCheckoutSession } from '@/lib/paymongo';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const appUrl =
+  process.env.NEXT_PUBLIC_APP_URL || 'https://mediflow.apprisingcreatives.com';
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ clinicId: string }> }
+  { params }: { params: Promise<{ clinicId: string }> },
 ) {
   try {
     const { clinicId } = await params;
-    const { plan, billing_cycle, amount, card_last_four } =
-      await request.json();
 
-    // Get clinic data
-    const { data: clinic, error: clinicError } = await supabaseAdmin
-      .from("clinics")
-      .select("*")
-      .eq("id", clinicId)
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: adminRecord } = await supabaseAdmin
+      .from('clinic_admins')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .eq('clinic_id', clinicId)
+      .eq('is_active', true)
       .single();
 
-    if (clinicError || !clinic) {
-      return NextResponse.json({ error: "Clinic not found" }, { status: 404 });
+    if (!adminRecord) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Calculate next billing date
-    const nextBillingDate = new Date();
-    if (billing_cycle === "yearly") {
-      nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
-    } else {
-      nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+    const { plan, billing_cycle } = await request.json();
+
+    if (!plan || !billing_cycle) {
+      return NextResponse.json(
+        { error: 'Missing plan or billing_cycle' },
+        { status: 400 },
+      );
     }
 
-    // Update clinic subscription
-    const { error: updateError } = await supabaseAdmin
-      .from("clinics")
-      .update({
-        subscription_plan: plan,
-        is_trial_active: false,
-        is_subscription_active: true,
-        payment_status: "active",
-        last_payment_date: new Date().toISOString(),
-        next_billing_date: nextBillingDate.toISOString(),
-      })
-      .eq("id", clinicId);
+    const { data: planData } = await supabaseAdmin
+      .from('subscription_plans')
+      .select('name, price, slug')
+      .eq('slug', plan)
+      .eq('billing_cycle', billing_cycle)
+      .eq('is_active', true)
+      .single();
 
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    if (!planData) {
+      return NextResponse.json(
+        { error: 'Invalid plan or billing cycle' },
+        { status: 400 },
+      );
     }
 
-    // Create payment record
-    const { error: paymentError } = await supabaseAdmin
-      .from("clinic_payments")
-      .insert({
+    const amountInCentavos = Math.round(planData.price * 100);
+
+    const session = await createCheckoutSession({
+      lineItems: [
+        {
+          name: `MediFlow ${planData.name} Plan`,
+          amount: amountInCentavos,
+          description: `${planData.name} — ${billing_cycle === 'yearly' ? 'Annual' : 'Monthly'} Subscription`,
+        },
+      ],
+      description: `MediFlow ${planData.name} Plan Subscription`,
+      metadata: {
+        type: 'clinic_subscription',
         clinic_id: clinicId,
-        amount,
-        currency: "PHP",
-        payment_method: `Card ending in ${card_last_four}`,
-        status: "paid",
-        description: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan - ${billing_cycle === "yearly" ? "Annual" : "Monthly"} Subscription`,
-        paid_at: new Date().toISOString(),
-      });
+        plan_slug: plan,
+        billing_cycle,
+        amount: String(planData.price),
+      },
+      successUrl: `${appUrl}/clinic/${clinicId}/billing?payment=success`,
+      cancelUrl: `${appUrl}/clinic/${clinicId}/billing?payment=cancelled`,
+      referenceNumber: `sub-${clinicId}-${Date.now()}`,
+    });
 
-    if (paymentError) {
-      console.error("Payment record error:", paymentError);
-    }
-
-    // Queue payment confirmation email
-    const { data: admin } = await supabaseAdmin
-      .from("clinic_admins")
-      .select("email, name")
-      .eq("clinic_id", clinicId)
-      .limit(1)
-      .single();
-
-    if (admin) {
-      await supabaseAdmin.from("email_notifications").insert({
-        recipient_email: admin.email,
-        recipient_name: admin.name,
-        recipient_type: "clinic",
-        subject: "Payment Successful - MediFlow Subscription Active",
-        body: `Dear ${admin.name}, Your payment of ₱${amount.toLocaleString()} for the ${plan} plan has been processed successfully. Your subscription is now active.`,
-        html_body: `<h1>Payment Successful</h1><p>Dear ${admin.name},</p><p>Your payment of <strong>₱${amount.toLocaleString()}</strong> for the <strong>${plan}</strong> plan has been processed successfully.</p><p>Your subscription is now active. Enjoy all the features!</p>`,
-        notification_type: "payment_success",
-        related_entity_type: "clinic",
-        related_entity_id: clinicId,
-        status: "pending",
-      });
-    }
+    await supabaseAdmin
+      .from('clinics')
+      .update({ paymongo_checkout_session_id: session.id })
+      .eq('id', clinicId);
 
     return NextResponse.json({
-      message: "Subscription activated successfully",
-      subscription: {
-        plan,
-        billing_cycle,
-        next_billing_date: nextBillingDate.toISOString(),
-      },
+      checkout_url: session.checkoutUrl,
+      session_id: session.id,
     });
   } catch (error) {
-    console.error("Subscription error:", error);
+    console.error('Subscription checkout error:', error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: 'Internal server error' },
+      { status: 500 },
     );
   }
 }
