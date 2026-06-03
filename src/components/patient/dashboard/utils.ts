@@ -72,7 +72,7 @@ export const MOCK_MESSAGES = [
     preview: 'Your lab results are in. Everything looks good...',
     time: '2 hours ago',
     unread: true,
-    avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80',
+    avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80&auto=format&fit=crop',
   },
   {
     id: 2,

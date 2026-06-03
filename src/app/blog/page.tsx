@@ -7,7 +7,7 @@ const posts = [
   {
     title: "The Future of AI in Healthcare: 2024 Trends",
     excerpt: "Explore how artificial intelligence is reshaping patient care, diagnostics, and clinic operations in the coming year.",
-    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80&auto=format&fit=crop",
     date: "Dec 15, 2024",
     readTime: "8 min read",
     category: "Industry Insights",
@@ -15,7 +15,7 @@ const posts = [
   {
     title: "5 Ways to Reduce Patient No-Shows",
     excerpt: "Practical strategies to minimize appointment cancellations and keep your schedule running smoothly.",
-    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&q=80&auto=format&fit=crop",
     date: "Dec 10, 2024",
     readTime: "5 min read",
     category: "Best Practices",
@@ -23,7 +23,7 @@ const posts = [
   {
     title: "HIPAA Compliance in the Digital Age",
     excerpt: "Everything you need to know about protecting patient data when using modern healthcare software.",
-    image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&q=80&auto=format&fit=crop",
     date: "Dec 5, 2024",
     readTime: "10 min read",
     category: "Compliance",
@@ -31,7 +31,7 @@ const posts = [
   {
     title: "How AI Intake Forms Improve Patient Experience",
     excerpt: "Learn how intelligent forms can streamline the check-in process while gathering better patient data.",
-    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80&auto=format&fit=crop",
     date: "Nov 28, 2024",
     readTime: "6 min read",
     category: "Product",
@@ -39,7 +39,7 @@ const posts = [
   {
     title: "Building a Patient-Centric Clinic Culture",
     excerpt: "Tips from healthcare leaders on creating an environment where patients feel valued and heard.",
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80&auto=format&fit=crop",
     date: "Nov 20, 2024",
     readTime: "7 min read",
     category: "Culture",
@@ -47,7 +47,7 @@ const posts = [
   {
     title: "Telemedicine Integration Best Practices",
     excerpt: "How to seamlessly blend virtual and in-person care for a hybrid healthcare model.",
-    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80&auto=format&fit=crop",
     date: "Nov 15, 2024",
     readTime: "9 min read",
     category: "Technology",
