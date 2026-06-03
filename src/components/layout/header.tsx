@@ -108,7 +108,8 @@ export function Header({ showSignIn = true }: HeaderProps) {
       ];
     }
     if (role === 'clinic_admin') {
-      return [{ label: 'Dashboard', href: '/clinic', icon: LayoutDashboard }];
+      const base = clinic_id ? `/clinic/${clinic_id}` : '/clinic';
+      return [{ label: 'Dashboard', href: `${base}/dashboard`, icon: LayoutDashboard }];
     }
     // Default: patient
     return [
