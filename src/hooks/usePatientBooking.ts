@@ -43,6 +43,7 @@ const usePatientBooking = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState('');
   const [notes, setNotes] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>('cash');
 
   // Data state
   const [practitioners, setPractitioners] = useState<BookingPractitioner[]>([]);
@@ -198,6 +199,7 @@ const usePatientBooking = () => {
             appointment_date: format(selectedDate, 'yyyy-MM-dd'),
             appointment_time: selectedTime,
             notes: notes || null,
+            payment_method: paymentMethod,
           }),
         });
 
@@ -208,6 +210,23 @@ const usePatientBooking = () => {
 
         const { appointment } = await res.json();
         setCreatedAppointment(appointment);
+
+        if (paymentMethod === 'online' && appointment?.id) {
+          const payRes = await fetch(`/api/appointments/${appointment.id}/pay`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
+          if (payRes.ok) {
+            const { checkout_url } = await payRes.json();
+            if (checkout_url) {
+              window.location.href = checkout_url;
+              return true;
+            }
+          }
+        }
 
         return true;
       } catch (err) {
@@ -225,6 +244,7 @@ const usePatientBooking = () => {
       selectedDate,
       selectedTime,
       notes,
+      paymentMethod,
     ]
   );
 
@@ -258,6 +278,7 @@ const usePatientBooking = () => {
     setSelectedDate(undefined);
     setSelectedTime('');
     setNotes('');
+    setPaymentMethod('cash');
     setTimeSlots([]);
     setPractitioners([]);
     setServices([]);
@@ -291,6 +312,8 @@ const usePatientBooking = () => {
     setSelectedServiceId,
     setSelectedTime,
     setNotes,
+    paymentMethod,
+    setPaymentMethod,
 
     // Handlers
     handleClinicChange,

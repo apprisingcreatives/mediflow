@@ -1,14 +1,13 @@
-"use client";
-
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Activity, ArrowLeft, Calendar, Clock, ArrowRight } from "lucide-react";
+import Image from "next/image";
 
 const posts = [
   {
     title: "The Future of AI in Healthcare: 2024 Trends",
     excerpt: "Explore how artificial intelligence is reshaping patient care, diagnostics, and clinic operations in the coming year.",
-    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80&auto=format&fit=crop",
     date: "Dec 15, 2024",
     readTime: "8 min read",
     category: "Industry Insights",
@@ -16,7 +15,7 @@ const posts = [
   {
     title: "5 Ways to Reduce Patient No-Shows",
     excerpt: "Practical strategies to minimize appointment cancellations and keep your schedule running smoothly.",
-    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=600&q=80&auto=format&fit=crop",
     date: "Dec 10, 2024",
     readTime: "5 min read",
     category: "Best Practices",
@@ -24,7 +23,7 @@ const posts = [
   {
     title: "HIPAA Compliance in the Digital Age",
     excerpt: "Everything you need to know about protecting patient data when using modern healthcare software.",
-    image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&q=80&auto=format&fit=crop",
     date: "Dec 5, 2024",
     readTime: "10 min read",
     category: "Compliance",
@@ -32,7 +31,7 @@ const posts = [
   {
     title: "How AI Intake Forms Improve Patient Experience",
     excerpt: "Learn how intelligent forms can streamline the check-in process while gathering better patient data.",
-    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80&auto=format&fit=crop",
     date: "Nov 28, 2024",
     readTime: "6 min read",
     category: "Product",
@@ -40,7 +39,7 @@ const posts = [
   {
     title: "Building a Patient-Centric Clinic Culture",
     excerpt: "Tips from healthcare leaders on creating an environment where patients feel valued and heard.",
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80&auto=format&fit=crop",
     date: "Nov 20, 2024",
     readTime: "7 min read",
     category: "Culture",
@@ -48,7 +47,7 @@ const posts = [
   {
     title: "Telemedicine Integration Best Practices",
     excerpt: "How to seamlessly blend virtual and in-person care for a hybrid healthcare model.",
-    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80",
+    image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80&auto=format&fit=crop",
     date: "Nov 15, 2024",
     readTime: "9 min read",
     category: "Technology",
@@ -96,9 +95,12 @@ export default function BlogPage() {
           <div className="mb-12 p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-glass overflow-hidden">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="aspect-video md:aspect-auto rounded-xl overflow-hidden">
-                <img
+                <Image
                   src={posts[0].image}
                   alt={posts[0].title}
+                  width={600}
+                  height={400}
+                  priority
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -138,9 +140,11 @@ export default function BlogPage() {
                 className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass overflow-hidden hover:shadow-glass-lg transition-all cursor-pointer group"
               >
                 <div className="aspect-video overflow-hidden">
-                  <img
+                  <Image
                     src={post.image}
                     alt={post.title}
+                    width={400}
+                    height={225}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>

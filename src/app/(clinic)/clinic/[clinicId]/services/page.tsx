@@ -27,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 import useGetServices, { ClinicService } from '@/hooks/useGetServices';
 import useServiceMutations from '@/hooks/useServiceMutations';
 import { ServiceFormModal, ServiceFormData } from '@/components/clinic/services';

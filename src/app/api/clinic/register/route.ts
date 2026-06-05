@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export async function POST(request: Request) {
+  let createdClinicId: string | null = null;
+  let createdAuthUserId: string | null = null;
+
   try {
     const { clinic, admin, services } = await request.json();
 
@@ -105,6 +108,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: clinicError.message }, { status: 500 });
     }
 
+    createdClinicId = newClinic.id;
+
     // Create admin user in Supabase Auth with password
     const { data: authUser, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
@@ -119,13 +124,16 @@ export async function POST(request: Request) {
       });
 
     if (authError || !authUser.user) {
-      // Rollback clinic creation
-      await supabaseAdmin.from("clinics").delete().eq("id", newClinic.id);
+      if (createdClinicId) {
+        await supabaseAdmin.from("clinics").delete().eq("id", createdClinicId);
+      }
       return NextResponse.json(
         { error: authError?.message || "Failed to create admin user" },
         { status: 500 }
       );
     }
+
+    createdAuthUserId = authUser.user.id;
 
     // Insert admin record into clinic_admins table
     const { error: adminInsertError } = await supabaseAdmin
@@ -139,9 +147,12 @@ export async function POST(request: Request) {
       });
 
     if (adminInsertError) {
-      // Rollback clinic + auth user
-      await supabaseAdmin.from("clinics").delete().eq("id", newClinic.id);
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+      if (createdClinicId) {
+        await supabaseAdmin.from("clinics").delete().eq("id", createdClinicId);
+      }
+      if (createdAuthUserId) {
+        await supabaseAdmin.auth.admin.deleteUser(createdAuthUserId);
+      }
       return NextResponse.json(
         { error: adminInsertError.message },
         { status: 500 }
@@ -165,23 +176,18 @@ export async function POST(request: Request) {
         })
       );
 
-      await supabaseAdmin.from("clinic_services").insert(servicesToInsert);
+      const { error: servicesInsertError } = await supabaseAdmin
+        .from("clinic_services")
+        .insert(servicesToInsert);
+
+      if (servicesInsertError) {
+        throw new Error(`Failed to insert clinic services: ${servicesInsertError.message}`);
+      }
     }
 
-    // --- Insert AI features for the clinic ---
-    const { data: features } = await supabaseAdmin
-      .from("ai_features")
-      .select("id, is_premium");
-
-    if (features) {
-      const clinicFeatures = features.map((feature) => ({
-        clinic_id: newClinic.id,
-        feature_id: feature.id,
-        is_enabled: !feature.is_premium,
-      }));
-
-      await supabaseAdmin.from("clinic_ai_features").insert(clinicFeatures);
-    }
+    // Note: AI features are populated automatically by the database trigger:
+    // trigger_populate_clinic_ai_features (AFTER INSERT ON public.clinics)
+    // There is no need to manually insert them in this route.
 
     // --- Response ---
     return NextResponse.json(
@@ -195,10 +201,19 @@ export async function POST(request: Request) {
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Registration error:", error);
+
+    // Rollback any partially created resources to prevent locked states
+    if (createdClinicId) {
+      await supabaseAdmin.from("clinics").delete().eq("id", createdClinicId);
+    }
+    if (createdAuthUserId) {
+      await supabaseAdmin.auth.admin.deleteUser(createdAuthUserId);
+    }
+
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: error.message || "Internal server error" },
       { status: 500 }
     );
   }

@@ -31,10 +31,11 @@ import {
   Clock,
   UserX,
 } from 'lucide-react';
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 import { useGetPractitioners, type Practitioner } from '@/hooks';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
+import Image from 'next/image';
 
 // Common specializations
 const SPECIALIZATIONS = [
@@ -409,9 +410,11 @@ function PractitionerCard({ practitioner }: { practitioner: Practitioner }) {
         <div className='flex items-center gap-3'>
           <div className='w-12 h-12 rounded-full bg-clinic-ai/10 flex items-center justify-center'>
             {practitioner.image_url ? (
-              <img
+              <Image
                 src={practitioner.image_url}
                 alt={practitioner.name}
+                width={48}
+                height={48}
                 className='w-12 h-12 rounded-full object-cover'
               />
             ) : (

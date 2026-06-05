@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'supabase', 'migrations');
-const DB_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+const DB_URL = 'postgresql://postgres:postgres@127.0.0.1:54328/postgres';
 
 function psql(sql) {
   return execSync(`psql "${DB_URL}" -c "${sql.replace(/"/g, '\\"')}"`, {

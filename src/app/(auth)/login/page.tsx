@@ -44,6 +44,11 @@ function LoginContent() {
         router.push('/patient');
       } else if (practitioner) {
         router.push(`/practitioner/${practitioner.id}/clinic/${practitioner.clinic_id}/dashboard`);
+      } else if (user.user_metadata?.role === 'clinic_admin') {
+        const clinicId = user.user_metadata?.clinic_id;
+        if (clinicId) {
+          router.push(`/clinic/${clinicId}/dashboard`);
+        }
       }
     }
   }, [user, patient, practitioner, authLoading, isLoading, router, redirectUrl, searchParams]);

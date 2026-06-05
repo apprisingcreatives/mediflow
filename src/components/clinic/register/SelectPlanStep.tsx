@@ -26,6 +26,18 @@ export function SelectPlanStep({
 }: SelectPlanStepProps) {
   const [plansData, setPlansData] = useState<any[]>([]);
   const [plansLoading, setPlansLoading] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+
+  // Sync billingCycle state with selectedPlan if selectedPlan is set externally/initially
+  useEffect(() => {
+    if (selectedPlan) {
+      if (selectedPlan.endsWith("-yearly")) {
+        setBillingCycle("yearly");
+      } else {
+        setBillingCycle("monthly");
+      }
+    }
+  }, [selectedPlan]);
 
   useEffect(() => {
     if (plansData.length === 0) {
@@ -36,7 +48,8 @@ export function SelectPlanStep({
           const plans = data.plans || [];
           setPlansData(plans);
           if (!selectedPlan && plans.length > 0) {
-            setSelectedPlan(plans[0].slug);
+            const defaultPlan = plans.find((p: any) => p.billing_cycle === "monthly") || plans[0];
+            setSelectedPlan(defaultPlan.slug);
           }
         })
         .catch((err) => console.error("Failed to fetch plans:", err))
@@ -44,13 +57,61 @@ export function SelectPlanStep({
     }
   }, [plansData.length, selectedPlan, setSelectedPlan]);
 
+  const handleBillingCycleChange = (cycle: "monthly" | "yearly") => {
+    setBillingCycle(cycle);
+    if (selectedPlan) {
+      if (cycle === "yearly" && !selectedPlan.endsWith("-yearly")) {
+        setSelectedPlan(`${selectedPlan}-yearly`);
+      } else if (cycle === "monthly" && selectedPlan.endsWith("-yearly")) {
+        setSelectedPlan(selectedPlan.replace("-yearly", ""));
+      }
+    }
+  };
+
+  const filteredPlans = plansData.filter(
+    (plan) => plan.billing_cycle === billingCycle
+  );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Activity className="w-5 h-5 text-clinic-teal" />
-        <h2 className="font-display text-xl font-bold text-clinic-navy dark:text-white">
-          Select Your Plan
-        </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <div className="flex items-center gap-2">
+          <Activity className="w-5 h-5 text-clinic-teal" />
+          <h2 className="font-display text-xl font-bold text-clinic-navy dark:text-white">
+            Select Your Plan
+          </h2>
+        </div>
+
+        {/* Billing Cycle Toggle */}
+        {!plansLoading && plansData.length > 0 && (
+          <div className="inline-flex items-center gap-1 p-1 bg-clinic-navy/5 dark:bg-slate-800 rounded-xl border border-clinic-navy/10 dark:border-white/10 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => handleBillingCycleChange("monthly")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                billingCycle === "monthly"
+                  ? "bg-clinic-teal text-white shadow-sm"
+                  : "text-clinic-text/60 dark:text-white/60 hover:text-clinic-navy dark:hover:text-white"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => handleBillingCycleChange("yearly")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                billingCycle === "yearly"
+                  ? "bg-clinic-teal text-white shadow-sm"
+                  : "text-clinic-text/60 dark:text-white/60 hover:text-clinic-navy dark:hover:text-white"
+              }`}
+            >
+              Yearly
+              <span className="text-[10px] text-green-600 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-1 rounded">
+                Save 17%
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
       {plansLoading ? (
@@ -64,48 +125,56 @@ export function SelectPlanStep({
         </div>
       ) : (
         <div
-          className={`grid gap-4 ${plansData.length >= 2 ? "sm:grid-cols-2" : ""}`}
+          className={`grid gap-4 ${
+            filteredPlans.length >= 3
+              ? "md:grid-cols-3"
+              : filteredPlans.length === 2
+              ? "sm:grid-cols-2"
+              : ""
+          }`}
         >
-          {plansData.map((plan, index) => (
+          {filteredPlans.map((plan, index) => (
             <div
               key={plan.id}
               onClick={() => setSelectedPlan(plan.slug)}
-              className={`p-6 border-2 rounded-xl cursor-pointer transition-all ${
+              className={`p-6 border-2 rounded-xl cursor-pointer transition-all flex flex-col justify-between ${
                 selectedPlan === plan.slug
                   ? "border-clinic-teal bg-clinic-teal/5"
                   : "border-clinic-navy/10 dark:border-white/10 hover:border-clinic-teal/50"
               }`}
             >
-              {index === 1 && (
-                <span className="text-xs font-medium text-clinic-teal mb-2 block">
-                  Most Popular
-                </span>
-              )}
-              <h3 className="font-display text-lg font-bold text-clinic-navy dark:text-white">
-                {plan.name}
-              </h3>
-              <p className="text-2xl font-bold text-clinic-teal mt-1">
-                {formatPrice(plan.price, plan.currency)}
-                <span className="text-sm font-normal text-clinic-text/60 dark:text-white/60">
-                  /{plan.billing_cycle === "yearly" ? "year" : "month"}
-                </span>
-              </p>
-              {plan.description && (
-                <p className="text-sm text-clinic-text/60 dark:text-white/60 mt-2">
-                  {plan.description}
+              <div>
+                {index === 1 && (
+                  <span className="text-xs font-semibold text-clinic-teal mb-2 block uppercase tracking-wider">
+                    Most Popular
+                  </span>
+                )}
+                <h3 className="font-display text-lg font-bold text-clinic-navy dark:text-white">
+                  {plan.name}
+                </h3>
+                <p className="text-2xl font-bold text-clinic-teal mt-1">
+                  {formatPrice(plan.price, plan.currency)}
+                  <span className="text-sm font-normal text-clinic-text/60 dark:text-white/60">
+                    /{plan.billing_cycle === "yearly" ? "year" : "month"}
+                  </span>
                 </p>
-              )}
-              <ul className="mt-4 space-y-2">
-                {(plan.features || []).map((feature: string) => (
-                  <li
-                    key={feature}
-                    className="flex items-center gap-2 text-sm text-clinic-text/70 dark:text-white/70"
-                  >
-                    <Check className="w-4 h-4 text-clinic-teal" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
+                {plan.description && (
+                  <p className="text-sm text-clinic-text/60 dark:text-white/60 mt-2">
+                    {plan.description}
+                  </p>
+                )}
+                <ul className="mt-4 space-y-2">
+                  {(plan.features || []).map((feature: string) => (
+                    <li
+                      key={feature}
+                      className="flex items-center gap-2 text-sm text-clinic-text/70 dark:text-white/70"
+                    >
+                      <Check className="w-4 h-4 text-clinic-teal flex-shrink-0" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           ))}
         </div>

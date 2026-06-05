@@ -39,8 +39,10 @@ export interface Clinic {
   last_payment_date: string | null;
   next_billing_date: string | null;
 
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
+  paymongo_customer_id: string | null;
+  paymongo_checkout_session_id: string | null;
+  paymongo_merchant_id: string | null;
+  paymongo_merchant_status: 'pending' | 'activated' | 'declined' | null;
 
   slug: string | null;
 
@@ -138,6 +140,7 @@ export interface Patient {
   insurance_provider: string | null;
   insurance_policy_number: string | null;
   onboarding_completed: boolean;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }

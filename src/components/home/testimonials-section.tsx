@@ -4,6 +4,7 @@ import { useRef, useEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Quote } from "lucide-react";
+import Image from "next/image";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -16,7 +17,7 @@ const testimonials = [
     author: "Dr. Amanda Foster",
     role: "Medical Director",
     organization: "Pacific Northwest Health Network",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80&auto=format&fit=crop",
     metric: "40%",
     metricLabel: "Revenue increase",
   },
@@ -26,7 +27,7 @@ const testimonials = [
     author: "Jennifer Martinez, RN",
     role: "Practice Manager",
     organization: "Sunrise Family Medicine",
-    image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&q=80&auto=format&fit=crop",
     metric: "60%",
     metricLabel: "Time saved on intake",
   },
@@ -36,7 +37,7 @@ const testimonials = [
     author: "Dr. Richard Chang",
     role: "CEO & Founder",
     organization: "Integrated Care Partners",
-    image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80&auto=format&fit=crop",
     metric: "5",
     metricLabel: "Clinics unified",
   },
@@ -141,9 +142,11 @@ export function TestimonialsSection() {
 
               {/* Author */}
               <div className="flex items-center gap-4">
-                <img
+                <Image
                   src={testimonial.image}
                   alt={testimonial.author}
+                  width={56}
+                  height={56}
                   className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-md"
                 />
                 <div>

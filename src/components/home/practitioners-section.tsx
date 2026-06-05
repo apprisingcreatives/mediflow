@@ -4,6 +4,7 @@ import { useRef, useEffect } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Star, Users } from "lucide-react";
+import Image from "next/image";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
@@ -14,42 +15,42 @@ const practitioners = [
     name: "Dr. Sarah Chen",
     specialty: "Family Medicine",
     clinic: "Bay Area Medical Group",
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&q=80&auto=format&fit=crop",
     quote: "MediFlow reduced our administrative burden by 50%. My staff can now focus on patient care.",
   },
   {
     name: "Dr. Michael Rodriguez",
     specialty: "Pediatrics",
     clinic: "Children's Wellness Center",
-    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&q=80&auto=format&fit=crop",
     quote: "The AI intake system asks the right questions, saving valuable consultation time.",
   },
   {
     name: "Dr. Emily Watson",
     specialty: "Internal Medicine",
     clinic: "Eastside Health Partners",
-    image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400&q=80&auto=format&fit=crop",
     quote: "Our no-show rate dropped 35% within the first month of using intelligent scheduling.",
   },
   {
     name: "Dr. James Park",
     specialty: "Orthopedics",
     clinic: "Summit Orthopedic Clinic",
-    image: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=400&q=80&auto=format&fit=crop",
     quote: "The analytics dashboard gives me insights I never had before about my practice.",
   },
   {
     name: "Dr. Lisa Thompson",
     specialty: "Dermatology",
     clinic: "Clear Skin Dermatology",
-    image: "https://images.unsplash.com/photo-1651008376811-b90baee60c1f?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1651008376811-b90baee60c1f?w=400&q=80&auto=format&fit=crop",
     quote: "Seamless EHR integration made the transition effortless. Highly recommend.",
   },
   {
     name: "Dr. Robert Kim",
     specialty: "Cardiology",
     clinic: "Heart Health Associates",
-    image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&q=80&auto=format&fit=crop",
     quote: "The HIPAA compliance features give me peace of mind with patient data security.",
   },
 ];
@@ -136,9 +137,11 @@ export function PractitionersSection() {
             >
               {/* Image */}
               <div className="relative h-48 overflow-hidden">
-                <img
+                <Image
                   src={practitioner.image}
                   alt={practitioner.name}
+                  width={400}
+                  height={192}
                   className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-clinic-navy/80 via-clinic-navy/20 to-transparent" />

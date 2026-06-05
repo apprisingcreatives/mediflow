@@ -77,12 +77,34 @@ export default function useGetTimeSlots({
         );
 
         if (!mounted) return;
-        setTimeSlots(slots);
 
-        // Check if selected time is still available
+        // Filter out past time slots when the selected date is today (Manila time)
+        const nowManila = new Date(
+          new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+        );
+        const todayManila = `${nowManila.getFullYear()}-${String(nowManila.getMonth() + 1).padStart(2, "0")}-${String(nowManila.getDate()).padStart(2, "0")}`;
+
+        const filteredSlots =
+          dateStr === todayManila
+            ? slots.filter((slot) => {
+                const [slotHour, slotMinute] = slot.time_slot
+                  .split(":")
+                  .map(Number);
+                const slotTotalMinutes = slotHour * 60 + slotMinute;
+                const nowTotalMinutes =
+                  nowManila.getHours() * 60 + nowManila.getMinutes();
+                return slotTotalMinutes > nowTotalMinutes;
+              })
+            : slots;
+
+        setTimeSlots(filteredSlots);
+
+        // Check if selected time is still available after filtering
         if (
           selectedTime &&
-          !slots.find((s) => s.time_slot === selectedTime && s.is_available)
+          !filteredSlots.find(
+            (s) => s.time_slot === selectedTime && s.is_available
+          )
         ) {
           onSelectedTimeUnavailableRef.current?.();
         }

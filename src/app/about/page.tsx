@@ -1,29 +1,28 @@
-"use client";
-
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Activity, ArrowLeft, Heart, Target, Users, Award } from "lucide-react";
+import Image from "next/image";
 
 const team = [
   {
     name: "Dr. Sarah Chen",
     role: "CEO & Co-Founder",
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&q=80&auto=format&fit=crop",
   },
   {
     name: "Michael Rodriguez",
     role: "CTO & Co-Founder",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&q=80&auto=format&fit=crop",
   },
   {
     name: "Dr. Emily Watson",
     role: "Chief Medical Officer",
-    image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400&q=80&auto=format&fit=crop",
   },
   {
     name: "James Park",
     role: "VP of Engineering",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80&auto=format&fit=crop",
   },
 ];
 
@@ -142,9 +141,11 @@ export default function AboutPage() {
               {team.map((member) => (
                 <div key={member.name} className="text-center">
                   <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden bg-clinic-navy/10">
-                    <img
+                    <Image
                       src={member.image}
                       alt={member.name}
+                      width={96}
+                      height={96}
                       className="w-full h-full object-cover"
                     />
                   </div>

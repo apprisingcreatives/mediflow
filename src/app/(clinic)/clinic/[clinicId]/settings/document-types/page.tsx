@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { useClinicContext } from '../../layout';
+import { useClinicContext } from '../../clinic-context';
 import { ClinicRequiredDocument } from '@/types/database';
 import { toast } from 'sonner';
 

@@ -45,7 +45,7 @@ const upcomingAppointments = [
     type: "in-person",
     location: "Bay Area Medical Group",
     avatar:
-      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80",
+      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80&auto=format&fit=crop",
   },
   {
     id: 2,
@@ -55,7 +55,7 @@ const upcomingAppointments = [
     time: "2:30 PM",
     type: "video",
     avatar:
-      "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&q=80",
+      "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&q=80&auto=format&fit=crop",
   },
 ];
 
@@ -67,7 +67,7 @@ const recentMessages = [
     time: "2 hours ago",
     unread: true,
     avatar:
-      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80",
+      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&q=80&auto=format&fit=crop",
   },
   {
     id: 2,

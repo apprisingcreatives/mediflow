@@ -9,6 +9,7 @@ export interface PatientClinicInfo {
     name: string;
     address: string | null;
     phone: string | null;
+    paymongo_merchant_id: string | null;
   };
 }
 

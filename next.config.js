@@ -2,7 +2,17 @@
 
 const nextConfig = {
     images: {
-        domains: ['images.unsplash.com'],
+        unoptimized: true,
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: 'images.unsplash.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'kandwedeqpguuupzqpcc.supabase.co',
+            },
+        ],
     }
 };
 

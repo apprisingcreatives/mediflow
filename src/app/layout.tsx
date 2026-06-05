@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
+import { JsonLdSchema } from "@/components/seo/json-ld";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,42 +18,61 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://a0f02019-16a7-41a9-82aa-ae5d66692014.canvases.tempo.build"),
-  title: "MediFlow | Intelligent Healthcare Management Platform",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://mediflow.apprisingcreatives.com"
+  ),
+  title: {
+    default:
+      "MediFlow | AI-Powered Clinic Management Software — Run Your Entire Clinic From One Platform",
+    template: "%s | MediFlow",
+  },
   description:
-    "Transform your clinic with AI-powered patient intake, intelligent scheduling, and streamlined operations. HIPAA-compliant, secure, and designed for modern healthcare practices.",
+    "MediFlow is the AI-powered operating system for modern clinics. Manage appointments, patient records, staff, billing, and AI clinical notes in one secure platform. Replace Messenger, Viber, Excel, and paper charts. Start your free trial today.",
   keywords: [
-    "healthcare management",
-    "clinic software",
-    "AI patient intake",
+    "clinic management software",
+    "clinic management software Philippines",
+    "AI clinic software",
+    "appointment scheduling system",
+    "patient records management",
+    "electronic medical records Philippines",
+    "healthcare management platform",
     "medical practice management",
-    "HIPAA compliant",
-    "telehealth",
-    "appointment scheduling",
+    "reduce clinic no-shows",
+    "AI medical notes",
+    "HIPAA compliant clinic software",
+    "dental clinic software",
+    "dermatology clinic software",
+    "pediatric clinic software",
+    "OB-GYN clinic management",
+    "MediFlow",
   ],
-  authors: [{ name: "MediFlow" }],
+  authors: [{ name: "Apprising Creatives", url: "https://apprisingcreatives.com" }],
+  creator: "Apprising Creatives",
+  publisher: "Apprising Creatives",
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://mediflow.ai",
+    url: "https://mediflow.apprisingcreatives.com",
     siteName: "MediFlow",
-    title: "MediFlow | Intelligent Healthcare Management Platform",
+    title:
+      "MediFlow | AI-Powered Clinic Management Software — Run Your Entire Clinic From One Platform",
     description:
-      "Transform your clinic with AI-powered patient intake, intelligent scheduling, and streamlined operations.",
+      "Manage appointments, patient records, staff, billing, and AI clinical notes in one secure platform. Replace Messenger, Viber, and paper charts.",
     images: [
       {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "MediFlow Platform",
+        alt: "MediFlow — AI-Powered Clinic Management Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "MediFlow | Intelligent Healthcare Management Platform",
+    title:
+      "MediFlow | AI-Powered Clinic Management Software",
     description:
-      "Transform your clinic with AI-powered patient intake, intelligent scheduling, and streamlined operations.",
+      "Run your entire clinic from one AI-powered platform. Manage appointments, records, billing, and AI notes.",
     images: ["/og-image.jpg"],
   },
   robots: {
@@ -66,6 +86,9 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  alternates: {
+    canonical: "https://mediflow.apprisingcreatives.com",
+  },
 };
 
 export default function RootLayout({
@@ -73,8 +96,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
-  
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -91,6 +112,7 @@ export default function RootLayout({
             <Toaster richColors position="top-right" />
           </AuthProvider>
         </ThemeProvider>
+        <JsonLdSchema />
       </body>
     </html>
   );

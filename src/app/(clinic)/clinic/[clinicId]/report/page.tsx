@@ -1,6 +1,6 @@
 'use client';
 
-import { useClinicContext } from '../layout';
+import { useClinicContext } from '../clinic-context';
 import ReportForm from '@/components/reports/ReportForm';
 
 export default function ClinicReportPage() {
