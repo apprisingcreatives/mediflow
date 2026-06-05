@@ -1,10 +1,12 @@
 import axios from 'axios';
+import crypto from 'crypto';
 
 if (typeof window !== 'undefined') {
   throw new Error('paymongo.ts must only be imported server-side');
 }
 
 const secretKey = process.env.PAYMONGO_SECRET_KEY;
+const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
 const PAYMONGO_API = 'https://api.paymongo.com/v1';
 
 function getAuthHeader() {
@@ -117,4 +119,64 @@ export async function retrieveCheckoutSession(
       paidAt: p.attributes?.paid_at,
     })),
   };
+}
+
+export async function createRefund(params: {
+  paymentId: string;
+  amount: number;
+  reason?: string;
+  merchantId?: string;
+}): Promise<{ id: string; status: string }> {
+  try {
+    const response = await axios.post(
+      `${PAYMONGO_API}/refunds`,
+      {
+        data: {
+          attributes: {
+            payment_id: params.paymentId,
+            amount: params.amount,
+            reason: params.reason || 'requested_by_customer',
+          },
+        },
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: getAuthHeader(),
+          ...(params.merchantId && { 'Account-ID': params.merchantId }),
+        },
+      },
+    );
+
+    const refund = response.data?.data;
+    return {
+      id: refund.id,
+      status: refund.attributes?.status || 'pending',
+    };
+  } catch (err: any) {
+    const details = err?.response?.data?.errors || err?.response?.data;
+    console.error('PayMongo createRefund error:', JSON.stringify(details, null, 2));
+    throw err;
+  }
+}
+
+export function verifyWebhookSignature(rawBody: string, signatureHeader: string): boolean {
+  if (!webhookSecret) return true;
+
+  const parts = signatureHeader.split(',');
+  const timestampPart = parts.find((p) => p.startsWith('t='));
+  const signaturePart = parts.find((p) => p.startsWith('te='));
+
+  if (!timestampPart || !signaturePart) return false;
+
+  const timestamp = timestampPart.slice(2);
+  const signature = signaturePart.slice(3);
+
+  const payload = `${timestamp}.${rawBody}`;
+  const expected = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(payload)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 }

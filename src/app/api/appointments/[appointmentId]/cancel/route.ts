@@ -86,12 +86,19 @@ export async function POST(
       );
     }
 
-    // 1. Cancel the appointment
+    // 1. Cancel the appointment + schedule refund if paid
+    const refundDelay = 24 * 60 * 60 * 1000; // 24 hours
+    const shouldRefund = appointment.payment_status === 'paid';
+
     const { error: cancelError } = await supabaseAdmin
       .from('appointments')
       .update({
         status: 'cancelled',
         updated_at: new Date().toISOString(),
+        ...(shouldRefund && {
+          payment_status: 'refund_pending',
+          refund_scheduled_at: new Date(Date.now() + refundDelay).toISOString(),
+        }),
       })
       .eq('id', appointmentId);
 
@@ -139,6 +146,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       waitlist_filled: waitlistFilled,
+      refund_scheduled: shouldRefund,
     });
   } catch (err) {
     console.error('Cancel appointment error:', err);

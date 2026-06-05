@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
+export type PaymentStatus = 'pending' | 'paid' | 'pay_at_clinic' | 'waived' | 'refunded' | 'refund_pending' | 'refund_failed';
+
 export interface Appointment {
   id: string;
   patient_id: string | null;
@@ -17,6 +19,14 @@ export interface Appointment {
   notes: string | null;
   ai_recommended: boolean;
   ai_recommendation_reason: string | null;
+  payment_status: PaymentStatus;
+  payment_method: string | null;
+  payment_amount: number | null;
+  paymongo_checkout_id: string | null;
+  paid_at: string | null;
+  refund_scheduled_at: string | null;
+  refund_attempts: number;
+  refunded_at: string | null;
   created_at: string;
   updated_at: string;
   // Joined relations

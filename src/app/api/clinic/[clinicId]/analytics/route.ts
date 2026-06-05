@@ -28,7 +28,10 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify clinic admin
+  // Verify clinic admin or practitioner
+  let callerRole: 'clinic_admin' | 'practitioner' | null = null;
+  let callerPractitionerId: string | null = null;
+
   const { data: adminRecord } = await supabaseAdmin
     .from('clinic_admins')
     .select('id')
@@ -37,17 +40,38 @@ export async function GET(
     .eq('is_active', true)
     .single();
 
-  if (!adminRecord) {
+  if (adminRecord) {
+    callerRole = 'clinic_admin';
+  } else {
+    const { data: practRecord } = await supabaseAdmin
+      .from('practitioners')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .eq('clinic_id', clinicId)
+      .single();
+
+    if (practRecord) {
+      callerRole = 'practitioner';
+      callerPractitionerId = practRecord.id;
+    }
+  }
+
+  if (!callerRole) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const url = new URL(request.url);
   const period = url.searchParams.get('period') || '30d';
   const days = parseInt(period) || 30;
+  // Practitioners can only see their own metrics
+  const practitionerIdParam = callerRole === 'practitioner'
+    ? callerPractitionerId
+    : url.searchParams.get('practitionerId') || null;
 
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
   const startDateStr = startDate.toISOString().split('T')[0];
+  const endDateStr = new Date().toISOString().split('T')[0];
 
   // Fetch all appointments in the period
   const { data: appointments } = await supabaseAdmin
@@ -65,6 +89,9 @@ export async function GET(
       confirmation_rate: 0,
       peak_hours: [],
       trends: { dates: [], no_show_rates: [], appointment_counts: [] },
+      practitioner_metrics: [],
+      patient_return_rate: 0,
+      total_revenue: 0,
     });
   }
 
@@ -131,6 +158,26 @@ export async function GET(
     appointment_counts: sortedDates.map(d => dailyData[d].total),
   };
 
+  // BI metrics via SQL functions
+  const { data: practitionerMetrics } = await supabaseAdmin.rpc('get_practitioner_metrics', {
+    p_clinic_id: clinicId,
+    p_start_date: startDateStr,
+    p_end_date: endDateStr,
+    p_practitioner_id: practitionerIdParam || null,
+  });
+
+  const { data: patientReturnRate } = await supabaseAdmin.rpc('get_patient_return_rate', {
+    p_clinic_id: clinicId,
+    p_start_date: startDateStr,
+    p_end_date: endDateStr,
+  });
+
+  const { data: totalRevenue } = await supabaseAdmin.rpc('get_clinic_revenue', {
+    p_clinic_id: clinicId,
+    p_start_date: startDateStr,
+    p_end_date: endDateStr,
+  });
+
   return NextResponse.json({
     no_show_rate: noShowRate,
     no_show_count: noShows.length,
@@ -139,5 +186,18 @@ export async function GET(
     confirmation_rate: confirmationRate,
     peak_hours: peakHours,
     trends,
+    practitioner_metrics: (practitionerMetrics || []).map((m: any) => ({
+      practitioner_id: m.practitioner_id,
+      practitioner_name: m.practitioner_name,
+      appointment_count: Number(m.appointment_count),
+      completed_count: Number(m.completed_count),
+      cancelled_count: Number(m.cancelled_count),
+      no_show_count: Number(m.no_show_count),
+      cancellation_rate: Number(m.cancellation_rate),
+      revenue: Number(m.revenue),
+      utilization_rate: Number(m.utilization_rate),
+    })),
+    patient_return_rate: Number(patientReturnRate || 0),
+    total_revenue: Number(totalRevenue || 0),
   });
 }
