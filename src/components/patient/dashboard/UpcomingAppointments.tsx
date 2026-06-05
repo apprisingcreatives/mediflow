@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { format, parseISO, isToday } from 'date-fns';
-import { Calendar, Clock, MapPin, ChevronRight, Plus, Loader2, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, ChevronRight, Plus, Loader2, CheckCircle, CreditCard, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -13,6 +13,8 @@ import { supabase } from '@/lib/supabase';
 import { RescheduleModal } from './RescheduleModal';
 import { formatTime, getStatusColor } from './utils';
 import { AppointmentActions } from '@/components/appointments/AppointmentActions';
+import { usePayAppointment } from '@/hooks/usePayAppointment';
+import { PaymentReceiptDialog } from './PaymentReceiptDialog';
 
 interface UpcomingAppointmentsProps {
   appointments: Appointment[];
@@ -115,6 +117,16 @@ function AppointmentCard({ appointment }: AppointmentCardProps) {
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkInError, setCheckInError] = useState<string | null>(null);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const { pay, loading: paying, error: payError } = usePayAppointment();
+  const [receiptOpen, setReceiptOpen] = useState(false);
+
+  const showPayButton =
+    ['scheduled', 'confirmed'].includes(appointment.status) &&
+    appointment.payment_status === 'pending' &&
+    appointment.payment_amount &&
+    appointment.payment_amount > 0;
+
+  const showReceiptButton = ['paid', 'refunded'].includes(appointment.payment_status);
 
   const canCheckIn =
     appointment.status === 'confirmed' &&
@@ -204,6 +216,9 @@ function AppointmentCard({ appointment }: AppointmentCardProps) {
         {checkInError && (
           <p className="text-xs text-red-500 mt-1">{checkInError}</p>
         )}
+        {payError && (
+          <p className="text-xs text-red-500 mt-1">{payError}</p>
+        )}
       </div>
       <div className="flex flex-col gap-2">
         {/* Check In button - patient only, time-gated */}
@@ -232,6 +247,55 @@ function AppointmentCard({ appointment }: AppointmentCardProps) {
           </Button>
         ) : null}
 
+        {/* Pay Now button for unpaid appointments */}
+        {showPayButton && (
+          <Button
+            size="sm"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            disabled={paying}
+            onClick={() => pay(appointment.id)}
+          >
+            {paying ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <CreditCard className="w-4 h-4 mr-1" />
+                Pay Now
+              </>
+            )}
+          </Button>
+        )}
+
+        {/* Payment status indicator */}
+        {appointment.payment_status === 'paid' && (
+          <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs">
+            Paid
+          </Badge>
+        )}
+        {appointment.payment_status === 'refund_pending' && (
+          <Badge className="bg-amber-100 text-amber-700 border-0 text-xs">
+            Refund Pending
+          </Badge>
+        )}
+        {appointment.payment_status === 'refunded' && (
+          <Badge className="bg-blue-100 text-blue-700 border-0 text-xs">
+            Refunded
+          </Badge>
+        )}
+
+        {/* View Receipt */}
+        {showReceiptButton && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => setReceiptOpen(true)}
+          >
+            <Receipt className="w-3 h-3 mr-1" />
+            Receipt
+          </Button>
+        )}
+
         {/* Context-aware action buttons (Confirm, Cancel) */}
         <AppointmentActions
           appointment={appointment}
@@ -249,6 +313,14 @@ function AppointmentCard({ appointment }: AppointmentCardProps) {
           </Button>
         )}
       </div>
+
+      {showReceiptButton && (
+        <PaymentReceiptDialog
+          appointmentId={appointment.id}
+          isOpen={receiptOpen}
+          onClose={() => setReceiptOpen(false)}
+        />
+      )}
 
       <RescheduleModal
         appointment={appointment}

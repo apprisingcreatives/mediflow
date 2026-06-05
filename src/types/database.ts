@@ -107,6 +107,7 @@ export interface Practitioner {
   bio: string | null;
   image_url: string | null;
   is_active: boolean;
+  max_daily_appointments: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -145,6 +146,9 @@ export interface Patient {
   updated_at: string;
 }
 
+export type AppointmentPaymentStatus = 'pending' | 'paid' | 'pay_at_clinic' | 'waived' | 'refunded' | 'refund_pending' | 'refund_failed';
+export type AppointmentPaymentMethod = 'gcash' | 'grab_pay' | 'paymaya' | 'card' | 'cash' | null;
+
 export interface Appointment {
   id: string;
   patient_id: string | null;
@@ -158,6 +162,14 @@ export interface Appointment {
   ai_recommended: boolean;
   ai_recommendation_reason: string | null;
   intake_status: 'none' | 'pending' | 'completed';
+  payment_status: AppointmentPaymentStatus;
+  payment_method: AppointmentPaymentMethod;
+  payment_amount: number | null;
+  paymongo_checkout_id: string | null;
+  paid_at: string | null;
+  refund_scheduled_at: string | null;
+  refund_attempts: number;
+  refunded_at: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -4,6 +4,18 @@ import { useState, useCallback } from 'react';
 import axios from 'axios';
 import { supabase } from '@/lib/supabase';
 
+export interface PractitionerMetric {
+  practitioner_id: string;
+  practitioner_name: string;
+  appointment_count: number;
+  completed_count: number;
+  cancelled_count: number;
+  no_show_count: number;
+  cancellation_rate: number;
+  revenue: number;
+  utilization_rate: number;
+}
+
 export interface ClinicAnalytics {
   no_show_rate: number;
   no_show_count: number;
@@ -16,6 +28,9 @@ export interface ClinicAnalytics {
     no_show_rates: number[];
     appointment_counts: number[];
   };
+  practitioner_metrics: PractitionerMetric[];
+  patient_return_rate: number;
+  total_revenue: number;
 }
 
 const useClinicAnalytics = (clinicId: string) => {
@@ -24,7 +39,7 @@ const useClinicAnalytics = (clinicId: string) => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchAnalytics = useCallback(
-    async (period: string = '30d') => {
+    async (period: string = '30d', practitionerId?: string) => {
       if (!clinicId) return;
       try {
         setLoading(true);
@@ -39,7 +54,7 @@ const useClinicAnalytics = (clinicId: string) => {
           `/api/clinic/${clinicId}/analytics`,
           {
             headers: { Authorization: `Bearer ${session.access_token}` },
-            params: { period },
+            params: { period, ...(practitionerId && { practitionerId }) },
           },
         );
         setAnalytics(data);
