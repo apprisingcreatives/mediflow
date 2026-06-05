@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { verifyWebhookSignature } from '@/lib/paymongo';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const rawBody = await request.text();
+
+    const signature = request.headers.get('paymongo-signature') || '';
+    if (signature && !verifyWebhookSignature(rawBody, signature)) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+
+    const body = JSON.parse(rawBody);
     const event = body?.data?.attributes;
 
     if (!event?.type) {
@@ -145,6 +153,39 @@ async function confirmAppointmentPayment(
       entity_id: appointment_id,
       metadata: { payment_method: paymentMethod, source: 'paymongo' },
     });
+  }
+
+  // Send email receipt to patient
+  try {
+    const { data: appt } = await supabaseAdmin
+      .from('appointments')
+      .select('appointment_date, appointment_time, payment_amount, patient:patients(first_name, last_name, email), clinic:clinics(name), service:clinic_services(name)')
+      .eq('id', appointment_id)
+      .single();
+
+    if (appt) {
+      const patient = appt.patient as any;
+      const clinic = appt.clinic as any;
+      const service = appt.service as any;
+      const amount = appt.payment_amount || 0;
+
+      if (patient?.email) {
+        await supabaseAdmin.from('email_notifications').insert({
+          recipient_email: patient.email,
+          recipient_name: `${patient.first_name} ${patient.last_name}`,
+          recipient_type: 'patient',
+          subject: `Payment Receipt - ${clinic?.name || 'MediFlow'}`,
+          body: `Hi ${patient.first_name}, your payment of ₱${amount.toLocaleString()} for ${service?.name || 'your appointment'} at ${clinic?.name || 'the clinic'} on ${appt.appointment_date} has been confirmed.`,
+          html_body: `<h1>Payment Confirmed</h1><p>Hi ${patient.first_name},</p><p>Your payment of <strong>₱${amount.toLocaleString()}</strong> for <strong>${service?.name || 'your appointment'}</strong> at <strong>${clinic?.name || 'the clinic'}</strong> on ${appt.appointment_date} at ${appt.appointment_time} has been confirmed.</p><p>Thank you for using MediFlow.</p>`,
+          notification_type: 'payment_receipt',
+          related_entity_type: 'appointment',
+          related_entity_id: appointment_id,
+          status: 'pending',
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Failed to queue payment receipt email:', err);
   }
 }
 

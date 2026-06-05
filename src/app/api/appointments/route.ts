@@ -185,6 +185,20 @@ export async function POST(request: Request) {
       servicePrice = svc?.price ?? null;
     }
 
+    // Check daily appointment limit
+    if (practitioner_id && appointment_date) {
+      const { data: withinLimit } = await supabaseAdmin.rpc('check_daily_appointment_limit', {
+        p_practitioner_id: practitioner_id,
+        p_date: appointment_date,
+      });
+      if (withinLimit === false) {
+        return NextResponse.json(
+          { error: 'This practitioner has reached their maximum appointments for the day.' },
+          { status: 409 },
+        );
+      }
+    }
+
     const isCash = payment_method === 'cash';
     const isOnline = payment_method === 'online';
 
@@ -209,6 +223,12 @@ export async function POST(request: Request) {
       .single();
 
     if (appointmentError) {
+      if (appointmentError.code === '23505') {
+        return NextResponse.json(
+          { error: 'This time slot was just booked. Please select another.' },
+          { status: 409 },
+        );
+      }
       console.error('Appointment creation error:', appointmentError);
       return NextResponse.json(
         { error: appointmentError.message },

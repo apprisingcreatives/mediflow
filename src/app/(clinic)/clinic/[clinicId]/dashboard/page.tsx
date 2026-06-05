@@ -14,6 +14,10 @@ import {
   DollarSign,
   Clock,
   BarChart3,
+  Activity,
+  ArrowUpDown,
+  Crown,
+  Repeat,
 } from 'lucide-react';
 import {
   BarChart,
@@ -306,6 +310,147 @@ export default function ClinicDashboardPage() {
                   </ResponsiveContainer>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Business Intelligence */}
+      {!isTrialExpired && analytics && !analyticsLoading && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="w-5 h-5 text-clinic-teal" />
+            <h2 className="font-display text-lg font-bold text-clinic-navy dark:text-white">
+              Business Intelligence
+            </h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Total Revenue */}
+            <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <DollarSign className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-clinic-text/60 dark:text-white/60">Total Revenue</p>
+                  <p className="text-lg font-bold text-clinic-navy dark:text-white">
+                    {formatCurrency(analytics.total_revenue)}
+                  </p>
+                  <p className="text-xs text-clinic-text/40 dark:text-white/40">Last 30 days</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Doctor Utilization */}
+            {(() => {
+              const metrics = analytics.practitioner_metrics || [];
+              const avgUtil = metrics.length > 0
+                ? Math.round(metrics.reduce((s, m) => s + m.utilization_rate, 0) / metrics.length)
+                : 0;
+              const utilColor = avgUtil >= 80 ? 'text-green-500' : avgUtil >= 50 ? 'text-amber-500' : 'text-red-500';
+              const utilBg = avgUtil >= 80 ? 'bg-green-500/10' : avgUtil >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10';
+              return (
+                <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${utilBg} flex items-center justify-center shrink-0`}>
+                      <BarChart3 className={`w-5 h-5 ${utilColor}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-clinic-text/60 dark:text-white/60">Avg Utilization</p>
+                      <p className={`text-lg font-bold ${utilColor}`}>{avgUtil}%</p>
+                      <p className="text-xs text-clinic-text/40 dark:text-white/40">{metrics.length} practitioner{metrics.length !== 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Patient Return Rate */}
+            <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                  <Repeat className="w-5 h-5 text-violet-500" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-clinic-text/60 dark:text-white/60">Patient Return Rate</p>
+                  <p className="text-lg font-bold text-clinic-navy dark:text-white">{analytics.patient_return_rate}%</p>
+                  <p className="text-xs text-clinic-text/40 dark:text-white/40">Returning patients</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Top Performer */}
+            {(() => {
+              const metrics = analytics.practitioner_metrics || [];
+              const top = metrics.length > 0
+                ? metrics.reduce((a, b) => b.completed_count > a.completed_count ? b : a)
+                : null;
+              return (
+                <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0">
+                      <Crown className="w-5 h-5 text-yellow-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-clinic-text/60 dark:text-white/60">Top Performer</p>
+                      <p className="text-sm font-bold text-clinic-navy dark:text-white truncate">
+                        {top ? top.practitioner_name : 'N/A'}
+                      </p>
+                      <p className="text-xs text-clinic-text/40 dark:text-white/40">
+                        {top ? `${top.completed_count} completed` : 'No data'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Practitioner Performance Table */}
+          {analytics.practitioner_metrics && analytics.practitioner_metrics.length > 0 && (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass overflow-hidden">
+              <div className="px-6 py-4 border-b border-clinic-navy/10 dark:border-white/10">
+                <h3 className="text-sm font-semibold text-clinic-navy dark:text-white flex items-center gap-2">
+                  <ArrowUpDown className="w-4 h-4" />
+                  Practitioner Performance
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-clinic-navy/5 dark:bg-white/5">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase">Doctor</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase">Appts</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase">Utilization</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase">Revenue</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase">Cancel %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-clinic-navy/10 dark:divide-white/10">
+                    {analytics.practitioner_metrics.map((m) => (
+                      <tr key={m.practitioner_id} className="hover:bg-clinic-navy/5 dark:hover:bg-white/5">
+                        <td className="px-6 py-3 text-sm font-medium text-clinic-navy dark:text-white">{m.practitioner_name}</td>
+                        <td className="px-6 py-3 text-sm text-right text-clinic-navy dark:text-white">{m.appointment_count}</td>
+                        <td className="px-6 py-3 text-sm text-right">
+                          <span className={
+                            m.utilization_rate >= 80 ? 'text-green-600' :
+                            m.utilization_rate >= 50 ? 'text-amber-600' : 'text-red-600'
+                          }>
+                            {m.utilization_rate}%
+                          </span>
+                        </td>
+                        <td className="px-6 py-3 text-sm text-right text-clinic-navy dark:text-white">{formatCurrency(m.revenue)}</td>
+                        <td className="px-6 py-3 text-sm text-right">
+                          <span className={m.cancellation_rate > 20 ? 'text-red-600' : 'text-clinic-navy dark:text-white'}>
+                            {m.cancellation_rate}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
