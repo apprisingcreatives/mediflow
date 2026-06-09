@@ -20,14 +20,19 @@ import {
   Lock,
   LucideIcon,
   Stethoscope,
+  BarChart3,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useClinicContext } from '@/app/(clinic)/clinic/[clinicId]/clinic-context';
+import type { PermissionKey } from '@/lib/permissions';
 
 interface NavItem {
   path: string;
   label: string;
   icon: LucideIcon;
   requiresSubscription: boolean;
+  requiredPermission?: PermissionKey;
 }
 
 interface ClinicSidebarProps {
@@ -36,18 +41,19 @@ interface ClinicSidebarProps {
   onLogout: () => void;
 }
 
-// Navigation configuration - paths are relative to /clinic/[clinicId]
 const NAV_CONFIG: NavItem[] = [
   { path: 'dashboard', label: 'Dashboard', icon: Building2, requiresSubscription: false },
-  { path: 'appointments', label: 'Appointments', icon: Calendar, requiresSubscription: true },
-  { path: 'patients', label: 'Patients', icon: Users, requiresSubscription: true },
-  { path: 'practitioners', label: 'Practitioners', icon: Stethoscope, requiresSubscription: true },
-  { path: 'services', label: 'Services', icon: FileText, requiresSubscription: true },
-  { path: 'ai-features', label: 'AI Features', icon: Sparkles, requiresSubscription: true },
-  { path: 'billing', label: 'Billing', icon: CreditCard, requiresSubscription: false },
+  { path: 'appointments', label: 'Appointments', icon: Calendar, requiresSubscription: true, requiredPermission: 'appointments.view' },
+  { path: 'patients', label: 'Patients', icon: Users, requiresSubscription: true, requiredPermission: 'patients.view' },
+  { path: 'practitioners', label: 'Practitioners', icon: Stethoscope, requiresSubscription: true, requiredPermission: 'practitioners.view' },
+  { path: 'services', label: 'Services', icon: FileText, requiresSubscription: true, requiredPermission: 'services.view' },
+  { path: 'analytics', label: 'Analytics', icon: BarChart3, requiresSubscription: true, requiredPermission: 'analytics.view' },
+  { path: 'staff', label: 'Staff', icon: UserCog, requiresSubscription: true, requiredPermission: 'staff.manage' },
+  { path: 'ai-features', label: 'AI Features', icon: Sparkles, requiresSubscription: true, requiredPermission: 'ai_features.manage' },
+  { path: 'billing', label: 'Billing', icon: CreditCard, requiresSubscription: false, requiredPermission: 'billing.view' },
   { path: 'help', label: 'Help', icon: HelpCircle, requiresSubscription: false },
   { path: 'report', label: 'Report', icon: MessageSquareWarning, requiresSubscription: false },
-  { path: 'settings', label: 'Settings', icon: Settings, requiresSubscription: false },
+  { path: 'settings', label: 'Settings', icon: Settings, requiresSubscription: false, requiredPermission: 'settings.manage' },
 ];
 
 export function ClinicSidebar({
@@ -56,17 +62,23 @@ export function ClinicSidebar({
   onLogout,
 }: ClinicSidebarProps) {
   const pathname = usePathname();
+  const { hasPermission } = useClinicContext();
 
-  // Generate navigation items with full hrefs
   const navItems = useMemo(() => {
     const baseUrl = `/clinic/${clinicId}`;
-    return NAV_CONFIG.map((item) => ({
-      ...item,
-      href: `${baseUrl}/${item.path}`,
-    }));
-  }, [clinicId]);
+    return NAV_CONFIG
+      .filter((item) => {
+        if (item.requiredPermission && !hasPermission(item.requiredPermission)) {
+          return false;
+        }
+        return true;
+      })
+      .map((item) => ({
+        ...item,
+        href: `${baseUrl}/${item.path}`,
+      }));
+  }, [clinicId, hasPermission]);
 
-  // Check if current path matches the nav item
   const isActivePath = (href: string) => {
     return pathname === href || pathname.startsWith(`${href}/`);
   };

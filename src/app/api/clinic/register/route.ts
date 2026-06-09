@@ -143,6 +143,7 @@ export async function POST(request: Request) {
         email: admin.email,
         name: admin.name,
         role: "admin",
+        staff_role: "owner",
         auth_user_id: authUser.user.id,
       });
 

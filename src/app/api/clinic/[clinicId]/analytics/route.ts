@@ -20,21 +20,18 @@ export async function GET(
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser(token);
-
+  const { data: { user } } = await supabase.auth.getUser(token);
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Verify clinic admin or practitioner
+  // Dual-access: clinic admin OR practitioner
   let callerRole: 'clinic_admin' | 'practitioner' | null = null;
   let callerPractitionerId: string | null = null;
 
   const { data: adminRecord } = await supabaseAdmin
     .from('clinic_admins')
-    .select('id')
+    .select('id, staff_role')
     .eq('auth_user_id', user.id)
     .eq('clinic_id', clinicId)
     .eq('is_active', true)
@@ -63,7 +60,6 @@ export async function GET(
   const url = new URL(request.url);
   const period = url.searchParams.get('period') || '30d';
   const days = parseInt(period) || 30;
-  // Practitioners can only see their own metrics
   const practitionerIdParam = callerRole === 'practitioner'
     ? callerPractitionerId
     : url.searchParams.get('practitionerId') || null;
@@ -73,7 +69,6 @@ export async function GET(
   const startDateStr = startDate.toISOString().split('T')[0];
   const endDateStr = new Date().toISOString().split('T')[0];
 
-  // Fetch all appointments in the period
   const { data: appointments } = await supabaseAdmin
     .from('appointments')
     .select('id, appointment_date, appointment_time, status, service_id')
@@ -95,7 +90,6 @@ export async function GET(
     });
   }
 
-  // Get service prices for revenue calculation
   const serviceIds = [...new Set(appointments.filter(a => a.service_id).map(a => a.service_id))];
   const servicePrices: Record<string, number> = {};
   if (serviceIds.length > 0) {
@@ -108,7 +102,6 @@ export async function GET(
     });
   }
 
-  // Calculate metrics
   const total = appointments.length;
   const noShows = appointments.filter(a => a.status === 'no-show');
   const confirmed = appointments.filter(a => a.status === 'confirmed' || a.status === 'completed');
@@ -124,7 +117,6 @@ export async function GET(
     return sum + (a.service_id ? servicePrices[a.service_id] || 0 : 0);
   }, 0);
 
-  // Peak hours (appointment_time is HH:MM:SS, convert to hour)
   const hourCounts: Record<number, number> = {};
   appointments
     .filter(a => a.status !== 'cancelled')
@@ -138,7 +130,6 @@ export async function GET(
     .map(([hour, count]) => ({ hour: parseInt(hour), count }))
     .sort((a, b) => a.hour - b.hour);
 
-  // Daily trends
   const dailyData: Record<string, { total: number; noShows: number }> = {};
   appointments.forEach(a => {
     const date = a.appointment_date;
@@ -158,7 +149,6 @@ export async function GET(
     appointment_counts: sortedDates.map(d => dailyData[d].total),
   };
 
-  // BI metrics via SQL functions
   const { data: practitionerMetrics } = await supabaseAdmin.rpc('get_practitioner_metrics', {
     p_clinic_id: clinicId,
     p_start_date: startDateStr,
