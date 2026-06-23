@@ -40,6 +40,7 @@ function BookingContent() {
     user,
     patient,
     clinicName,
+    clinicBranches,
   } = useBookingForm();
 
   // Get current URL for redirects
@@ -75,6 +76,7 @@ function BookingContent() {
             selectedService={selectedService}
             isLoadingPractitioners={isLoadingPractitioners}
             isLoadingTimeSlots={isLoadingTimeSlots}
+            clinicBranches={clinicBranches}
           />
         );
       case 4:

@@ -20,11 +20,13 @@ import {
 
 export default function SetupClinicAccountPage() {
   return (
-    <Suspense fallback={
-      <div className='min-h-screen bg-gradient-to-br from-clinic-bg via-white to-clinic-teal/5 flex items-center justify-center'>
-        <Loader2 className='w-8 h-8 animate-spin text-clinic-teal' />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className='min-h-screen bg-gradient-to-br from-clinic-bg via-white to-clinic-teal/5 flex items-center justify-center'>
+          <Loader2 className='w-8 h-8 animate-spin text-clinic-teal' />
+        </div>
+      }
+    >
       <SetupClinicAccount />
     </Suspense>
   );
@@ -49,10 +51,13 @@ function SetupClinicAccount() {
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
   const passwordsMatch = password === confirmPassword && password.length > 0;
 
-  const passwordStrength =
-    [hasMinLength, hasUpperCase, hasLowerCase, hasNumber, hasSpecialChar].filter(
-      Boolean,
-    ).length;
+  const passwordStrength = [
+    hasMinLength,
+    hasUpperCase,
+    hasLowerCase,
+    hasNumber,
+    hasSpecialChar,
+  ].filter(Boolean).length;
 
   const isPasswordValid =
     hasMinLength &&
@@ -62,20 +67,27 @@ function SetupClinicAccount() {
     hasSpecialChar &&
     passwordsMatch;
 
+  const [staffRole, setStaffRole] = useState('');
+
   useEffect(() => {
-    // Get user metadata from the invitation
-    const fetchUserData = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user?.user_metadata) {
-        setClinicName(user.user_metadata.clinic_name || '');
-        setAdminName(user.user_metadata.name || '');
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user?.user_metadata) {
+          setClinicName(user.user_metadata.clinic_name || '');
+          setAdminName(user.user_metadata.name || '');
+          setStaffRole(user.user_metadata.staff_role || '');
+        }
       }
-    };
+    });
 
-    fetchUserData();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,30 +108,29 @@ function SetupClinicAccount() {
 
       if (passwordError) throw passwordError;
 
-      // Get the current user
+      // Activate admin record via API route
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (!user) throw new Error('No user found');
+      if (!session) throw new Error('No session found');
 
-      // Update clinic_admin record to mark as active and get clinic_id
-      const { data: adminData, error: updateError } = await supabase
-        .from('clinic_admins')
-        .update({ is_active: true })
-        .eq('auth_user_id', user.id)
-        .select('clinic_id')
-        .single();
+      const res = await fetch('/api/clinic/setup-account', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (updateError) throw updateError;
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to activate account');
 
       // Redirect to clinic dashboard
-      router.push(`/clinic/${adminData.clinic_id}/dashboard`);
+      router.push(`/clinic/${data.clinic_id}/dashboard`);
     } catch (err) {
       console.error('Setup error:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to set up account',
-      );
+      setError(err instanceof Error ? err.message : 'Failed to set up account');
       setIsLoading(false);
     }
   };
@@ -147,7 +158,7 @@ function SetupClinicAccount() {
               Welcome to {clinicName || 'Your Clinic'}!
             </h1>
             <p className='text-clinic-text/60'>
-              Hi {adminName}, set up your admin account password to get started.
+              Hi {adminName}, set up your account password to get started.
             </p>
           </div>
 

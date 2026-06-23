@@ -25,6 +25,9 @@ function useBookingForm() {
   const preSelectedServiceId = searchParams.get('service');
   const preSelectedPractitionerId = searchParams.get('practitioner');
 
+  // Branch state for multi-branch clinics
+  const [clinicBranches, setClinicBranches] = useState<Array<{ id: string; name: string; address: string | null; city: string | null; is_active: boolean; is_default: boolean }>>([]);
+
   // Hooks for data fetching
   const {
     fetchPractitioners,
@@ -77,7 +80,7 @@ function useBookingForm() {
         setFormData((prev) => ({ ...prev, time: '' })),
     });
 
-  // Fetch practitioners and services when clinicId is available
+  // Fetch practitioners, services, and branches when clinicId is available
   useEffect(() => {
     if (clinicId) {
       fetchPractitioners({
@@ -86,6 +89,21 @@ function useBookingForm() {
         includeWorkingHours: true,
       });
       fetchServices({ clinicId });
+
+      // Fetch branches for this clinic (public endpoint)
+      fetch(`/api/public/clinics/${clinicId}/branches`)
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => {
+          if (data?.branches) {
+            const active = data.branches.filter((b: any) => b.is_active);
+            setClinicBranches(active);
+            // Auto-select if only one branch
+            if (active.length === 1) {
+              setFormData((prev) => ({ ...prev, selectedBranchId: active[0].id }));
+            }
+          }
+        })
+        .catch(() => {});
     }
   }, [clinicId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -214,6 +232,7 @@ function useBookingForm() {
         },
         body: JSON.stringify({
           clinic_id: clinicId,
+          branch_id: formData.selectedBranchId || null,
           practitioner_id: formData.selectedPractitionerId,
           service_id: formData.selectedServiceId,
           appointment_date: formData.date,
@@ -313,6 +332,9 @@ function useBookingForm() {
     clinicName,
     preSelectedServiceId,
     preSelectedPractitionerId,
+
+    // Branches
+    clinicBranches,
   };
 }
 

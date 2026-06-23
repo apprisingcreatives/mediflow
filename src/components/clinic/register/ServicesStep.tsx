@@ -144,6 +144,7 @@ export function ServicesStep({
         </Button>
         <Button
           onClick={onNext}
+          disabled={!services.some((s) => s.name.trim() && s.price.trim())}
           className="flex-1 h-12 bg-clinic-teal hover:bg-clinic-teal/90 text-white"
         >
           Continue

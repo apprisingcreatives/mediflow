@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import type { StaffRole, Branch } from "@/types/database";
+import type { PermissionKey } from "@/lib/permissions";
 
 export interface Clinic {
   id: string;
@@ -28,6 +30,7 @@ export interface ClinicAdmin {
   name: string;
   clinic_id: string;
   is_active: boolean;
+  staff_role?: StaffRole;
 }
 
 export interface ClinicContextType {
@@ -37,6 +40,12 @@ export interface ClinicContextType {
   featuresLoading: boolean;
   isTrialExpired: boolean;
   trialDaysRemaining: number | null;
+  staffRole: StaffRole | null;
+  permissions: PermissionKey[];
+  hasPermission: (key: PermissionKey) => boolean;
+  branches: Branch[];
+  activeBranchId: string | null;
+  setActiveBranchId: (id: string | null) => void;
 }
 
 export const ClinicContext = createContext<ClinicContextType>({
@@ -46,6 +55,12 @@ export const ClinicContext = createContext<ClinicContextType>({
   featuresLoading: false,
   isTrialExpired: false,
   trialDaysRemaining: null,
+  staffRole: null,
+  permissions: [],
+  hasPermission: () => false,
+  branches: [],
+  activeBranchId: null,
+  setActiveBranchId: () => {},
 });
 
 export const useClinicContext = () => useContext(ClinicContext);

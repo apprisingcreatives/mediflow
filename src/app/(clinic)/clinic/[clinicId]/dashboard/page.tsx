@@ -37,7 +37,7 @@ import { supabase } from '@/lib/supabase';
 import { formatTimeToAMPM } from '@/lib/utils';
 
 export default function ClinicDashboardPage() {
-  const { clinicFeatures, featuresLoading, isTrialExpired, clinic } =
+  const { clinicFeatures, featuresLoading, isTrialExpired, clinic, activeBranchId } =
     useClinicContext();
 
   const {
@@ -56,7 +56,7 @@ export default function ClinicDashboardPage() {
     analytics,
     loading: analyticsLoading,
     fetchAnalytics,
-  } = useClinicAnalytics(clinic?.id || '');
+  } = useClinicAnalytics(clinic?.id || '', activeBranchId);
 
   useEffect(() => {
     if (!clinic?.id) return;
@@ -67,6 +67,7 @@ export default function ClinicDashboardPage() {
 
     fetchAppointments({
       clinicId: clinic.id,
+      branchId: activeBranchId,
       startDate: manilaToday,
       endDate: manilaToday,
     });
@@ -74,7 +75,7 @@ export default function ClinicDashboardPage() {
     return () => {
       unsubscribe();
     };
-  }, [clinic?.id, fetchAppointments, unsubscribe]);
+  }, [clinic?.id, activeBranchId, fetchAppointments, unsubscribe]);
 
   // Fetch patient count and monthly revenue
   useEffect(() => {
