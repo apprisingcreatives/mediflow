@@ -19,7 +19,7 @@ import { requireClinicAdmin, clinicAdminSignOut } from '@/lib/admin-auth';
 import { useGetClinicFeatures, useGetClinic } from '@/hooks';
 import { supabase } from '@/lib/supabase';
 import { ClinicContext, type Clinic, type ClinicAdmin } from './clinic-context';
-import type { StaffRole } from '@/types/database';
+import type { StaffRole, Branch } from '@/types/database';
 import type { PermissionKey } from '@/lib/permissions';
 
 export default function ClinicDashboardLayout({
@@ -36,6 +36,8 @@ export default function ClinicDashboardLayout({
   const [isTrialExpired, setIsTrialExpired] = useState(false);
   const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
   const [permissions, setPermissions] = useState<PermissionKey[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [activeBranchId, setActiveBranchId] = useState<string | null>(null);
 
   const { clinic, loading: clinicLoading, fetchClinic } = useGetClinic();
   const {
@@ -73,8 +75,23 @@ export default function ClinicDashboardLayout({
             }
           }
         } catch {
-          // Fallback: if /me fails, default to owner permissions for backward compat
           setStaffRole('owner');
+        }
+
+        // Fetch branches for enterprise clinics
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            const { data: branchData } = await axios.get(
+              `/api/clinic/${authenticatedAdmin.clinic_id}/branches`,
+              { headers: { Authorization: `Bearer ${session.access_token}` } },
+            );
+            if (branchData?.branches) {
+              setBranches(branchData.branches);
+            }
+          }
+        } catch {
+          // Non-enterprise clinics or branches not yet migrated — ignore
         }
       }
 
@@ -130,6 +147,9 @@ export default function ClinicDashboardLayout({
         staffRole,
         permissions,
         hasPermission,
+        branches,
+        activeBranchId,
+        setActiveBranchId,
       }}
     >
       <div className='min-h-screen bg-clinic-bg dark:bg-slate-900'>

@@ -15,7 +15,7 @@ export interface DemographicsData {
   cities: { city: string; count: number }[];
 }
 
-const useAdvancedAnalytics = (clinicId: string) => {
+const useAdvancedAnalytics = (clinicId: string, branchId?: string | null) => {
   const [demographics, setDemographics] = useState<DemographicsData | null>(null);
   const [serviceTrends, setServiceTrends] = useState<ServicePopularity[]>([]);
   const [revenueForecast, setRevenueForecast] = useState<RevenueForecastPoint[]>([]);
@@ -37,7 +37,7 @@ const useAdvancedAnalytics = (clinicId: string) => {
       const headers = await getAuthHeaders();
       const { data } = await axios.get(
         `/api/clinic/${clinicId}/analytics/demographics`,
-        { headers, params: { start_date: startDate, end_date: endDate } },
+        { headers, params: { start_date: startDate, end_date: endDate, branch_id: branchId || undefined } },
       );
       setDemographics(data);
     } catch (err: any) {
@@ -48,7 +48,7 @@ const useAdvancedAnalytics = (clinicId: string) => {
     } finally {
       setLoading((prev) => ({ ...prev, demographics: false }));
     }
-  }, [clinicId]);
+  }, [clinicId, branchId]);
 
   const fetchServiceTrends = useCallback(async (startDate?: string, endDate?: string) => {
     if (!clinicId) return;
@@ -58,7 +58,7 @@ const useAdvancedAnalytics = (clinicId: string) => {
       const headers = await getAuthHeaders();
       const { data } = await axios.get(
         `/api/clinic/${clinicId}/analytics/service-trends`,
-        { headers, params: { start_date: startDate, end_date: endDate } },
+        { headers, params: { start_date: startDate, end_date: endDate, branch_id: branchId || undefined } },
       );
       setServiceTrends(data.services ?? []);
     } catch (err: any) {
@@ -69,7 +69,7 @@ const useAdvancedAnalytics = (clinicId: string) => {
     } finally {
       setLoading((prev) => ({ ...prev, services: false }));
     }
-  }, [clinicId]);
+  }, [clinicId, branchId]);
 
   const fetchRevenueForecast = useCallback(async (monthsAhead: number = 3) => {
     if (!clinicId) return;
@@ -79,7 +79,7 @@ const useAdvancedAnalytics = (clinicId: string) => {
       const headers = await getAuthHeaders();
       const { data } = await axios.get(
         `/api/clinic/${clinicId}/analytics/revenue-forecast`,
-        { headers, params: { monthsAhead } },
+        { headers, params: { monthsAhead, branch_id: branchId || undefined } },
       );
       setRevenueForecast(data.data ?? []);
       setHasEnoughData(data.hasEnoughData ?? false);
@@ -91,7 +91,7 @@ const useAdvancedAnalytics = (clinicId: string) => {
     } finally {
       setLoading((prev) => ({ ...prev, forecast: false }));
     }
-  }, [clinicId]);
+  }, [clinicId, branchId]);
 
   return {
     demographics,

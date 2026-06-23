@@ -16,14 +16,22 @@ export async function GET(
 
   const url = new URL(request.url);
   const monthsAhead = Math.min(parseInt(url.searchParams.get('monthsAhead') ?? '3'), 12);
+  const branchId = url.searchParams.get('branch_id');
+
+  const rpcParams: Record<string, unknown> = {
+    p_clinic_id: clinicId,
+    p_months_ahead: monthsAhead,
+  };
+  if (branchId) rpcParams.p_branch_id = branchId;
 
   const { data: forecast, error } = await supabaseAdmin.rpc(
     'get_revenue_forecast',
-    { p_clinic_id: clinicId, p_months_ahead: monthsAhead },
+    rpcParams,
   );
 
   if (error) {
-    return NextResponse.json({ error: 'Failed to generate forecast' }, { status: 500 });
+    console.error('Revenue forecast RPC error:', error.message);
+    return NextResponse.json({ error: error.message || 'Failed to generate forecast' }, { status: 500 });
   }
 
   const rows = forecast ?? [];

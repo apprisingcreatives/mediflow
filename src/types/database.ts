@@ -173,6 +173,7 @@ export interface Appointment {
   refund_scheduled_at: string | null;
   refund_attempts: number;
   refunded_at: string | null;
+  branch_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -266,6 +267,38 @@ export interface PatientOnboardingData {
   responses: PatientQuestionResponse[];
   uploadedDocuments: PatientDocument[];
   aiPrediction?: AITreatmentPrediction;
+}
+
+// Phase 3b: Multi-Branch
+export interface Branch {
+  id: string;
+  clinic_id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  phone: string | null;
+  is_active: boolean;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PractitionerBranch {
+  id: string;
+  practitioner_id: string;
+  branch_id: string;
+  created_at: string;
+}
+
+export interface BranchComparison {
+  branch_id: string;
+  branch_name: string;
+  appointment_count: number;
+  completed_count: number;
+  cancelled_count: number;
+  unique_patients: number;
+  revenue: number;
+  avg_daily_appointments: number;
 }
 
 // Phase 3: Staff Audit Log

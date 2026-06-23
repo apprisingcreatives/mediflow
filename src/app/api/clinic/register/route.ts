@@ -136,16 +136,23 @@ export async function POST(request: Request) {
     createdAuthUserId = authUser.user.id;
 
     // Insert admin record into clinic_admins table
-    const { error: adminInsertError } = await supabaseAdmin
+    const baseAdminRecord = {
+      clinic_id: newClinic.id,
+      email: admin.email,
+      name: admin.name,
+      role: "admin",
+      auth_user_id: authUser.user.id,
+    };
+
+    let { error: adminInsertError } = await supabaseAdmin
       .from("clinic_admins")
-      .insert({
-        clinic_id: newClinic.id,
-        email: admin.email,
-        name: admin.name,
-        role: "admin",
-        staff_role: "owner",
-        auth_user_id: authUser.user.id,
-      });
+      .insert({ ...baseAdminRecord, staff_role: "owner" });
+
+    if (adminInsertError?.message?.includes("staff_role")) {
+      ({ error: adminInsertError } = await supabaseAdmin
+        .from("clinic_admins")
+        .insert(baseAdminRecord));
+    }
 
     if (adminInsertError) {
       if (createdClinicId) {

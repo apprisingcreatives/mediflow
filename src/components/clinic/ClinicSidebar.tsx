@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,9 @@ import {
   Stethoscope,
   BarChart3,
   UserCog,
+  GitBranch,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClinicContext } from '@/app/(clinic)/clinic/[clinicId]/clinic-context';
@@ -49,6 +52,7 @@ const NAV_CONFIG: NavItem[] = [
   { path: 'services', label: 'Services', icon: FileText, requiresSubscription: true, requiredPermission: 'services.view' },
   { path: 'analytics', label: 'Analytics', icon: BarChart3, requiresSubscription: true, requiredPermission: 'analytics.view' },
   { path: 'staff', label: 'Staff', icon: UserCog, requiresSubscription: true, requiredPermission: 'staff.manage' },
+  { path: 'branches', label: 'Branches', icon: GitBranch, requiresSubscription: true, requiredPermission: 'branches.manage' },
   { path: 'ai-features', label: 'AI Features', icon: Sparkles, requiresSubscription: true, requiredPermission: 'ai_features.manage' },
   { path: 'billing', label: 'Billing', icon: CreditCard, requiresSubscription: false, requiredPermission: 'billing.view' },
   { path: 'help', label: 'Help', icon: HelpCircle, requiresSubscription: false },
@@ -62,7 +66,23 @@ export function ClinicSidebar({
   onLogout,
 }: ClinicSidebarProps) {
   const pathname = usePathname();
-  const { hasPermission } = useClinicContext();
+  const { hasPermission, clinic, branches, activeBranchId, setActiveBranchId } = useClinicContext();
+  const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
+  const branchDropdownRef = useRef<HTMLDivElement>(null);
+
+  const isEnterprise = clinic?.subscription_plan === 'enterprise';
+  const showBranchSwitcher = isEnterprise && branches.length > 1;
+  const activeBranch = branches.find((b) => b.id === activeBranchId);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (branchDropdownRef.current && !branchDropdownRef.current.contains(e.target as Node)) {
+        setBranchDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const navItems = useMemo(() => {
     const baseUrl = `/clinic/${clinicId}`;
@@ -96,6 +116,51 @@ export function ClinicSidebar({
           </span>
         </Link>
       </div>
+
+      {/* Branch Switcher */}
+      {showBranchSwitcher && (
+        <div className='px-4 pb-2' ref={branchDropdownRef}>
+          <button
+            onClick={() => setBranchDropdownOpen(!branchDropdownOpen)}
+            className='w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-clinic-navy/5 dark:bg-white/5 hover:bg-clinic-navy/10 dark:hover:bg-white/10 transition-colors text-sm'
+          >
+            <div className='flex items-center gap-2 min-w-0'>
+              <GitBranch className='w-4 h-4 text-clinic-teal flex-shrink-0' />
+              <span className='truncate text-clinic-navy dark:text-white font-medium'>
+                {activeBranch?.name ?? 'All Branches'}
+              </span>
+            </div>
+            <ChevronDown className={cn('w-4 h-4 text-clinic-text/50 transition-transform', branchDropdownOpen && 'rotate-180')} />
+          </button>
+          {branchDropdownOpen && (
+            <div className='mt-1 py-1 bg-white dark:bg-slate-700 border border-clinic-navy/10 dark:border-white/10 rounded-lg shadow-lg'>
+              <button
+                onClick={() => { setActiveBranchId(null); setBranchDropdownOpen(false); }}
+                className={cn(
+                  'w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-clinic-navy/5 dark:hover:bg-white/5',
+                  !activeBranchId && 'text-clinic-teal font-medium',
+                )}
+              >
+                {!activeBranchId && <Check className='w-3.5 h-3.5' />}
+                <span className={cn(!activeBranchId ? '' : 'ml-5.5')}>All Branches</span>
+              </button>
+              {branches.filter((b) => b.is_active).map((branch) => (
+                <button
+                  key={branch.id}
+                  onClick={() => { setActiveBranchId(branch.id); setBranchDropdownOpen(false); }}
+                  className={cn(
+                    'w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-clinic-navy/5 dark:hover:bg-white/5',
+                    activeBranchId === branch.id && 'text-clinic-teal font-medium',
+                  )}
+                >
+                  {activeBranchId === branch.id && <Check className='w-3.5 h-3.5' />}
+                  <span className={cn(activeBranchId === branch.id ? '' : 'ml-5.5')}>{branch.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className='flex-1 px-4 space-y-1 overflow-y-auto'>

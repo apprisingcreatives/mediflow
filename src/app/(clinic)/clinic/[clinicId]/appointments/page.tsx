@@ -54,7 +54,7 @@ type ViewMode = 'calendar' | 'list';
 export default function AppointmentsPage() {
   const params = useParams();
   const clinicId = params.clinicId as string;
-  const { clinic, isTrialExpired } = useClinicContext();
+  const { clinic, isTrialExpired, activeBranchId } = useClinicContext();
 
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
@@ -136,6 +136,7 @@ export default function AppointmentsPage() {
 
       fetchAppointments({
         clinicId,
+        branchId: activeBranchId,
         startDate: format(monthStart, 'yyyy-MM-dd'),
         endDate: format(monthEnd, 'yyyy-MM-dd'),
         practitionerId:
@@ -145,6 +146,7 @@ export default function AppointmentsPage() {
     }
   }, [
     clinicId,
+    activeBranchId,
     currentMonth,
     practitionerFilter,
     statusFilter,

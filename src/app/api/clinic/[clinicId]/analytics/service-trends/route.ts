@@ -17,17 +17,26 @@ export async function GET(
   const url = new URL(request.url);
   const period = url.searchParams.get('period') || '90d';
   const days = parseInt(period) || 90;
+  const branchId = url.searchParams.get('branch_id');
 
   const endDate = new Date().toISOString().split('T')[0];
   const startDate = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
 
+  const rpcParams: Record<string, unknown> = {
+    p_clinic_id: clinicId,
+    p_start_date: startDate,
+    p_end_date: endDate,
+  };
+  if (branchId) rpcParams.p_branch_id = branchId;
+
   const { data: services, error } = await supabaseAdmin.rpc(
     'get_service_popularity',
-    { p_clinic_id: clinicId, p_start_date: startDate, p_end_date: endDate },
+    rpcParams,
   );
 
   if (error) {
-    return NextResponse.json({ error: 'Failed to fetch service trends' }, { status: 500 });
+    console.error('Service trends RPC error:', error.message);
+    return NextResponse.json({ error: error.message || 'Failed to fetch service trends' }, { status: 500 });
   }
 
   return NextResponse.json({

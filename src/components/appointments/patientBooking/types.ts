@@ -26,6 +26,7 @@ export interface BookingFormData {
   insuranceProvider: string;
   insurancePolicyNumber: string;
   // Appointment
+  selectedBranchId: string;
   selectedPractitionerId: string;
   selectedServiceId: string;
   date: string;
@@ -84,6 +85,7 @@ export interface AppointmentStepProps extends StepProps {
   selectedService: ClinicService | undefined;
   isLoadingPractitioners: boolean;
   isLoadingTimeSlots: boolean;
+  clinicBranches?: Array<{ id: string; name: string; address: string | null; city: string | null; is_active: boolean; is_default: boolean }>;
 }
 
 export interface ConfirmationStepProps {
@@ -118,6 +120,7 @@ export const INITIAL_FORM_DATA: BookingFormData = {
   symptoms: "",
   insuranceProvider: "",
   insurancePolicyNumber: "",
+  selectedBranchId: "",
   selectedPractitionerId: "",
   selectedServiceId: "",
   date: "",

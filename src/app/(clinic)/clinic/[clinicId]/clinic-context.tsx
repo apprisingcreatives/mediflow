@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, useCallback } from "react";
-import type { StaffRole } from "@/types/database";
+import { createContext, useContext } from "react";
+import type { StaffRole, Branch } from "@/types/database";
 import type { PermissionKey } from "@/lib/permissions";
 
 export interface Clinic {
@@ -43,6 +43,9 @@ export interface ClinicContextType {
   staffRole: StaffRole | null;
   permissions: PermissionKey[];
   hasPermission: (key: PermissionKey) => boolean;
+  branches: Branch[];
+  activeBranchId: string | null;
+  setActiveBranchId: (id: string | null) => void;
 }
 
 export const ClinicContext = createContext<ClinicContextType>({
@@ -55,6 +58,9 @@ export const ClinicContext = createContext<ClinicContextType>({
   staffRole: null,
   permissions: [],
   hasPermission: () => false,
+  branches: [],
+  activeBranchId: null,
+  setActiveBranchId: () => {},
 });
 
 export const useClinicContext = () => useContext(ClinicContext);

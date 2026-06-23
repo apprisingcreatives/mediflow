@@ -60,6 +60,7 @@ export async function GET(
   const url = new URL(request.url);
   const period = url.searchParams.get('period') || '30d';
   const days = parseInt(period) || 30;
+  const branchId = url.searchParams.get('branch_id');
   const practitionerIdParam = callerRole === 'practitioner'
     ? callerPractitionerId
     : url.searchParams.get('practitionerId') || null;
@@ -69,11 +70,17 @@ export async function GET(
   const startDateStr = startDate.toISOString().split('T')[0];
   const endDateStr = new Date().toISOString().split('T')[0];
 
-  const { data: appointments } = await supabaseAdmin
+  let appointmentQuery = supabaseAdmin
     .from('appointments')
     .select('id, appointment_date, appointment_time, status, service_id')
     .eq('clinic_id', clinicId)
     .gte('appointment_date', startDateStr);
+
+  if (branchId) {
+    appointmentQuery = appointmentQuery.eq('branch_id', branchId);
+  }
+
+  const { data: appointments } = await appointmentQuery;
 
   if (!appointments || appointments.length === 0) {
     return NextResponse.json({

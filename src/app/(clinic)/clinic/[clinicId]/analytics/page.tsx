@@ -10,16 +10,19 @@ import {
   Lock,
   Loader2,
   DollarSign,
+  GitBranch,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useClinicContext } from '../clinic-context';
 import { useAdvancedAnalytics } from '@/hooks';
+import useBranchComparison from '@/hooks/useBranchComparison';
 import { DemographicsCharts } from '@/components/clinic/analytics/DemographicsCharts';
 import { ServiceTrendsChart } from '@/components/clinic/analytics/ServiceTrendsChart';
 import { RevenueForecastChart } from '@/components/clinic/analytics/RevenueForecastChart';
+import { BranchComparisonChart } from '@/components/clinic/analytics/BranchComparisonChart';
 import { cn } from '@/lib/utils';
 
-type Tab = 'demographics' | 'service-trends' | 'revenue-forecast';
+type Tab = 'demographics' | 'service-trends' | 'revenue-forecast' | 'branch-comparison';
 
 interface TabConfig {
   id: Tab;
@@ -45,6 +48,12 @@ const TABS: TabConfig[] = [
     id: 'revenue-forecast',
     label: 'Revenue Forecast',
     icon: DollarSign,
+    requiresPlan: 'enterprise',
+  },
+  {
+    id: 'branch-comparison',
+    label: 'Branch Comparison',
+    icon: GitBranch,
     requiresPlan: 'enterprise',
   },
 ];
@@ -102,7 +111,7 @@ function ErrorState({ message }: ErrorStateProps) {
 export default function AdvancedAnalyticsPage() {
   const params = useParams();
   const clinicId = params.clinicId as string;
-  const { clinic } = useClinicContext();
+  const { clinic, activeBranchId } = useClinicContext();
 
   const plan = clinic?.subscription_plan ?? 'starter';
   const isProfessional = plan === 'professional' || plan === 'enterprise';
@@ -120,7 +129,14 @@ export default function AdvancedAnalyticsPage() {
     fetchDemographics,
     fetchServiceTrends,
     fetchRevenueForecast,
-  } = useAdvancedAnalytics(clinicId);
+  } = useAdvancedAnalytics(clinicId, activeBranchId);
+
+  const {
+    data: branchComparisonData,
+    loading: branchComparisonLoading,
+    error: branchComparisonError,
+    fetchComparison,
+  } = useBranchComparison(clinicId);
 
   // Fetch data when tab changes, only when the plan allows it
   useEffect(() => {
@@ -140,6 +156,17 @@ export default function AdvancedAnalyticsPage() {
       fetchRevenueForecast(3);
     }
   }, [activeTab, isEnterprise, revenueForecast.length, fetchRevenueForecast]);
+
+  useEffect(() => {
+    if (activeTab === 'branch-comparison' && isEnterprise && branchComparisonData.length === 0) {
+      const now = new Date();
+      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+      fetchComparison(
+        threeMonthsAgo.toISOString().split('T')[0],
+        now.toISOString().split('T')[0],
+      );
+    }
+  }, [activeTab, isEnterprise, branchComparisonData.length, fetchComparison]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -192,6 +219,21 @@ export default function AdvancedAnalyticsPage() {
             hasEnoughData={hasEnoughData}
           />
         );
+      }
+
+      case 'branch-comparison': {
+        if (!isEnterprise) {
+          return (
+            <UpgradePrompt
+              planName="Enterprise"
+              featureName="branch comparison analytics"
+              clinicId={clinicId}
+            />
+          );
+        }
+        if (branchComparisonLoading) return <LoadingState message="Loading branch comparison..." />;
+        if (branchComparisonError) return <ErrorState message={branchComparisonError} />;
+        return <BranchComparisonChart data={branchComparisonData} />;
       }
 
       default:

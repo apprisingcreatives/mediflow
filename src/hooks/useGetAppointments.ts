@@ -102,6 +102,7 @@ export const APPOINTMENT_STATUSES: { value: AppointmentStatus; label: string; co
 // For clinic admin view - fetch by clinic
 interface FetchAppointmentsByClinicParams {
   clinicId: string;
+  branchId?: string | null;
   startDate?: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD
   practitionerId?: string;
@@ -398,6 +399,9 @@ const useGetAppointments = (options: UseGetAppointmentsOptions = {}) => {
 
           query = query.eq('clinic_id', params.clinicId);
 
+          if (params.branchId) {
+            query = query.eq('branch_id', params.branchId);
+          }
           if (params.startDate) {
             query = query.gte('appointment_date', params.startDate);
           }

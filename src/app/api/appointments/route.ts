@@ -57,6 +57,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       clinic_id,
+      branch_id,
       patient_id: bodyPatientId,
       practitioner_id,
       service_id,
@@ -208,6 +209,7 @@ export async function POST(request: Request) {
       .insert({
         patient_id: patient.id,
         clinic_id: clinic_id || null,
+        branch_id: branch_id || null,
         practitioner_id: practitioner_id || null,
         service_id: service_id || null,
         appointment_date,
@@ -521,6 +523,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const clinicId = searchParams.get('clinic_id');
+    const branchId = searchParams.get('branch_id');
 
     // Check if user is a patient
     const { data: patient } = await supabase
@@ -576,6 +579,11 @@ export async function GET(request: Request) {
       // Optional: filter by specific clinic if provided
       if (clinicId) {
         query = query.eq('clinic_id', clinicId);
+      }
+
+      // Optional: filter by branch
+      if (branchId) {
+        query = query.eq('branch_id', branchId);
       }
 
       const { data: appointments, error } = await query
