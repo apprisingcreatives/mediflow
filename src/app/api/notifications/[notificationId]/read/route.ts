@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -26,14 +25,15 @@ export async function PATCH(
 
   const { notificationId } = await params;
 
-  const { error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('notifications')
     .update({ is_read: true })
     .eq('id', notificationId)
-    .eq('recipient_id', user.id);
+    .select('id')
+    .single();
 
-  if (error) {
-    return NextResponse.json({ error: 'Failed to mark notification as read' }, { status: 500 });
+  if (error || !data) {
+    return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
   }
 
   return NextResponse.json({ success: true });

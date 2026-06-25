@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { createNotification } from '@/lib/notifications';
+import { createNotifications } from '@/lib/notifications';
 import jwt from 'jsonwebtoken';
 
 const jwtSecret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'mediflow-rebook-secret';
@@ -113,19 +113,18 @@ export async function POST(request: NextRequest) {
         .eq('clinic_id', appointment.clinic_id)
         .eq('staff_role', 'owner')
         .eq('is_active', true);
-      for (const owner of owners ?? []) {
-        if (owner.auth_user_id) {
-          createNotification({
-            recipientId: owner.auth_user_id,
-            recipientType: 'clinic_admin',
-            clinicId: appointment.clinic_id,
-            type: 'appointment.status_changed',
-            title: 'Appointment Confirmed',
-            message: 'A patient has confirmed their appointment',
-            actionUrl: `/clinic/${appointment.clinic_id}/appointments`,
-          });
-        }
-      }
+      const ownerNotifs = (owners ?? [])
+        .filter((o) => o.auth_user_id)
+        .map((o) => ({
+          recipientId: o.auth_user_id!,
+          recipientType: 'clinic_admin' as const,
+          clinicId: appointment.clinic_id,
+          type: 'appointment.status_changed' as const,
+          title: 'Appointment Confirmed',
+          message: 'A patient has confirmed their appointment',
+          actionUrl: `/clinic/${appointment.clinic_id}/appointments`,
+        }));
+      if (ownerNotifs.length > 0) createNotifications(ownerNotifs);
     }
 
     return NextResponse.json({ success: true });

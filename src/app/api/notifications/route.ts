@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -26,10 +25,9 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 50);
   const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-  let query = supabaseAdmin
+  let query = supabase
     .from('notifications')
     .select('*', { count: 'exact' })
-    .eq('recipient_id', user.id)
     .gt('expires_at', new Date().toISOString())
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
@@ -44,20 +42,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 });
   }
 
-  const { count: unreadCount } = await supabaseAdmin
+  const { count: unreadCount } = await supabase
     .from('notifications')
     .select('*', { count: 'exact', head: true })
-    .eq('recipient_id', user.id)
     .eq('is_read', false)
     .gt('expires_at', new Date().toISOString());
-
-  // Fire-and-forget: clean up expired notifications for this user
-  supabaseAdmin
-    .from('notifications')
-    .delete()
-    .eq('recipient_id', user.id)
-    .lt('expires_at', new Date().toISOString())
-    .then(() => {});
 
   return NextResponse.json({
     notifications: notifications ?? [],

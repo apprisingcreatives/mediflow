@@ -44,7 +44,8 @@ CREATE POLICY "Users update own notifications"
 
 CREATE POLICY "Service role full access"
   ON public.notifications FOR ALL
-  USING (auth.role() = 'service_role');
+  TO service_role
+  USING (true);
 
 -- Enable Realtime (RLS already active above)
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;

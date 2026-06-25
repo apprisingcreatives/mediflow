@@ -102,9 +102,11 @@ const useNotifications = () => {
           (payload) => {
             if (!mounted) return;
             const updated = payload.new as Notification;
-            setNotifications((prev) =>
-              prev.map((n) => (n.id === updated.id ? updated : n))
-            );
+            setNotifications((prev) => {
+              const next = prev.map((n) => (n.id === updated.id ? updated : n));
+              setUnreadCount(next.filter((n) => !n.is_read).length);
+              return next;
+            });
           }
         )
         .subscribe((status) => {
