@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -21,10 +20,9 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('notifications')
     .update({ is_read: true })
-    .eq('recipient_id', user.id)
     .eq('is_read', false)
     .select('id');
 

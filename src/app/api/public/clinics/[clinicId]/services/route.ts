@@ -10,6 +10,20 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const branchId = searchParams.get('branch_id');
 
+    if (branchId) {
+      // Verify branch belongs to this clinic
+      const { data: branch } = await supabaseAdmin
+        .from('branches')
+        .select('id')
+        .eq('id', branchId)
+        .eq('clinic_id', clinicId)
+        .single();
+
+      if (!branch) {
+        return NextResponse.json({ error: 'Branch not found' }, { status: 404 });
+      }
+    }
+
     let query = supabaseAdmin
       .from('clinic_services')
       .select('id, name, duration_minutes, price')

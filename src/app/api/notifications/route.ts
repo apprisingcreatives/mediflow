@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
   const { count: unreadCount } = await supabase
     .from('notifications')
     .select('*', { count: 'exact', head: true })
+    .eq('recipient_id', user.id)
     .eq('is_read', false)
     .gt('expires_at', new Date().toISOString());
 

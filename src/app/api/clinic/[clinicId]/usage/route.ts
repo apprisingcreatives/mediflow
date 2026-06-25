@@ -41,16 +41,18 @@ export async function GET(
     const byBranch: Record<string, number> = {};
     let totalPractitioners = 0;
 
-    for (const branchId of branchIds) {
-      const { count } = await supabaseAdmin
+    if (branchIds.length > 0) {
+      const { data: assignments } = await supabaseAdmin
         .from('practitioner_branches')
-        .select('id, practitioners!inner(is_active)', { count: 'exact', head: true })
-        .eq('branch_id', branchId)
+        .select('branch_id, practitioners!inner(is_active)')
+        .in('branch_id', branchIds)
         .eq('practitioners.is_active', true);
 
-      const c = count ?? 0;
-      byBranch[branchId] = c;
-      totalPractitioners += c;
+      for (const branchId of branchIds) {
+        const c = (assignments ?? []).filter((a: { branch_id: string }) => a.branch_id === branchId).length;
+        byBranch[branchId] = c;
+        totalPractitioners += c;
+      }
     }
 
     const { count: patientCount } = await supabaseAdmin

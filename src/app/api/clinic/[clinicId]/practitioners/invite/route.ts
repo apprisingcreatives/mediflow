@@ -222,6 +222,12 @@ export async function POST(
 
       if (branchAssignError) {
         console.error('Branch assignment error:', branchAssignError);
+        await supabaseAdmin.from('practitioners').delete().eq('id', newPractitioner.id);
+        await supabaseAdmin.auth.admin.deleteUser(invitedUser.user.id);
+        return NextResponse.json(
+          { error: 'Failed to assign practitioner to branch' },
+          { status: 500 },
+        );
       }
     }
 

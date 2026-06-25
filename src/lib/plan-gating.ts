@@ -45,6 +45,9 @@ export async function requirePlan(
   return true;
 }
 
+// Advisory check — not atomic with the subsequent INSERT. Under concurrent
+// requests the count may drift by one. A DB trigger or advisory lock would
+// close the gap, but the blast radius here is a single extra practitioner/branch.
 export async function checkResourceLimit(
   clinicId: string,
   resource: 'practitioners' | 'branches',

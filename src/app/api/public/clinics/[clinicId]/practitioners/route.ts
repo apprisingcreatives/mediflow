@@ -11,6 +11,18 @@ export async function GET(
     const branchId = searchParams.get('branch_id');
 
     if (branchId) {
+      // Verify branch belongs to this clinic
+      const { data: branch } = await supabaseAdmin
+        .from('branches')
+        .select('id')
+        .eq('id', branchId)
+        .eq('clinic_id', clinicId)
+        .single();
+
+      if (!branch) {
+        return NextResponse.json({ error: 'Branch not found' }, { status: 404 });
+      }
+
       // Get practitioner IDs assigned to this branch
       const { data: assignments, error: assignError } = await supabaseAdmin
         .from('practitioner_branches')
