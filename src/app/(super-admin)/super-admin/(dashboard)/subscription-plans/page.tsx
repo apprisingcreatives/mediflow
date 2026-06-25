@@ -99,6 +99,7 @@ interface PlanFormState {
   features: string;
   max_practitioners: string;
   max_patients: string;
+  max_branches: string;
   is_active: boolean;
   sort_order: string;
 }
@@ -113,6 +114,7 @@ const EMPTY_FORM: PlanFormState = {
   features: '',
   max_practitioners: '',
   max_patients: '',
+  max_branches: '',
   is_active: true,
   sort_order: '0',
 };
@@ -154,6 +156,7 @@ export default function SubscriptionPlansPage() {
       features: plan.features.join('\n'),
       max_practitioners: plan.max_practitioners != null ? String(plan.max_practitioners) : '',
       max_patients: plan.max_patients != null ? String(plan.max_patients) : '',
+      max_branches: plan.max_branches != null ? String(plan.max_branches) : '',
       is_active: plan.is_active,
       sort_order: String(plan.sort_order),
     });
@@ -178,6 +181,7 @@ export default function SubscriptionPlansPage() {
         .filter(Boolean),
       max_practitioners: form.max_practitioners ? parseInt(form.max_practitioners, 10) : null,
       max_patients: form.max_patients ? parseInt(form.max_patients, 10) : null,
+      max_branches: form.max_branches ? parseInt(form.max_branches, 10) : null,
       is_active: form.is_active,
       sort_order: parseInt(form.sort_order, 10) || 0,
     };
@@ -453,13 +457,13 @@ export default function SubscriptionPlansPage() {
               />
             </div>
 
-            {/* Max practitioners + patients */}
-            <div className='grid grid-cols-2 gap-3'>
+            {/* Max practitioners + patients + branches */}
+            <div className='grid grid-cols-3 gap-3'>
               <div>
                 <label className='text-sm font-medium text-clinic-text/70 dark:text-white/70 mb-1 block'>
                   Max Practitioners
                   <span className='font-normal ml-1 text-clinic-text/40 dark:text-white/40'>
-                    (optional)
+                    (per branch)
                   </span>
                 </label>
                 <Input
@@ -485,6 +489,23 @@ export default function SubscriptionPlansPage() {
                   value={form.max_patients}
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, max_patients: e.target.value }))
+                  }
+                  placeholder='Unlimited'
+                />
+              </div>
+              <div>
+                <label className='text-sm font-medium text-clinic-text/70 dark:text-white/70 mb-1 block'>
+                  Max Branches
+                  <span className='font-normal ml-1 text-clinic-text/40 dark:text-white/40'>
+                    (optional)
+                  </span>
+                </label>
+                <Input
+                  type='number'
+                  min={1}
+                  value={form.max_branches}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, max_branches: e.target.value }))
                   }
                   placeholder='Unlimited'
                 />

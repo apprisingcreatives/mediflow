@@ -337,3 +337,31 @@ export interface RevenueForecastPoint {
   revenue: number;
   is_forecast: boolean;
 }
+
+// Plan Limits
+export interface LimitExceededError {
+  error: 'limit_exceeded';
+  message: string;
+  resource: 'practitioners' | 'branches';
+  current: number;
+  max: number;
+  plan: string;
+  upgradeTo?: string;
+}
+
+export interface ClinicUsage {
+  plan: string;
+  practitioners: {
+    current: number;
+    max: number | null;
+    byBranch: Record<string, number>;
+  };
+  branches: {
+    current: number;
+    max: number | null;
+  };
+  patients: {
+    current: number;
+    max: number | null;
+  };
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { createClient } from '@supabase/supabase-js';
+import { checkResourceLimit } from '@/lib/plan-gating';
 
 interface InvitePractitionerRequest {
   name: string;
@@ -102,6 +103,19 @@ export async function POST(
         { error: 'Clinic not found' },
         { status: 404 }
       );
+    }
+
+    // Check practitioner limit for the clinic's default branch
+    const { data: defaultBranch } = await supabaseAdmin
+      .from('branches')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('is_default', true)
+      .single();
+
+    if (defaultBranch) {
+      const limitCheck = await checkResourceLimit(clinicId, 'practitioners', defaultBranch.id);
+      if (limitCheck !== true) return limitCheck;
     }
 
     // Check if practitioner already exists by email in this clinic

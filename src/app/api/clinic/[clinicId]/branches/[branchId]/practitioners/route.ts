@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { authenticateClinicRequest, isAuthSuccess } from '@/lib/api-auth';
-import { requirePlan } from '@/lib/plan-gating';
+import { requirePlan, checkResourceLimit } from '@/lib/plan-gating';
 import { logStaffAction } from '@/lib/audit';
 
 export async function GET(
@@ -42,8 +42,11 @@ export async function POST(
     const authResult = await authenticateClinicRequest(request, clinicId, 'branches.manage');
     if (!isAuthSuccess(authResult)) return authResult;
 
-    const planCheck = await requirePlan(clinicId, 'enterprise');
+    const planCheck = await requirePlan(clinicId, 'professional');
     if (planCheck !== true) return planCheck;
+
+    const practitionerLimit = await checkResourceLimit(clinicId, 'practitioners', branchId);
+    if (practitionerLimit !== true) return practitionerLimit;
 
     const { practitioner_id } = await request.json();
 
