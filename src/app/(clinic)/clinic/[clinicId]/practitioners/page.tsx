@@ -60,7 +60,7 @@ export default function PractitionersPage() {
   const { user } = useAuth();
   const params = useParams();
   const clinicId = params.clinicId as string;
-  const { isTrialExpired } = useClinicContext();
+  const { isTrialExpired, activeBranchId } = useClinicContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,12 +75,12 @@ export default function PractitionersPage() {
   const { practitioners, loading, error, fetchPractitioners } =
     useGetPractitioners();
 
-  // Fetch practitioners on mount
+  // Fetch practitioners on mount and when branch changes
   useEffect(() => {
     if (clinicId) {
-      fetchPractitioners({ clinicId, activeOnly: false });
+      fetchPractitioners({ clinicId, branchId: activeBranchId, activeOnly: false });
     }
-  }, [clinicId, fetchPractitioners]);
+  }, [clinicId, activeBranchId, fetchPractitioners]);
 
   // Filter practitioners by search query
   const filteredPractitioners = practitioners.filter((practitioner) => {
@@ -141,6 +141,7 @@ export default function PractitionersPage() {
             name: name.trim(),
             email: email.trim().toLowerCase(),
             specialization,
+            branch_id: activeBranchId || undefined,
           }),
         },
       );
@@ -154,7 +155,7 @@ export default function PractitionersPage() {
       setSubmitSuccess(true);
 
       // Refresh the practitioners list
-      await fetchPractitioners({ clinicId, activeOnly: false });
+      await fetchPractitioners({ clinicId, branchId: activeBranchId, activeOnly: false });
 
       // Close dialog after a short delay
       setTimeout(() => {

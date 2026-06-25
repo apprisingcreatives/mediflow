@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import axios from 'axios';
 import { supabase } from '@/lib/supabase';
 import { ClinicService } from '@/hooks/useGetServices';
 
@@ -12,6 +13,7 @@ export interface CreateServiceData {
   price: number;
   currency?: string;
   is_active?: boolean;
+  branch_id?: string | null;
 }
 
 export interface UpdateServiceData {
@@ -21,6 +23,14 @@ export interface UpdateServiceData {
   price?: number;
   currency?: string;
   is_active?: boolean;
+}
+
+async function getAuthHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Not authenticated');
+  }
+  return { Authorization: `Bearer ${session.access_token}` };
 }
 
 const useServiceMutations = () => {
@@ -33,25 +43,22 @@ const useServiceMutations = () => {
         setLoading(true);
         setError(null);
 
-        const { data: newService, error: insertError } = await supabase
-          .from('clinic_services')
-          .insert({
-            clinic_id: data.clinic_id,
+        const headers = await getAuthHeaders();
+        const { data: responseData } = await axios.post(
+          `/api/clinic/${data.clinic_id}/services`,
+          {
             name: data.name,
             description: data.description || null,
             duration_minutes: data.duration_minutes,
             price: data.price,
             currency: data.currency || 'PHP',
             is_active: data.is_active ?? true,
-          })
-          .select()
-          .single();
+            branch_id: data.branch_id || null,
+          },
+          { headers },
+        );
 
-        if (insertError) {
-          throw insertError;
-        }
-
-        return newService as ClinicService;
+        return responseData.service as ClinicService;
       } catch (err) {
         console.error('Failed to create service:', err);
         const errorMessage =
@@ -68,27 +75,25 @@ const useServiceMutations = () => {
   const updateService = useCallback(
     async (
       serviceId: string,
-      data: UpdateServiceData
+      data: UpdateServiceData,
+      clinicId?: string
     ): Promise<ClinicService | null> => {
       try {
         setLoading(true);
         setError(null);
 
-        const { data: updatedService, error: updateError } = await supabase
-          .from('clinic_services')
-          .update({
-            ...data,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', serviceId)
-          .select()
-          .single();
-
-        if (updateError) {
-          throw updateError;
+        if (!clinicId) {
+          throw new Error('clinicId is required for updateService');
         }
 
-        return updatedService as ClinicService;
+        const headers = await getAuthHeaders();
+        const { data: responseData } = await axios.patch(
+          `/api/clinic/${clinicId}/services/${serviceId}`,
+          data,
+          { headers },
+        );
+
+        return responseData.service as ClinicService;
       } catch (err) {
         console.error('Failed to update service:', err);
         const errorMessage =
@@ -102,49 +107,52 @@ const useServiceMutations = () => {
     []
   );
 
-  const deleteService = useCallback(async (serviceId: string): Promise<boolean> => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const { error: deleteError } = await supabase
-        .from('clinic_services')
-        .delete()
-        .eq('id', serviceId);
-
-      if (deleteError) {
-        throw deleteError;
-      }
-
-      return true;
-    } catch (err) {
-      console.error('Failed to delete service:', err);
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to delete service';
-      setError(errorMessage);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const toggleServiceStatus = useCallback(
-    async (serviceId: string, isActive: boolean): Promise<boolean> => {
+  const deleteService = useCallback(
+    async (serviceId: string, clinicId?: string): Promise<boolean> => {
       try {
         setLoading(true);
         setError(null);
 
-        const { error: updateError } = await supabase
-          .from('clinic_services')
-          .update({
-            is_active: isActive,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', serviceId);
-
-        if (updateError) {
-          throw updateError;
+        if (!clinicId) {
+          throw new Error('clinicId is required for deleteService');
         }
+
+        const headers = await getAuthHeaders();
+        await axios.delete(
+          `/api/clinic/${clinicId}/services/${serviceId}`,
+          { headers },
+        );
+
+        return true;
+      } catch (err) {
+        console.error('Failed to delete service:', err);
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to delete service';
+        setError(errorMessage);
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const toggleServiceStatus = useCallback(
+    async (serviceId: string, isActive: boolean, clinicId?: string): Promise<boolean> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (!clinicId) {
+          throw new Error('clinicId is required for toggleServiceStatus');
+        }
+
+        const headers = await getAuthHeaders();
+        await axios.patch(
+          `/api/clinic/${clinicId}/services/${serviceId}`,
+          { is_active: isActive },
+          { headers },
+        );
 
         return true;
       } catch (err) {

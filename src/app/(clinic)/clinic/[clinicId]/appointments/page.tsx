@@ -54,7 +54,7 @@ type ViewMode = 'calendar' | 'list';
 export default function AppointmentsPage() {
   const params = useParams();
   const clinicId = params.clinicId as string;
-  const { clinic, isTrialExpired, activeBranchId } = useClinicContext();
+  const { clinic, isTrialExpired, activeBranchId, branches } = useClinicContext();
 
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
@@ -112,14 +112,24 @@ export default function AppointmentsPage() {
     error: updateError,
   } = useUpdateAppointment();
 
-  // Fetch data on mount
+  // Branch used inside the appointment form modal (defaults to sidebar selection)
+  const [modalBranchId, setModalBranchId] = useState<string | null>(activeBranchId);
+
+  // Sync modal branch when sidebar branch changes
+  useEffect(() => {
+    setModalBranchId(activeBranchId);
+  }, [activeBranchId]);
+
+  // Fetch data on mount and when the effective branch changes
+  const effectiveBranchId = modalBranchId;
+
   useEffect(() => {
     if (clinicId) {
-      fetchPractitioners({ clinicId, includeWorkingHours: true });
-      fetchServices({ clinicId });
+      fetchPractitioners({ clinicId, branchId: effectiveBranchId, includeWorkingHours: true });
+      fetchServices({ clinicId, branchId: effectiveBranchId });
       fetchPatients({ clinicId });
     }
-  }, [clinicId, fetchPractitioners, fetchServices, fetchPatients]);
+  }, [clinicId, effectiveBranchId, fetchPractitioners, fetchServices, fetchPatients]);
 
   // Cleanup realtime subscription on unmount
   useEffect(() => {
@@ -591,6 +601,9 @@ export default function AppointmentsPage() {
         practitioners={practitioners}
         services={services}
         patients={patients}
+        branches={branches}
+        activeBranchId={modalBranchId}
+        onBranchChange={setModalBranchId}
         getAvailableTimeSlots={getAvailableTimeSlots}
         onInvitePatient={handleInvitePatient}
         initialDate={selectedDate}

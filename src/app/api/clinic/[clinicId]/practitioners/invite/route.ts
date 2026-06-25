@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { createClient } from '@supabase/supabase-js';
+import { createNotifications } from '@/lib/notifications';
 import { checkResourceLimit } from '@/lib/plan-gating';
 
 interface InvitePractitionerRequest {
@@ -8,6 +9,7 @@ interface InvitePractitionerRequest {
   email: string;
   specialization: string;
   bio?: string;
+  branch_id?: string;
 }
 
 // Default working hours: 9 AM - 5 PM Manila time (Monday-Friday)
@@ -81,7 +83,7 @@ export async function POST(
     }
 
     // Get practitioner details from request
-    const { name, email, specialization, bio }: InvitePractitionerRequest =
+    const { name, email, specialization, bio, branch_id }: InvitePractitionerRequest =
       await request.json();
 
     if (!name || !email || !specialization) {
@@ -105,16 +107,20 @@ export async function POST(
       );
     }
 
-    // Check practitioner limit for the clinic's default branch
-    const { data: defaultBranch } = await supabaseAdmin
-      .from('branches')
-      .select('id')
-      .eq('clinic_id', clinicId)
-      .eq('is_default', true)
-      .single();
+    // Resolve target branch: use provided branch_id or fall back to default
+    let targetBranchId = branch_id;
+    if (!targetBranchId) {
+      const { data: defaultBranch } = await supabaseAdmin
+        .from('branches')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('is_default', true)
+        .single();
+      targetBranchId = defaultBranch?.id;
+    }
 
-    if (defaultBranch) {
-      const limitCheck = await checkResourceLimit(clinicId, 'practitioners', defaultBranch.id);
+    if (targetBranchId) {
+      const limitCheck = await checkResourceLimit(clinicId, 'practitioners', targetBranchId);
       if (limitCheck !== true) return limitCheck;
     }
 
@@ -205,6 +211,20 @@ export async function POST(
       );
     }
 
+    // Assign practitioner to the target branch
+    if (targetBranchId) {
+      const { error: branchAssignError } = await supabaseAdmin
+        .from('practitioner_branches')
+        .insert({
+          practitioner_id: newPractitioner.id,
+          branch_id: targetBranchId,
+        });
+
+      if (branchAssignError) {
+        console.error('Branch assignment error:', branchAssignError);
+      }
+    }
+
     // Update user metadata with practitioner_id
     await supabaseAdmin.auth.admin.updateUserById(invitedUser.user.id, {
       user_metadata: {
@@ -231,6 +251,26 @@ export async function POST(
       console.error('Working hours creation error:', workingHoursError);
       // Don't rollback - working hours can be added later
     }
+
+    // Notify clinic owner(s) about new practitioner
+    const { data: owners } = await supabaseAdmin
+      .from('clinic_admins')
+      .select('auth_user_id')
+      .eq('clinic_id', clinicId)
+      .eq('staff_role', 'owner')
+      .eq('is_active', true);
+    const ownerNotifs = (owners ?? [])
+      .filter((o) => o.auth_user_id && o.auth_user_id !== user.id)
+      .map((o) => ({
+        recipientId: o.auth_user_id!,
+        recipientType: 'clinic_admin' as const,
+        clinicId,
+        type: 'practitioner.added' as const,
+        title: 'Practitioner Invited',
+        message: `${name} (${specialization}) has been invited as a practitioner`,
+        actionUrl: `/clinic/${clinicId}/practitioners`,
+      }));
+    if (ownerNotifs.length > 0) createNotifications(ownerNotifs);
 
     return NextResponse.json(
       {

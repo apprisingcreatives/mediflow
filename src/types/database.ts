@@ -338,6 +338,37 @@ export interface RevenueForecastPoint {
   is_forecast: boolean;
 }
 
+// Notifications
+export type NotificationType =
+  | 'appointment.created'
+  | 'appointment.cancelled'
+  | 'appointment.rescheduled'
+  | 'appointment.status_changed'
+  | 'staff.invited'
+  | 'staff.role_changed'
+  | 'practitioner.added'
+  | 'plan.changed'
+  | 'trial.expiring'
+  | 'payment.status_changed'
+  | 'report.submitted';
+
+export type RecipientType = 'super_admin' | 'clinic_admin' | 'practitioner' | 'patient';
+
+export interface Notification {
+  id: string;
+  recipient_id: string;
+  recipient_type: RecipientType;
+  clinic_id: string | null;
+  type: NotificationType;
+  title: string;
+  message: string;
+  action_url: string | null;
+  metadata: Record<string, unknown>;
+  is_read: boolean;
+  created_at: string;
+  expires_at: string;
+}
+
 // Plan Limits
 export interface LimitExceededError {
   error: 'limit_exceeded';

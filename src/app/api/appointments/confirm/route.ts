@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createNotification } from '@/lib/notifications';
 import jwt from 'jsonwebtoken';
 
 const jwtSecret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'mediflow-rebook-secret';
@@ -103,6 +104,29 @@ export async function POST(request: NextRequest) {
       entity_id: decoded.appointmentId,
       metadata: { source: 'sms_link' },
     });
+
+    // Notify clinic owner(s) that appointment was confirmed
+    if (appointment.clinic_id) {
+      const { data: owners } = await supabaseAdmin
+        .from('clinic_admins')
+        .select('auth_user_id')
+        .eq('clinic_id', appointment.clinic_id)
+        .eq('staff_role', 'owner')
+        .eq('is_active', true);
+      for (const owner of owners ?? []) {
+        if (owner.auth_user_id) {
+          createNotification({
+            recipientId: owner.auth_user_id,
+            recipientType: 'clinic_admin',
+            clinicId: appointment.clinic_id,
+            type: 'appointment.status_changed',
+            title: 'Appointment Confirmed',
+            message: 'A patient has confirmed their appointment',
+            actionUrl: `/clinic/${appointment.clinic_id}/appointments`,
+          });
+        }
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch {

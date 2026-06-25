@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import axios from 'axios';
 import { supabase } from '@/lib/supabase';
 
 export interface Practitioner {
@@ -16,20 +17,18 @@ export interface Practitioner {
   role: string | null;
   created_at: string;
   updated_at: string;
-  // Joined relations
   working_hours?: PractitionerWorkingHours[];
 }
 
 export interface PractitionerWorkingHours {
   id: string;
   practitioner_id: string;
-  day_of_week: number; // 0=Sunday, 6=Saturday
-  start_time: string; // HH:MM:SS
-  end_time: string; // HH:MM:SS
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
   is_available: boolean;
 }
 
-// Helper to get day name from day_of_week
 export const DAY_NAMES = [
   'Sunday',
   'Monday',
@@ -42,6 +41,7 @@ export const DAY_NAMES = [
 
 interface FetchPractitionersParams {
   clinicId: string;
+  branchId?: string | null;
   includeWorkingHours?: boolean;
   activeOnly?: boolean;
 }
@@ -54,6 +54,7 @@ const useGetPractitioners = () => {
   const fetchPractitioners = useCallback(
     async ({
       clinicId,
+      branchId,
       includeWorkingHours = false,
       activeOnly = true,
     }: FetchPractitionersParams) => {
@@ -66,46 +67,27 @@ const useGetPractitioners = () => {
         setLoading(true);
         setError(null);
 
-        // Build query based on whether we need working hours
-        if (includeWorkingHours) {
-          let query = supabase
-            .from('practitioners')
-            .select('*, working_hours:practitioner_working_hours(id, practitioner_id, day_of_week, start_time, end_time, is_available)')
-            .eq('clinic_id', clinicId)
-            .order('name', { ascending: true });
-
-          if (activeOnly) {
-            query = query.eq('is_active', true);
-          }
-
-          const { data, error: queryError } = await query;
-
-          if (queryError) {
-            throw queryError;
-          }
-
-          setPractitioners((data as Practitioner[]) ?? []);
-          return (data as Practitioner[]) ?? [];
-        } else {
-          let query = supabase
-            .from('practitioners')
-            .select('*')
-            .eq('clinic_id', clinicId)
-            .order('name', { ascending: true });
-
-          if (activeOnly) {
-            query = query.eq('is_active', true);
-          }
-
-          const { data, error: queryError } = await query;
-
-          if (queryError) {
-            throw queryError;
-          }
-
-          setPractitioners((data as Practitioner[]) ?? []);
-          return (data as Practitioner[]) ?? [];
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('Not authenticated');
         }
+
+        const params: Record<string, string> = {};
+        if (branchId) params.branch_id = branchId;
+        if (!activeOnly) params.active_only = 'false';
+        if (includeWorkingHours) params.include_working_hours = 'true';
+
+        const { data } = await axios.get(
+          `/api/clinic/${clinicId}/practitioners`,
+          {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+            params,
+          },
+        );
+
+        const results: Practitioner[] = data.practitioners ?? [];
+        setPractitioners(results);
+        return results;
       } catch (err) {
         console.error('Failed to fetch practitioners:', err);
         const errorMessage =

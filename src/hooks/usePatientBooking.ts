@@ -96,20 +96,26 @@ const usePatientBooking = () => {
     }
   }, []);
 
-  // Fetch practitioners for a clinic
-  const fetchPractitioners = useCallback(async (clinicId: string) => {
+  // Fetch practitioners for a clinic (public endpoint, optional branch filter)
+  const fetchPractitioners = useCallback(async (clinicId: string, branchId?: string) => {
     if (!clinicId) return;
 
     try {
       setLoadingPractitioners(true);
-      const { data, error: queryError } = await supabase
-        .from('practitioners')
-        .select('id, name, specialization')
-        .eq('clinic_id', clinicId)
-        .eq('is_active', true);
+      const url = new URL(`/api/public/clinics/${clinicId}/practitioners`, window.location.origin);
+      if (branchId) {
+        url.searchParams.set('branch_id', branchId);
+      }
 
-      if (queryError) throw queryError;
-      setPractitioners(data || []);
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        console.error('Failed to fetch practitioners:', res.statusText);
+        setPractitioners([]);
+        return;
+      }
+
+      const data = await res.json();
+      setPractitioners(data.practitioners ?? []);
     } catch (err) {
       console.error('Failed to fetch practitioners:', err);
       setPractitioners([]);
@@ -118,20 +124,26 @@ const usePatientBooking = () => {
     }
   }, []);
 
-  // Fetch services for a clinic
-  const fetchServices = useCallback(async (clinicId: string) => {
+  // Fetch services for a clinic (public endpoint, optional branch filter)
+  const fetchServices = useCallback(async (clinicId: string, branchId?: string) => {
     if (!clinicId) return;
 
     try {
       setLoadingServices(true);
-      const { data, error: queryError } = await supabase
-        .from('clinic_services')
-        .select('id, name, duration_minutes, price')
-        .eq('clinic_id', clinicId)
-        .eq('is_active', true);
+      const url = new URL(`/api/public/clinics/${clinicId}/services`, window.location.origin);
+      if (branchId) {
+        url.searchParams.set('branch_id', branchId);
+      }
 
-      if (queryError) throw queryError;
-      setServices(data || []);
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        console.error('Failed to fetch services:', res.statusText);
+        setServices([]);
+        return;
+      }
+
+      const data = await res.json();
+      setServices(data.services ?? []);
     } catch (err) {
       console.error('Failed to fetch services:', err);
       setServices([]);
@@ -140,7 +152,7 @@ const usePatientBooking = () => {
     }
   }, []);
 
-  // Fetch time slots
+  // Fetch time slots (RPC call — acceptable per project conventions)
   const fetchTimeSlots = useCallback(async () => {
     if (!selectedPractitionerId || !selectedDate || !selectedServiceId) {
       setTimeSlots([]);
@@ -186,6 +198,7 @@ const usePatientBooking = () => {
       setTimeSlots([]);
       setBranches([]);
       fetchBranches(clinicId);
+      // Fetch all practitioners and services for the clinic (no branch filter)
       fetchPractitioners(clinicId);
       fetchServices(clinicId);
     },
@@ -193,13 +206,22 @@ const usePatientBooking = () => {
   );
 
   // Handle branch selection
-  const handleBranchChange = useCallback((branchId: string) => {
-    setSelectedBranchId(branchId);
-    setSelectedPractitionerId('');
-    setSelectedDate(undefined);
-    setSelectedTime('');
-    setTimeSlots([]);
-  }, []);
+  const handleBranchChange = useCallback(
+    (branchId: string) => {
+      setSelectedBranchId(branchId);
+      setSelectedPractitionerId('');
+      setSelectedServiceId('');
+      setSelectedDate(undefined);
+      setSelectedTime('');
+      setTimeSlots([]);
+      // Re-fetch practitioners and services filtered by branch
+      if (selectedClinicId) {
+        fetchPractitioners(selectedClinicId, branchId || undefined);
+        fetchServices(selectedClinicId, branchId || undefined);
+      }
+    },
+    [selectedClinicId, fetchPractitioners, fetchServices]
+  );
 
   // Handle date selection
   const handleDateChange = useCallback((date: Date | undefined) => {
