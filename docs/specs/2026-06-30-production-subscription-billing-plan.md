@@ -26,30 +26,19 @@
 - Create: `supabase/migrations/20260630000001_billing_lifecycle.sql`
 
 **Interfaces:**
-- Produces: Four new columns on `clinics` table — `trial_end_date`, `pending_checkout_session_id`, `last_reminder_sent_at`, `reminder_count`
+- Produces: Three new columns on `clinics` table — `pending_checkout_session_id`, `last_reminder_sent_at`, `reminder_count`
+- Note: `trial_end_date`, `trial_start_date`, `payment_status`, `is_subscription_active`, `is_trial_active`, `next_billing_date`, `last_payment_date`, `paymongo_checkout_session_id` already exist
 
 - [ ] **Step 1: Create the migration file**
 
 ```sql
--- Billing lifecycle columns for trial expiry, renewal reminders, and grace period tracking
+-- Billing lifecycle columns for renewal reminders and grace period tracking
+-- Note: trial_end_date already exists from initial schema
 
 ALTER TABLE public.clinics
-  ADD COLUMN IF NOT EXISTS trial_end_date TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS pending_checkout_session_id TEXT,
   ADD COLUMN IF NOT EXISTS last_reminder_sent_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS reminder_count INTEGER NOT NULL DEFAULT 0;
-
--- Backfill existing trial clinics: set trial_end_date from created_at
-UPDATE public.clinics
-SET trial_end_date = created_at + INTERVAL '14 days'
-WHERE is_trial_active = true
-  AND trial_end_date IS NULL;
-
--- Backfill clinics that already have trial_start_date but no trial_end_date
-UPDATE public.clinics
-SET trial_end_date = trial_start_date + INTERVAL '14 days'
-WHERE trial_end_date IS NULL
-  AND trial_start_date IS NOT NULL;
 ```
 
 - [ ] **Step 2: Apply migration locally**
@@ -539,32 +528,9 @@ git commit -m "feat(billing): add BillingBanner component with payment-status-aw
 
 ---
 
-### Task 6: Registration Update — Set `trial_end_date`
+### ~~Task 6: Registration Update — Set `trial_end_date`~~ SKIPPED
 
-**Files:**
-- Modify: `src/app/api/clinic/register/route.ts`
-- Modify: `src/app/api/super-admin/clinics/route.ts`
-
-**Interfaces:**
-- Produces: New clinics always have `trial_end_date` set to `now + 14 days`
-
-- [ ] **Step 1: Verify `trial_end_date` is already set in registration route**
-
-Read `src/app/api/clinic/register/route.ts` around line 92. The explore agent found it already sets `trial_end_date: trialEndDate.toISOString()`. Verify this is correct — `trialEndDate` should be `trialStartDate + 14 days`.
-
-If already correct, no change needed. Move to step 2.
-
-- [ ] **Step 2: Verify super-admin clinic creation also sets `trial_end_date`**
-
-Read `src/app/api/super-admin/clinics/route.ts` around line 145. Verify `trial_end_date` is set. If already present, no change needed.
-
-- [ ] **Step 3: Commit (only if changes were made)**
-
-```bash
-git add src/app/api/clinic/register/route.ts
-git add src/app/api/super-admin/clinics/route.ts
-git commit -m "feat(billing): ensure trial_end_date set on clinic creation"
-```
+**Already implemented.** Both `src/app/api/clinic/register/route.ts` and `src/app/api/super-admin/clinics/route.ts` already set `trial_end_date` during clinic creation. No changes needed.
 
 ---
 
@@ -1133,12 +1099,12 @@ git commit -m "feat(billing): add billing notification types"
 
 | Task | Description | Key Files |
 |------|-------------|-----------|
-| 1 | Migration — billing lifecycle columns | `supabase/migrations/20260630000001_billing_lifecycle.sql` |
+| 1 | Migration — add `pending_checkout_session_id`, `last_reminder_sent_at`, `reminder_count` | `supabase/migrations/20260630000001_billing_lifecycle.sql` |
 | 2 | Payment-aware plan gating | `src/lib/plan-gating.ts` |
 | 3 | Enforce on mutation routes | `appointments/route.ts`, `invite/route.ts`, `branches/route.ts` |
 | 4 | Webhook security hardening | `src/lib/paymongo.ts`, `webhooks/paymongo/route.ts` |
 | 5 | BillingBanner + context | `BillingBanner.tsx`, `clinic-context.tsx`, `layout.tsx` |
-| 6 | Registration update | `register/route.ts`, `super-admin/clinics/route.ts` |
+| ~~6~~ | ~~Registration update~~ | SKIPPED — `trial_end_date` already set in both routes |
 | 7 | Billing lifecycle Edge Function | `supabase/functions/billing-lifecycle/index.ts` |
 | 8 | pg_cron daily schedule | `supabase/migrations/20260630000002_billing_lifecycle_cron.sql` |
-| 9 | Verify notification types | `src/types/database.ts` |
+| 9 | Update TypeScript types | `src/types/database.ts` — add 3 new columns to `Clinic` interface |

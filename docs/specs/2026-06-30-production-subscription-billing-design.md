@@ -251,7 +251,17 @@ When paid, the existing `handleCheckoutPaid` → `activateClinicSubscription` we
 - Resets `reminder_count = 0`, clears `pending_checkout_session_id`
 - Records payment in `clinic_payments`
 
-### 8. Registration Update
+### 8. Mid-Cycle Plan Upgrades
+
+When a clinic upgrades mid-cycle (e.g., Starter to Professional with 20 days remaining):
+- Clinic pays the **full price** of the new plan
+- `next_billing_date` resets to today + 1 month/year (new cycle starts from upgrade date)
+- Remaining days on the old plan are not refunded or credited
+- This is the current behavior in `activateClinicSubscription` — no code change needed, just documented as intentional
+
+Downgrades follow the same pattern: charge the new (lower) plan price, new billing cycle starts immediately. The billing page should only show plans at or above the current tier as upgrade options; downgrades are handled by super-admin or support.
+
+### 9. Registration Update
 
 **File:** `src/app/api/clinic/register/route.ts` (or equivalent)
 
@@ -283,7 +293,6 @@ Each email includes: clinic name, plan name, amount due, and a direct link to th
 - Automatic plan downgrade on expiry
 - Refund automation
 - Multi-currency support
-- Proration for mid-cycle plan changes
 - Invoice PDF generation
 
 ## Environment Variables Required
