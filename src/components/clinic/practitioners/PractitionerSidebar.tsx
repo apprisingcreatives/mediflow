@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
@@ -121,6 +122,7 @@ export function PractitionerSidebar({
               </p>
             )}
           </div>
+          <NotificationBell />
         </div>
         {clinicName && (
           <div className="mt-3 px-3 py-2 bg-clinic-teal/10 rounded-lg">

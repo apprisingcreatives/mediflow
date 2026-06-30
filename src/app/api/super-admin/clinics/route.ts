@@ -140,7 +140,7 @@ export async function POST(request: Request) {
         phone: phone || null,
         address: address || null,
         city: city || null,
-        subscription_plan: subscription_plan || 'basic',
+        subscription_plan: subscription_plan || 'starter',
         is_active: is_active ?? true,
         trial_start_date: trialStartDate.toISOString(),
         trial_end_date: trialEndDate.toISOString(),
@@ -182,16 +182,25 @@ export async function POST(request: Request) {
     }
 
     // Create clinic_admins record (pending until they accept)
-    const { error: adminError } = await supabaseAdmin
+    const baseAdmin = {
+      clinic_id: newClinic.id,
+      email: admin_email,
+      name: admin_name,
+      role: 'admin',
+      auth_user_id: invitedUser.user.id,
+      is_active: false,
+    };
+
+    let { error: adminError } = await supabaseAdmin
       .from('clinic_admins')
-      .insert({
-        clinic_id: newClinic.id,
-        email: admin_email,
-        name: admin_name,
-        role: 'admin',
-        auth_user_id: invitedUser.user.id,
-        is_active: false, // Will be activated when they complete setup
-      });
+      .insert({ ...baseAdmin, staff_role: 'owner' });
+
+    // Retry without staff_role if column doesn't exist yet (Phase 3 migration not applied)
+    if (adminError?.message?.includes('staff_role')) {
+      ({ error: adminError } = await supabaseAdmin
+        .from('clinic_admins')
+        .insert(baseAdmin));
+    }
 
     if (adminError) {
       // Rollback clinic and auth user
@@ -199,7 +208,7 @@ export async function POST(request: Request) {
       await supabaseAdmin.auth.admin.deleteUser(invitedUser.user.id);
       console.error('Admin record creation error:', adminError);
       return NextResponse.json(
-        { error: 'Failed to create admin record' },
+        { error: `Failed to create admin record: ${adminError.message}` },
         { status: 500 },
       );
     }

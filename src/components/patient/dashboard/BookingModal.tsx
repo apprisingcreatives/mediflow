@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
-import { CalendarIcon, Check, Clock, Loader2, Search, CreditCard, Banknote } from 'lucide-react';
+import { CalendarIcon, Check, Clock, Loader2, Search, CreditCard, Banknote, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { PatientClinicInfo } from './types';
 import { formatTime } from './utils';
 import {
+  BookingBranch,
   BookingPractitioner,
   BookingService,
   TimeSlot,
@@ -43,6 +44,7 @@ interface BookingModalProps {
 
   // Selection state
   selectedClinicId: string;
+  selectedBranchId: string;
   selectedPractitionerId: string;
   selectedServiceId: string;
   selectedDate: Date | undefined;
@@ -51,6 +53,7 @@ interface BookingModalProps {
 
   // Setters
   onClinicChange: (clinicId: string) => void;
+  onBranchChange: (branchId: string) => void;
   onPractitionerChange: (practitionerId: string) => void;
   onServiceChange: (serviceId: string) => void;
   onDateChange: (date: Date | undefined) => void;
@@ -63,11 +66,13 @@ interface BookingModalProps {
   selectedServicePrice?: number;
 
   // Data
+  branches: BookingBranch[];
   practitioners: BookingPractitioner[];
   services: BookingService[];
   timeSlots: TimeSlot[];
 
   // Loading states
+  loadingBranches: boolean;
   loadingPractitioners: boolean;
   loadingServices: boolean;
   loadingTimeSlots: boolean;
@@ -86,12 +91,14 @@ export function BookingModal({
   onSubmit,
   clinics,
   selectedClinicId,
+  selectedBranchId,
   selectedPractitionerId,
   selectedServiceId,
   selectedDate,
   selectedTime,
   notes,
   onClinicChange,
+  onBranchChange,
   onPractitionerChange,
   onServiceChange,
   onDateChange,
@@ -100,9 +107,11 @@ export function BookingModal({
   paymentMethod,
   onPaymentMethodChange,
   selectedServicePrice,
+  branches,
   practitioners,
   services,
   timeSlots,
+  loadingBranches,
   loadingPractitioners,
   loadingServices,
   loadingTimeSlots,
@@ -144,6 +153,45 @@ export function BookingModal({
             selectedClinicId={selectedClinicId}
             onClinicChange={onClinicChange}
           />
+
+          {/* Branch Selection — only for multi-branch clinics */}
+          {selectedClinicId && (loadingBranches || branches.length > 1) && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Location</Label>
+              {loadingBranches ? (
+                <div className="flex items-center gap-2 h-10 px-3 border rounded-md text-sm text-clinic-text/60">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading locations...
+                </div>
+              ) : (
+                <Select
+                  value={selectedBranchId}
+                  onValueChange={onBranchChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        <span className="flex items-center gap-2">
+                          <MapPin className="w-3.5 h-3.5 text-clinic-text/40 flex-shrink-0" />
+                          <span>
+                            {branch.name}
+                            {(branch.address || branch.city) && (
+                              <span className="text-clinic-text/50 ml-1.5">
+                                — {[branch.address, branch.city].filter(Boolean).join(', ')}
+                              </span>
+                            )}
+                          </span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
 
           {/* Practitioner Selection */}
           <div className="space-y-2">

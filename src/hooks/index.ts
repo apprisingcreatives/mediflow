@@ -53,3 +53,11 @@ export { default as useReportMutations } from './useReportMutations';
 // Activity log hooks
 export { default as useActivityLogs } from './useActivityLogs';
 export type { ActivityLog, ActivityActionType } from './useActivityLogs';
+
+// Phase 3: Staff roles & advanced analytics hooks
+export { default as useStaffMembers } from './useStaffMembers';
+export type { StaffMember } from './useStaffMembers';
+export { default as useStaffAuditLogs } from './useStaffAuditLogs';
+export type { AuditLog, AuditLogFilters } from './useStaffAuditLogs';
+export { default as useAdvancedAnalytics } from './useAdvancedAnalytics';
+export type { DemographicsData } from './useAdvancedAnalytics';

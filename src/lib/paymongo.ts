@@ -43,8 +43,6 @@ export async function createCheckoutSession(
   params: CheckoutSessionParams,
 ): Promise<CheckoutSessionResponse> {
   try {
-    const useRedirectUrls = params.successUrl?.startsWith('https://');
-
     const response = await axios.post(
       `${PAYMONGO_API}/checkout_sessions`,
       {
@@ -59,10 +57,9 @@ export async function createCheckoutSession(
             })),
             description: params.description,
             metadata: params.metadata,
-            ...(useRedirectUrls && {
-              success_url: params.successUrl,
-              cancel_url: params.cancelUrl,
-            }),
+            success_url: params.successUrl,
+            cancel_url: params.cancelUrl,
+            payment_method_types: ['card', 'gcash', 'grab_pay', 'paymaya'],
             reference_number: params.referenceNumber,
             send_email_receipt: true,
             show_description: true,

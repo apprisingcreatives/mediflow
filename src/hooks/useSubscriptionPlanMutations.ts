@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import axios from 'axios';
 
 interface PlanInput {
   name: string;
@@ -17,6 +18,14 @@ interface PlanInput {
   sort_order: number;
 }
 
+async function getAuthHeaders() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+  return { Authorization: `Bearer ${session.access_token}` };
+}
+
 const useSubscriptionPlanMutations = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,15 +34,16 @@ const useSubscriptionPlanMutations = () => {
     try {
       setLoading(true);
       setError(null);
-      const { data, error } = await supabase
-        .from('subscription_plans')
-        .insert(input)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      const headers = await getAuthHeaders();
+      const { data } = await axios.post('/api/super-admin/subscription-plans', input, { headers });
+      return data.plan;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create plan');
+      const msg = axios.isAxiosError(err)
+        ? err.response?.data?.error || err.message
+        : err instanceof Error
+          ? err.message
+          : 'Failed to create plan';
+      setError(msg);
       throw err;
     } finally {
       setLoading(false);
@@ -44,16 +54,16 @@ const useSubscriptionPlanMutations = () => {
     try {
       setLoading(true);
       setError(null);
-      const { data, error } = await supabase
-        .from('subscription_plans')
-        .update({ ...input, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      const headers = await getAuthHeaders();
+      const { data } = await axios.patch(`/api/super-admin/subscription-plans/${id}`, input, { headers });
+      return data.plan;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update plan');
+      const msg = axios.isAxiosError(err)
+        ? err.response?.data?.error || err.message
+        : err instanceof Error
+          ? err.message
+          : 'Failed to update plan';
+      setError(msg);
       throw err;
     } finally {
       setLoading(false);

@@ -33,7 +33,7 @@ export interface ClinicAnalytics {
   total_revenue: number;
 }
 
-const useClinicAnalytics = (clinicId: string) => {
+const useClinicAnalytics = (clinicId: string, branchId?: string | null) => {
   const [analytics, setAnalytics] = useState<ClinicAnalytics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +54,11 @@ const useClinicAnalytics = (clinicId: string) => {
           `/api/clinic/${clinicId}/analytics`,
           {
             headers: { Authorization: `Bearer ${session.access_token}` },
-            params: { period, ...(practitionerId && { practitionerId }) },
+            params: {
+              period,
+              ...(practitionerId && { practitionerId }),
+              ...(branchId && { branch_id: branchId }),
+            },
           },
         );
         setAnalytics(data);
@@ -65,7 +69,7 @@ const useClinicAnalytics = (clinicId: string) => {
         setLoading(false);
       }
     },
-    [clinicId],
+    [clinicId, branchId],
   );
 
   return { analytics, loading, error, fetchAnalytics };

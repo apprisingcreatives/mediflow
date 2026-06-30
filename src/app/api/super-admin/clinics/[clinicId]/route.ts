@@ -5,9 +5,10 @@ import { SuperAdminStatus } from '@/types/super-admin';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { clinicId: string } },
+  { params }: { params: Promise<{ clinicId: string }> },
 ) {
   try {
+    const { clinicId } = await params;
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
 
@@ -52,8 +53,6 @@ export async function PATCH(
         { status: 403 },
       );
     }
-
-    const { clinicId } = params;
     const body = await request.json();
     const {
       name,
@@ -114,9 +113,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { clinicId: string } },
+  { params }: { params: Promise<{ clinicId: string }> },
 ) {
   try {
+    const { clinicId } = await params;
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
 
@@ -161,8 +161,6 @@ export async function DELETE(
         { status: 403 },
       );
     }
-
-    const { clinicId } = params;
 
     // Soft delete by setting is_active to false
     const { error: deleteError } = await supabaseAdmin

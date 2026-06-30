@@ -16,11 +16,12 @@ const plans = [
     monthlyPrice: 5000,
     yearlyPrice: 50000,
     features: [
+      'Up to 3 practitioners',
       'Up to 500 patients',
+      '1 location',
       'AI-powered intake forms',
       'Basic appointment scheduling',
       'Email support',
-      '1 practitioner',
     ],
   },
   {
@@ -30,12 +31,13 @@ const plans = [
     yearlyPrice: 100000,
     popular: true,
     features: [
+      'Up to 5 practitioners per branch',
       'Up to 2,000 patients',
+      'Up to 3 branches',
       'Advanced AI features',
       'Smart scheduling & reminders',
       'Priority support',
       'Analytics dashboard',
-      'Up to 5 practitioners',
       'Secure messaging',
     ],
   },
@@ -45,13 +47,13 @@ const plans = [
     monthlyPrice: 25000,
     yearlyPrice: 250000,
     features: [
+      'Unlimited practitioners',
       'Unlimited patients',
+      'Unlimited branches',
       'Full AI suite',
       'Custom integrations',
       'Dedicated support',
       'Advanced analytics',
-      'Unlimited practitioners',
-      'Multi-location support',
       'API access',
     ],
   },
@@ -72,8 +74,32 @@ export default function BillingPage() {
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [showPaymongoGuide, setShowPaymongoGuide] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<string | null>(null);
 
   const paymentStatus = searchParams.get('payment');
+
+  useEffect(() => {
+    if (paymentStatus !== 'success' || !session?.access_token || !clinicId) return;
+
+    setVerifying(true);
+    axios
+      .post(
+        `/api/clinic/${clinicId}/verify-payment`,
+        {},
+        { headers: { Authorization: `Bearer ${session.access_token}` } },
+      )
+      .then((res) => {
+        setVerifyResult(res.data.status);
+        if (res.data.status === 'activated' || res.data.status === 'already_active') {
+          setTimeout(() => window.location.reload(), 1500);
+        }
+      })
+      .catch(() => {
+        setVerifyResult('error');
+      })
+      .finally(() => setVerifying(false));
+  }, [paymentStatus, session?.access_token, clinicId]);
 
   const currentPlan =
     plans.find((p) => p.id === clinic?.subscription_plan) || plans[0];
@@ -144,10 +170,42 @@ export default function BillingPage() {
       {/* Payment status banner */}
       {paymentStatus === 'success' && (
         <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-          <CheckCircle className="w-5 h-5 text-green-600" />
-          <p className="text-green-800 dark:text-green-300 font-medium">
-            Payment successful! Your subscription is now active.
-          </p>
+          {verifying ? (
+            <>
+              <Loader2 className="w-5 h-5 text-green-600 animate-spin" />
+              <p className="text-green-800 dark:text-green-300 font-medium">
+                Verifying payment and activating your subscription...
+              </p>
+            </>
+          ) : verifyResult === 'activated' ? (
+            <>
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <p className="text-green-800 dark:text-green-300 font-medium">
+                Payment verified! Your subscription is now active. Refreshing...
+              </p>
+            </>
+          ) : verifyResult === 'already_active' ? (
+            <>
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <p className="text-green-800 dark:text-green-300 font-medium">
+                Payment successful! Your subscription is active.
+              </p>
+            </>
+          ) : verifyResult === 'error' ? (
+            <>
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <p className="text-green-800 dark:text-green-300 font-medium">
+                Payment received! Your plan will update shortly.
+              </p>
+            </>
+          ) : (
+            <>
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <p className="text-green-800 dark:text-green-300 font-medium">
+                Payment successful! Activating your subscription...
+              </p>
+            </>
+          )}
         </div>
       )}
       {paymentStatus === 'cancelled' && (
@@ -357,7 +415,7 @@ export default function BillingPage() {
             <div
               key={plan.id}
               className={cn(
-                'relative p-6 rounded-2xl transition-all',
+                'relative p-6 rounded-2xl transition-all flex flex-col',
                 isCurrentPlan
                   ? 'bg-white dark:bg-slate-800 border-2 border-clinic-teal shadow-glass'
                   : 'bg-white dark:bg-slate-800 border-2 border-transparent hover:border-clinic-teal/30 shadow-sm',
@@ -385,7 +443,7 @@ export default function BillingPage() {
                 </div>
               </div>
 
-              <ul className="space-y-3 mb-6">
+              <ul className="space-y-3 mb-6 flex-1">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-clinic-teal flex-shrink-0 mt-0.5" />

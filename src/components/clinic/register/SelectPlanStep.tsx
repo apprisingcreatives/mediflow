@@ -202,7 +202,7 @@ export function SelectPlanStep({
         <Button
           variant="ghost"
           onClick={() => {
-            setSelectedPlan("free_trial");
+            setSelectedPlan("starter");
             setTimeout(onSubmit, 0);
           }}
           disabled={isLoading}

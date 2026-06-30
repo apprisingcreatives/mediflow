@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import axios from 'axios';
 import { supabase } from '@/lib/supabase';
 
 export interface ClinicService {
@@ -12,6 +13,7 @@ export interface ClinicService {
   price: number;
   currency: string;
   is_active: boolean;
+  branch_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -43,7 +45,7 @@ export const canPractitionerPerformService = (
 
   // Check if the service matches the practitioner's specialization
   const allowedServices = SPECIALIZATION_SERVICE_MAP[practitionerSpecialization] || [];
-  
+
   // Always allow general consultation for any practitioner
   if (serviceName.toLowerCase().includes('general consultation') ||
       serviceName.toLowerCase().includes('follow-up')) {
@@ -59,6 +61,7 @@ export const canPractitionerPerformService = (
 
 interface FetchServicesParams {
   clinicId: string;
+  branchId?: string | null;
   activeOnly?: boolean;
 }
 
@@ -68,7 +71,7 @@ const useGetServices = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchServices = useCallback(
-    async ({ clinicId, activeOnly = true }: FetchServicesParams) => {
+    async ({ clinicId, branchId, activeOnly = true }: FetchServicesParams) => {
       if (!clinicId) {
         console.error('fetchServices called without clinicId');
         return [];
@@ -78,24 +81,26 @@ const useGetServices = () => {
         setLoading(true);
         setError(null);
 
-        let query = supabase
-          .from('clinic_services')
-          .select('*')
-          .eq('clinic_id', clinicId)
-          .order('name', { ascending: true });
-
-        if (activeOnly) {
-          query = query.eq('is_active', true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('Not authenticated');
         }
 
-        const { data, error: queryError } = await query;
+        const params: Record<string, string> = {};
+        if (branchId) params.branch_id = branchId;
+        if (!activeOnly) params.active_only = 'false';
 
-        if (queryError) {
-          throw queryError;
-        }
+        const { data } = await axios.get(
+          `/api/clinic/${clinicId}/services`,
+          {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+            params,
+          },
+        );
 
-        setServices(data ?? []);
-        return data ?? [];
+        const results: ClinicService[] = data.services ?? [];
+        setServices(results);
+        return results;
       } catch (err) {
         console.error('Failed to fetch services:', err);
         const errorMessage =

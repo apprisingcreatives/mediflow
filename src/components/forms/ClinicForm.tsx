@@ -97,6 +97,8 @@ export function ClinicForm({ clinic, onSuccess, onCancel }: ClinicFormProps) {
     return null;
   };
 
+  const [justAdvanced, setJustAdvanced] = useState(false);
+
   const handleNext = () => {
     const validationError = validateStep();
     if (validationError) {
@@ -104,7 +106,9 @@ export function ClinicForm({ clinic, onSuccess, onCancel }: ClinicFormProps) {
       return;
     }
     setError(null);
+    setJustAdvanced(true);
     setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+    setTimeout(() => setJustAdvanced(false), 100);
   };
 
   const handleBack = () => {
@@ -119,6 +123,7 @@ export function ClinicForm({ clinic, onSuccess, onCancel }: ClinicFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLastStep || justAdvanced) return;
 
     const validationError = validateStep();
     if (validationError) {
@@ -176,7 +181,15 @@ export function ClinicForm({ clinic, onSuccess, onCancel }: ClinicFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className='space-y-5'>
+    <form
+      onSubmit={handleSubmit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+        }
+      }}
+      className='space-y-5'
+    >
       <ClinicFormStepper steps={steps} currentStep={currentStep} />
 
       {/* Error / Success Messages */}

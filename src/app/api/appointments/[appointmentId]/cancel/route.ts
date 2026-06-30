@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createNotifications } from '@/lib/notifications';
 import { sendSMS } from '@/lib/unisms';
 import { normalizeToE164, isValidPHMobile } from '@/lib/phone';
 import jwt from 'jsonwebtoken';
@@ -126,7 +127,76 @@ export async function POST(
       },
     });
 
-    // 3. Waitlist auto-book (priority over rebooking)
+    // 3. Fire-and-forget in-app notifications
+    {
+      const [hh, mm] = (appointment.appointment_time || '00:00').split(':').map(Number);
+      const time = `${hh % 12 || 12}:${String(mm).padStart(2, '0')} ${hh >= 12 ? 'PM' : 'AM'}`;
+      const dateObj = new Date(appointment.appointment_date + 'T00:00:00');
+      const dateStr = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      const patientName = appointment.patient ? `${appointment.patient.first_name} ${appointment.patient.last_name}` : 'A patient';
+      const cancelMsg = `Appointment on ${dateStr} at ${time} has been cancelled`;
+      const items: Parameters<typeof createNotifications>[0] = [];
+
+      // Notify practitioner
+      if (appointment.practitioner_id) {
+        const { data: prac } = await supabaseAdmin
+          .from('practitioners')
+          .select('auth_user_id')
+          .eq('id', appointment.practitioner_id)
+          .single();
+        if (prac?.auth_user_id && prac.auth_user_id !== user.id) {
+          items.push({
+            recipientId: prac.auth_user_id,
+            recipientType: 'practitioner',
+            clinicId: appointment.clinic_id,
+            type: 'appointment.cancelled',
+            title: 'Appointment Cancelled',
+            message: `${patientName} — ${cancelMsg}`,
+            actionUrl: `/clinic/${appointment.clinic_id}/appointments`,
+          });
+        }
+      }
+
+      // Notify patient (if cancelled by admin)
+      if (isClinicAdmin && appointment.patient?.auth_user_id) {
+        items.push({
+          recipientId: appointment.patient.auth_user_id,
+          recipientType: 'patient',
+          clinicId: appointment.clinic_id,
+          type: 'appointment.cancelled',
+          title: 'Appointment Cancelled',
+          message: `Your appointment on ${dateStr} at ${time}${appointment.clinic?.name ? ` at ${appointment.clinic.name}` : ''} has been cancelled`,
+          actionUrl: '/patient/appointments',
+        });
+      }
+
+      // Notify clinic owner(s) (if cancelled by patient)
+      if (isPatientOwner && appointment.clinic_id) {
+        const { data: owners } = await supabaseAdmin
+          .from('clinic_admins')
+          .select('auth_user_id')
+          .eq('clinic_id', appointment.clinic_id)
+          .eq('staff_role', 'owner')
+          .eq('is_active', true);
+        for (const owner of owners ?? []) {
+          if (owner.auth_user_id) {
+            items.push({
+              recipientId: owner.auth_user_id,
+              recipientType: 'clinic_admin',
+              clinicId: appointment.clinic_id,
+              type: 'appointment.cancelled',
+              title: 'Appointment Cancelled',
+              message: `${patientName} cancelled their appointment on ${dateStr} at ${time}`,
+              actionUrl: `/clinic/${appointment.clinic_id}/appointments`,
+            });
+          }
+        }
+      }
+
+      if (items.length > 0) createNotifications(items);
+    }
+
+    // 4. Waitlist auto-book (priority over rebooking)
     let waitlistFilled = false;
     try {
       waitlistFilled = await tryWaitlistAutoBook(appointment);

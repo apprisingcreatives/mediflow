@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import axios from 'axios';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -13,10 +14,14 @@ import {
   AlertCircle,
   Lock,
 } from 'lucide-react';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import { ClinicSidebar } from '@/components/clinic/ClinicSidebar';
 import { requireClinicAdmin, clinicAdminSignOut } from '@/lib/admin-auth';
 import { useGetClinicFeatures, useGetClinic } from '@/hooks';
+import { supabase } from '@/lib/supabase';
 import { ClinicContext, type Clinic, type ClinicAdmin } from './clinic-context';
+import type { StaffRole, Branch } from '@/types/database';
+import type { PermissionKey } from '@/lib/permissions';
 
 export default function ClinicDashboardLayout({
   children,
@@ -30,6 +35,10 @@ export default function ClinicDashboardLayout({
     null,
   );
   const [isTrialExpired, setIsTrialExpired] = useState(false);
+  const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
+  const [permissions, setPermissions] = useState<PermissionKey[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [activeBranchId, setActiveBranchId] = useState<string | null>(null);
 
   const { clinic, loading: clinicLoading, fetchClinic } = useGetClinic();
   const {
@@ -51,6 +60,40 @@ export default function ClinicDashboardLayout({
         }
 
         await fetchClinicFeatures({ clinicId: authenticatedAdmin.clinic_id });
+
+        // Fetch staff role and permissions from /me endpoint
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            const { data: meData } = await axios.get(
+              `/api/clinic/${authenticatedAdmin.clinic_id}/me`,
+              { headers: { Authorization: `Bearer ${session.access_token}` } },
+            );
+            if (meData) {
+              setStaffRole(meData.staff_role);
+              setPermissions(meData.permissions ?? []);
+              setAdmin((prev) => prev ? { ...prev, staff_role: meData.staff_role } : prev);
+            }
+          }
+        } catch {
+          setStaffRole('owner');
+        }
+
+        // Fetch branches for professional+ clinics
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            const { data: branchData } = await axios.get(
+              `/api/clinic/${authenticatedAdmin.clinic_id}/branches`,
+              { headers: { Authorization: `Bearer ${session.access_token}` } },
+            );
+            if (branchData?.branches) {
+              setBranches(branchData.branches);
+            }
+          }
+        } catch {
+          // Non-professional+ clinics or branches not yet migrated — ignore
+        }
       }
 
       setIsLoading(false);
@@ -77,6 +120,11 @@ export default function ClinicDashboardLayout({
     await clinicAdminSignOut(router);
   };
 
+  const hasPermission = useCallback(
+    (key: PermissionKey) => permissions.includes(key),
+    [permissions],
+  );
+
   if (isLoading) {
     return (
       <div className='min-h-screen bg-clinic-bg flex items-center justify-center'>
@@ -97,6 +145,12 @@ export default function ClinicDashboardLayout({
         featuresLoading,
         isTrialExpired,
         trialDaysRemaining,
+        staffRole,
+        permissions,
+        hasPermission,
+        branches,
+        activeBranchId,
+        setActiveBranchId,
       }}
     >
       <div className='min-h-screen bg-clinic-bg dark:bg-slate-900'>
@@ -121,6 +175,7 @@ export default function ClinicDashboardLayout({
                 </p>
               </div>
               <div className='flex items-center gap-4'>
+                <NotificationBell />
                 <span
                   className={`text-xs px-3 py-1 rounded-full font-medium ${
                     clinic?.subscription_plan === 'professional'
