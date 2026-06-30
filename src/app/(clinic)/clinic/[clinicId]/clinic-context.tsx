@@ -46,6 +46,8 @@ export interface ClinicContextType {
   branches: Branch[];
   activeBranchId: string | null;
   setActiveBranchId: (id: string | null) => void;
+  isReadOnly: boolean;
+  paymentStatus: string;
 }
 
 export const ClinicContext = createContext<ClinicContextType>({
@@ -61,6 +63,8 @@ export const ClinicContext = createContext<ClinicContextType>({
   branches: [],
   activeBranchId: null,
   setActiveBranchId: () => {},
+  isReadOnly: false,
+  paymentStatus: 'trial',
 });
 
 export const useClinicContext = () => useContext(ClinicContext);
