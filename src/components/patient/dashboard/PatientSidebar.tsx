@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
@@ -83,6 +84,7 @@ export function PatientSidebar({ patientName }: PatientSidebarProps) {
               Patient
             </p>
           </div>
+          <NotificationBell />
         </div>
       </div>
 

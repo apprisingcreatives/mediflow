@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createNotifications } from '@/lib/notifications';
 import { sendSMS } from '@/lib/unisms';
 import { normalizeToE164, isValidPHMobile } from '@/lib/phone';
 import jwt from 'jsonwebtoken';
@@ -373,6 +374,78 @@ export async function POST(request: Request) {
         time: appointment_time,
       },
     });
+
+    // Fire-and-forget in-app notifications
+    {
+      const notifTitle = 'New Appointment';
+      const notifMessage = `${patient.first_name} ${patient.last_name} — ${formatDate(appointment_date)} at ${formatTime(appointment_time)}${serviceName ? ` (${serviceName})` : ''}`;
+      const items: Parameters<typeof createNotifications>[0] = [];
+
+      // Notify practitioner
+      if (practitioner_id) {
+        const { data: prac } = await supabaseAdmin
+          .from('practitioners')
+          .select('auth_user_id')
+          .eq('id', practitioner_id)
+          .single();
+        if (prac?.auth_user_id) {
+          items.push({
+            recipientId: prac.auth_user_id,
+            recipientType: 'practitioner',
+            clinicId: clinic_id,
+            type: 'appointment.created',
+            title: notifTitle,
+            message: notifMessage,
+            actionUrl: `/clinic/${clinic_id}/appointments`,
+          });
+        }
+      }
+
+      // Notify clinic owner(s)
+      if (clinic_id) {
+        const { data: owners } = await supabaseAdmin
+          .from('clinic_admins')
+          .select('auth_user_id')
+          .eq('clinic_id', clinic_id)
+          .eq('staff_role', 'owner')
+          .eq('is_active', true);
+        for (const owner of owners ?? []) {
+          if (owner.auth_user_id && owner.auth_user_id !== user.id) {
+            items.push({
+              recipientId: owner.auth_user_id,
+              recipientType: 'clinic_admin',
+              clinicId: clinic_id,
+              type: 'appointment.created',
+              title: notifTitle,
+              message: notifMessage,
+              actionUrl: `/clinic/${clinic_id}/appointments`,
+            });
+          }
+        }
+      }
+
+      // Notify patient (if booked by admin)
+      if (booked_by === 'clinic_admin' && patient) {
+        const { data: patientAuth } = await supabaseAdmin
+          .from('patients')
+          .select('auth_user_id')
+          .eq('id', patient.id)
+          .single();
+        if (patientAuth?.auth_user_id) {
+          items.push({
+            recipientId: patientAuth.auth_user_id,
+            recipientType: 'patient',
+            clinicId: clinic_id,
+            type: 'appointment.created',
+            title: 'Appointment Scheduled',
+            message: `An appointment has been scheduled for you on ${formatDate(appointment_date)} at ${formatTime(appointment_time)}${clinicName ? ` at ${clinicName}` : ''}`,
+            actionUrl: '/patient/appointments',
+          });
+        }
+      }
+
+      if (items.length > 0) createNotifications(items);
+    }
 
     // Generate confirm/cancel tokens for email links
     const confirmToken = jwt.sign(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateClinicRequest, isAuthSuccess } from '@/lib/api-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createNotifications } from '@/lib/notifications';
 import { logStaffAction } from '@/lib/audit';
 
 export async function PATCH(
@@ -79,6 +80,28 @@ export async function PATCH(
       new_active: is_active ?? target.is_active,
     },
   });
+
+  // Notify clinic owner(s) about staff change
+  if (staff_role !== undefined && staff_role !== target.staff_role) {
+    const { data: owners } = await supabaseAdmin
+      .from('clinic_admins')
+      .select('auth_user_id')
+      .eq('clinic_id', clinicId)
+      .eq('staff_role', 'owner')
+      .eq('is_active', true);
+    const ownerNotifs = (owners ?? [])
+      .filter((o) => o.auth_user_id && o.auth_user_id !== auth.userId)
+      .map((o) => ({
+        recipientId: o.auth_user_id!,
+        recipientType: 'clinic_admin' as const,
+        clinicId,
+        type: 'staff.role_changed' as const,
+        title: 'Staff Role Changed',
+        message: `${target.email}'s role changed from ${target.staff_role} to ${staff_role}`,
+        actionUrl: `/clinic/${clinicId}/staff`,
+      }));
+    if (ownerNotifs.length > 0) createNotifications(ownerNotifs);
+  }
 
   return NextResponse.json({ staff: updated });
 }

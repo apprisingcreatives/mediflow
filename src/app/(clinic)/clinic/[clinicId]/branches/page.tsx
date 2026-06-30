@@ -23,6 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useClinicContext } from '../clinic-context';
 import useBranches from '@/hooks/useBranches';
+import useClinicUsage from '@/hooks/useClinicUsage';
+import LimitReachedBanner from '@/components/clinic/LimitReachedBanner';
 import type { Branch } from '@/types/database';
 
 interface BranchFormData {
@@ -56,6 +58,7 @@ export default function BranchesPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [practitionerCounts, setPractitionerCounts] = useState<Record<string, number>>({});
+  const { usage, refetch: refetchUsage } = useClinicUsage(clinicId);
 
   useEffect(() => {
     fetchBranches();
@@ -78,7 +81,8 @@ export default function BranchesPage() {
     loadCounts();
   }, [branches]);
 
-  const isEnterprise = clinic?.subscription_plan === 'enterprise';
+  const hasBranchAccess = clinic?.subscription_plan === 'professional' || clinic?.subscription_plan === 'enterprise';
+  const branchesAtLimit = usage?.branches != null && usage.branches.max !== null && usage.branches.current >= usage.branches.max;
 
   const openCreate = () => {
     setEditingBranch(null);
@@ -114,6 +118,7 @@ export default function BranchesPage() {
         await updateBranch(editingBranch.id, formData);
       } else {
         await createBranch(formData);
+        refetchUsage();
       }
       setShowDialog(false);
     } catch (err: any) {
@@ -137,12 +142,13 @@ export default function BranchesPage() {
     if (!confirm(`Delete "${branch.name}"? This cannot be undone.`)) return;
     try {
       await deleteBranch(branch.id);
+      refetchUsage();
     } catch (err: any) {
       alert(err.response?.data?.error ?? 'Failed to delete branch');
     }
   };
 
-  if (!isEnterprise) {
+  if (!hasBranchAccess) {
     return (
       <div className='flex flex-col items-center justify-center py-20 text-center'>
         <div className='w-16 h-16 rounded-2xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center mb-4'>
@@ -152,13 +158,13 @@ export default function BranchesPage() {
           Multi-Branch Management
         </h2>
         <p className='text-clinic-text/60 dark:text-white/60 max-w-md mb-6'>
-          Manage multiple clinic locations from one dashboard. Available on the Enterprise plan.
+          Manage multiple clinic locations from one dashboard. Available on the Professional plan and above.
         </p>
         <Button
           className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
           onClick={() => window.location.href = `/clinic/${clinicId}/billing`}
         >
-          Upgrade to Enterprise
+          Upgrade to Professional
         </Button>
       </div>
     );
@@ -174,16 +180,34 @@ export default function BranchesPage() {
           </h2>
           <p className='text-clinic-text/60 dark:text-white/60'>
             Manage your clinic locations
+            {usage?.branches.max !== null && (
+              <span className='ml-2 text-xs font-medium'>
+                ({usage?.branches.current ?? 0}/{usage?.branches.max} used)
+              </span>
+            )}
           </p>
         </div>
         <Button
           className='bg-clinic-teal hover:bg-clinic-teal/90 text-white'
           onClick={openCreate}
+          disabled={branchesAtLimit}
+          title={branchesAtLimit ? 'Branch limit reached. Upgrade your plan.' : undefined}
         >
           <Plus className='w-4 h-4 mr-2' />
           Add Branch
         </Button>
       </div>
+
+      {usage && usage.branches.max !== null && (
+        <LimitReachedBanner
+          resource="branches"
+          current={usage.branches.current}
+          max={usage.branches.max}
+          plan={usage.plan}
+          upgradeTo={usage.plan === 'professional' ? 'enterprise' : undefined}
+          clinicId={clinicId}
+        />
+      )}
 
       {error && (
         <div className='p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg'>

@@ -17,7 +17,7 @@ export interface StaffMember {
   updated_at: string;
 }
 
-const useStaffMembers = (clinicId: string) => {
+const useStaffMembers = (clinicId: string, branchId?: string | null) => {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,14 +34,16 @@ const useStaffMembers = (clinicId: string) => {
       setLoading(true);
       setError(null);
       const headers = await getAuthHeaders();
-      const { data } = await axios.get(`/api/clinic/${clinicId}/staff`, { headers });
+      const params: Record<string, string> = {};
+      if (branchId) params.branch_id = branchId;
+      const { data } = await axios.get(`/api/clinic/${clinicId}/staff`, { headers, params });
       setStaff(data.staff ?? []);
     } catch (err: any) {
       setError(err.response?.data?.error ?? 'Failed to load staff');
     } finally {
       setLoading(false);
     }
-  }, [clinicId]);
+  }, [clinicId, branchId]);
 
   const inviteStaff = useCallback(async (params: {
     email: string;
@@ -49,10 +51,11 @@ const useStaffMembers = (clinicId: string) => {
     staff_role: StaffRole;
   }) => {
     const headers = await getAuthHeaders();
-    const { data } = await axios.post(`/api/clinic/${clinicId}/staff`, params, { headers });
+    const body = branchId ? { ...params, branch_id: branchId } : params;
+    const { data } = await axios.post(`/api/clinic/${clinicId}/staff`, body, { headers });
     await fetchStaff();
     return data;
-  }, [clinicId, fetchStaff]);
+  }, [clinicId, branchId, fetchStaff]);
 
   const updateStaffRole = useCallback(async (
     staffId: string,

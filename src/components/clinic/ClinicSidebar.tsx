@@ -70,8 +70,8 @@ export function ClinicSidebar({
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
   const branchDropdownRef = useRef<HTMLDivElement>(null);
 
-  const isEnterprise = clinic?.subscription_plan === 'enterprise';
-  const showBranchSwitcher = isEnterprise && branches.length > 1;
+  const hasBranchAccess = clinic?.subscription_plan === 'enterprise' || clinic?.subscription_plan === 'professional';
+  const showBranchSwitcher = hasBranchAccess && branches.length > 1;
   const activeBranch = branches.find((b) => b.id === activeBranchId);
 
   useEffect(() => {

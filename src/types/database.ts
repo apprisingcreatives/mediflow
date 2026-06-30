@@ -337,3 +337,62 @@ export interface RevenueForecastPoint {
   revenue: number;
   is_forecast: boolean;
 }
+
+// Notifications
+export type NotificationType =
+  | 'appointment.created'
+  | 'appointment.cancelled'
+  | 'appointment.rescheduled'
+  | 'appointment.status_changed'
+  | 'staff.invited'
+  | 'staff.role_changed'
+  | 'practitioner.added'
+  | 'plan.changed'
+  | 'trial.expiring'
+  | 'payment.status_changed'
+  | 'report.submitted';
+
+export type RecipientType = 'super_admin' | 'clinic_admin' | 'practitioner' | 'patient';
+
+export interface Notification {
+  id: string;
+  recipient_id: string;
+  recipient_type: RecipientType;
+  clinic_id: string | null;
+  type: NotificationType;
+  title: string;
+  message: string;
+  action_url: string | null;
+  metadata: Record<string, unknown>;
+  is_read: boolean;
+  created_at: string;
+  expires_at: string;
+}
+
+// Plan Limits
+export interface LimitExceededError {
+  error: 'limit_exceeded';
+  message: string;
+  resource: 'practitioners' | 'branches';
+  current: number;
+  max: number;
+  plan: string;
+  upgradeTo?: string;
+}
+
+export interface ClinicUsage {
+  plan: string;
+  practitioners: {
+    current: number;
+    max: number | null;
+    byBranch: Record<string, number>;
+  };
+  branches: {
+    current: number;
+    max: number | null;
+  };
+  patients: {
+    current: number;
+    max: number | null;
+  };
+}

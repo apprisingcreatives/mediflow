@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateClinicRequest, isAuthSuccess } from '@/lib/api-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createNotifications } from '@/lib/notifications';
 import { logStaffAction } from '@/lib/audit';
 
 export async function GET(
@@ -11,11 +12,19 @@ export async function GET(
   const auth = await authenticateClinicRequest(request, clinicId, 'staff.manage');
   if (!isAuthSuccess(auth)) return auth;
 
-  const { data: staff, error } = await supabaseAdmin
+  const { searchParams } = new URL(request.url);
+  const branchId = searchParams.get('branch_id');
+
+  let query = supabaseAdmin
     .from('clinic_admins')
-    .select('id, clinic_id, email, name, role, staff_role, is_active, created_at, updated_at')
-    .eq('clinic_id', clinicId)
-    .order('created_at', { ascending: true });
+    .select('id, clinic_id, email, name, role, staff_role, branch_id, is_active, created_at, updated_at')
+    .eq('clinic_id', clinicId);
+
+  if (branchId) {
+    query = query.eq('branch_id', branchId);
+  }
+
+  const { data: staff, error } = await query.order('created_at', { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: 'Failed to fetch staff' }, { status: 500 });
@@ -32,7 +41,7 @@ export async function POST(
   const auth = await authenticateClinicRequest(request, clinicId, 'staff.manage');
   if (!isAuthSuccess(auth)) return auth;
 
-  const { email, name, staff_role } = await request.json();
+  const { email, name, staff_role, branch_id } = await request.json();
 
   if (!email || !name || !staff_role) {
     return NextResponse.json(
@@ -88,6 +97,17 @@ export async function POST(
     );
   }
 
+  let targetBranchId = branch_id;
+  if (!targetBranchId) {
+    const { data: defaultBranch } = await supabaseAdmin
+      .from('branches')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('is_default', true)
+      .single();
+    targetBranchId = defaultBranch?.id;
+  }
+
   const { data: newStaff, error: insertError } = await supabaseAdmin
     .from('clinic_admins')
     .insert({
@@ -96,6 +116,7 @@ export async function POST(
       name,
       role: 'admin',
       staff_role,
+      branch_id: targetBranchId,
       is_active: false,
       auth_user_id: invitedUser.user.id,
     })
@@ -118,6 +139,26 @@ export async function POST(
     entityId: newStaff.id,
     metadata: { invited_email: email, assigned_role: staff_role },
   });
+
+  // Notify clinic owner(s) about staff invite
+  const { data: owners } = await supabaseAdmin
+    .from('clinic_admins')
+    .select('auth_user_id')
+    .eq('clinic_id', clinicId)
+    .eq('staff_role', 'owner')
+    .eq('is_active', true);
+  const ownerNotifs = (owners ?? [])
+    .filter((o) => o.auth_user_id && o.auth_user_id !== auth.userId)
+    .map((o) => ({
+      recipientId: o.auth_user_id!,
+      recipientType: 'clinic_admin' as const,
+      clinicId,
+      type: 'staff.invited' as const,
+      title: 'Staff Member Invited',
+      message: `${name} (${staff_role}) has been invited to join the clinic`,
+      actionUrl: `/clinic/${clinicId}/staff`,
+    }));
+  if (ownerNotifs.length > 0) createNotifications(ownerNotifs);
 
   return NextResponse.json(
     { message: 'Invitation sent successfully', staff: newStaff },

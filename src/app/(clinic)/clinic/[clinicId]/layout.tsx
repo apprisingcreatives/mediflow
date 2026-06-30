@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Lock,
 } from 'lucide-react';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import { ClinicSidebar } from '@/components/clinic/ClinicSidebar';
 import { requireClinicAdmin, clinicAdminSignOut } from '@/lib/admin-auth';
 import { useGetClinicFeatures, useGetClinic } from '@/hooks';
@@ -78,7 +79,7 @@ export default function ClinicDashboardLayout({
           setStaffRole('owner');
         }
 
-        // Fetch branches for enterprise clinics
+        // Fetch branches for professional+ clinics
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.access_token) {
@@ -91,7 +92,7 @@ export default function ClinicDashboardLayout({
             }
           }
         } catch {
-          // Non-enterprise clinics or branches not yet migrated — ignore
+          // Non-professional+ clinics or branches not yet migrated — ignore
         }
       }
 
@@ -174,6 +175,7 @@ export default function ClinicDashboardLayout({
                 </p>
               </div>
               <div className='flex items-center gap-4'>
+                <NotificationBell />
                 <span
                   className={`text-xs px-3 py-1 rounded-full font-medium ${
                     clinic?.subscription_plan === 'professional'

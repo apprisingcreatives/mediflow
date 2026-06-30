@@ -13,7 +13,7 @@ export async function DELETE(
     const authResult = await authenticateClinicRequest(request, clinicId, 'branches.manage');
     if (!isAuthSuccess(authResult)) return authResult;
 
-    const planCheck = await requirePlan(clinicId, 'enterprise');
+    const planCheck = await requirePlan(clinicId, 'professional');
     if (planCheck !== true) return planCheck;
 
     const { error } = await supabaseAdmin

@@ -35,6 +35,7 @@ import { STAFF_ROLES, ROLE_LABELS } from '@/lib/permissions';
 import type { StaffRole } from '@/lib/permissions';
 import { InviteStaffModal } from '@/components/clinic/InviteStaffModal';
 import { PermissionGate } from '@/components/clinic/PermissionGate';
+import { useClinicContext } from '../clinic-context';
 
 const ROLE_BADGE_CLASS: Record<StaffRole, string> = {
   owner: 'bg-purple-100 text-purple-700',
@@ -128,9 +129,10 @@ function StaffTableRow({ member, isBusy, onRoleChange, onDeactivate, onReactivat
 export default function StaffPage() {
   const params = useParams();
   const clinicId = params.clinicId as string;
+  const { activeBranchId } = useClinicContext();
 
   const { staff, loading, error, fetchStaff, inviteStaff, updateStaffRole, deactivateStaff } =
-    useStaffMembers(clinicId);
+    useStaffMembers(clinicId, activeBranchId);
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [confirmDeactivate, setConfirmDeactivate] = useState<StaffMember | null>(null);
