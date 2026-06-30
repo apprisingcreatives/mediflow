@@ -158,7 +158,10 @@ export async function createRefund(params: {
 }
 
 export function verifyWebhookSignature(rawBody: string, signatureHeader: string): boolean {
-  if (!webhookSecret) return true;
+  if (!webhookSecret) {
+    console.error('PAYMONGO_WEBHOOK_SECRET not configured — rejecting webhook');
+    return false;
+  }
 
   const parts = signatureHeader.split(',');
   const timestampPart = parts.find((p) => p.startsWith('t='));
