@@ -45,6 +45,51 @@ export async function requirePlan(
   return true;
 }
 
+const GRACE_PERIOD_DAYS = 7;
+
+export async function requireActiveSubscription(
+  clinicId: string,
+): Promise<true | NextResponse> {
+  const { data: clinic, error } = await supabaseAdmin
+    .from('clinics')
+    .select('payment_status, is_subscription_active, trial_end_date, next_billing_date')
+    .eq('id', clinicId)
+    .single();
+
+  if (error || !clinic) {
+    return NextResponse.json({ error: 'Clinic not found' }, { status: 404 });
+  }
+
+  const now = new Date();
+
+  if (clinic.payment_status === 'active') return true;
+
+  if (clinic.payment_status === 'trial') {
+    if (clinic.trial_end_date && new Date(clinic.trial_end_date) > now) return true;
+    return makeInactiveResponse(clinicId, 'expired');
+  }
+
+  if (clinic.payment_status === 'past_due' && clinic.next_billing_date) {
+    const graceDeadline = new Date(clinic.next_billing_date);
+    graceDeadline.setDate(graceDeadline.getDate() + GRACE_PERIOD_DAYS);
+    if (graceDeadline > now) return true;
+  }
+
+  return makeInactiveResponse(clinicId, clinic.payment_status ?? 'expired');
+}
+
+function makeInactiveResponse(clinicId: string, paymentStatus: string): NextResponse {
+  return NextResponse.json(
+    {
+      error: 'subscription_inactive',
+      message: 'Your subscription is inactive. Please renew to continue.',
+      payment_status: paymentStatus,
+      billing_url: `/clinic/${clinicId}/billing`,
+    },
+    { status: 403 },
+  );
+}
+
 // Advisory check — not atomic with the subsequent INSERT. Under concurrent
 // requests the count may drift by one. A DB trigger or advisory lock would
 // close the gap, but the blast radius here is a single extra practitioner/branch.

@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { createNotifications } from '@/lib/notifications';
 import { sendSMS } from '@/lib/unisms';
 import { normalizeToE164, isValidPHMobile } from '@/lib/phone';
+import { requireActiveSubscription } from '@/lib/plan-gating';
 import jwt from 'jsonwebtoken';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -69,6 +70,11 @@ export async function POST(request: Request) {
       booked_by,
       payment_method,
     } = body;
+
+    if (clinic_id) {
+      const subCheck = await requireActiveSubscription(clinic_id);
+      if (subCheck !== true) return subCheck;
+    }
 
     // Validate required fields
     if (!appointment_date || !appointment_time) {
