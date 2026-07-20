@@ -21,6 +21,9 @@ export { default as usePatientBooking } from './usePatientBooking';
 export { default as useServiceMutations } from './useServiceMutations';
 export { default as useFeatureMutations } from './useFeatureMutations';
 
+// Clinic mutations (super admin)
+export { default as useClinicMutations } from './useClinicMutations';
+
 // Re-export types
 export type { Appointment, AppointmentStatus } from './useGetAppointments';
 export { APPOINTMENT_STATUSES } from './useGetAppointments';

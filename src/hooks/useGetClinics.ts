@@ -21,7 +21,12 @@ export type PublicClinicWithDetails = Pick<
 
 };
 
-const useGetClinics = () => {
+interface UseGetClinicsOptions {
+  /** When true, fetches all clinics including inactive ones (for super admin). Defaults to false. */
+  showAll?: boolean;
+}
+
+const useGetClinics = (options?: UseGetClinicsOptions) => {
   const [clinics, setClinics] = useState<PublicClinicWithDetails[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +36,7 @@ const useGetClinics = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('clinics')
         .select(
           `
@@ -50,8 +55,13 @@ const useGetClinics = () => {
           clinic_ai_features (*)
         `,
         )
-        .eq('is_active', true)
         .order('name', { ascending: true });
+
+      if (!options?.showAll) {
+        query = query.eq('is_active', true);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         throw error;
