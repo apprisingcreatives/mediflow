@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { CalendarIcon, Clock, Loader2, UserPlus, Search, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -203,40 +204,47 @@ export function AppointmentFormModal({
 
   // (Hook handles fetching time slots and clearing selected time if unavailable)
 
-  const handleInviteNewPatient = async () => {
-    if (
-      !newPatient.firstName ||
-      !newPatient.lastName ||
-      !newPatient.email ||
-      !newPatient.phone
-    ) {
-      return;
-    }
-
-    setInvitingPatient(true);
-    try {
-      const patient = await onInvitePatient(newPatient);
-      if (patient) {
-        setSelectedPatientId(patient.id);
-        setPatientMode("existing");
-        setNewPatient({ firstName: "", lastName: "", email: "", phone: "" });
-      }
-    } catch (err) {
-      console.error("Failed to invite patient:", err);
-    } finally {
-      setInvitingPatient(false);
-    }
-  };
 
   const handleSubmit = async () => {
+    let patientId = selectedPatientId;
+
     if (patientMode === "new") {
-      // First invite the patient
-      await handleInviteNewPatient();
-      return;
+      if (
+        !newPatient.firstName ||
+        !newPatient.lastName ||
+        !newPatient.email ||
+        !newPatient.phone
+      ) {
+        return;
+      }
+
+      // Verify email format
+      const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newPatient.email);
+      if (!isEmailValid) {
+        toast.error("Please enter a valid email address.");
+        return;
+      }
+
+      setInvitingPatient(true);
+      try {
+        const patient = await onInvitePatient(newPatient);
+        if (patient) {
+          patientId = patient.id;
+        } else {
+          setInvitingPatient(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to invite patient:", err);
+        setInvitingPatient(false);
+        return;
+      } finally {
+        setInvitingPatient(false);
+      }
     }
 
     if (
-      !selectedPatientId ||
+      !patientId ||
       !selectedPractitionerId ||
       !selectedServiceId ||
       !selectedDate ||
@@ -246,7 +254,7 @@ export function AppointmentFormModal({
     }
 
     await onSubmit({
-      patientId: selectedPatientId,
+      patientId: patientId,
       practitionerId: selectedPractitionerId,
       serviceId: selectedServiceId,
       appointmentDate: format(selectedDate, "yyyy-MM-dd"),
@@ -269,7 +277,11 @@ export function AppointmentFormModal({
         newPatient.firstName &&
         newPatient.lastName &&
         newPatient.email &&
-        newPatient.phone
+        newPatient.phone &&
+        selectedPractitionerId &&
+        selectedServiceId &&
+        selectedDate &&
+        selectedTime
       );
     }
     return (

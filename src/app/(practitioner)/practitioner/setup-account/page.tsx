@@ -153,7 +153,7 @@ export default function SetupPractitionerAccount() {
               <Stethoscope className='w-8 h-8 text-clinic-ai' />
             </div>
             <h1 className='text-2xl font-display font-bold text-clinic-navy mb-2'>
-              Welcome, Dr. {practitionerName}!
+              Welcome, {practitionerName}!
             </h1>
             <p className='text-clinic-text/60'>
               You&apos;ve been invited to join{" "}

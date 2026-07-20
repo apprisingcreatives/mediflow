@@ -22,13 +22,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
     }
 
-    const { data: appointment } = await supabaseAdmin
+    const { data: appointment, error: fetchError } = await supabaseAdmin
       .from('appointments')
       .select('id, appointment_date, appointment_time, status, clinic:clinics(name), practitioner:practitioners(name)')
       .eq('id', decoded.appointmentId)
       .single();
 
-    if (!appointment) {
+    if (fetchError || !appointment) {
+      console.error('Error fetching appointment:', fetchError);
       return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
     }
 
@@ -42,7 +43,8 @@ export async function GET(request: NextRequest) {
         practitioner: (appointment.practitioner as any)?.name,
       },
     });
-  } catch {
+  } catch (err: any) {
+    console.error('Token verification error:', err);
     return NextResponse.json({ error: 'Invalid or expired link' }, { status: 400 });
   }
 }

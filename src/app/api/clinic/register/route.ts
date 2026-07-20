@@ -1,29 +1,40 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
+const DEFAULT_WORKING_HOURS = [
+  { day_of_week: 1, start_time: '09:00:00', end_time: '17:00:00', is_available: true }, // Monday
+  { day_of_week: 2, start_time: '09:00:00', end_time: '17:00:00', is_available: true }, // Tuesday
+  { day_of_week: 3, start_time: '09:00:00', end_time: '17:00:00', is_available: true }, // Wednesday
+  { day_of_week: 4, start_time: '09:00:00', end_time: '17:00:00', is_available: true }, // Thursday
+  { day_of_week: 5, start_time: '09:00:00', end_time: '17:00:00', is_available: true }, // Friday
+  { day_of_week: 6, start_time: '09:00:00', end_time: '17:00:00', is_available: false }, // Saturday
+  { day_of_week: 0, start_time: '09:00:00', end_time: '17:00:00', is_available: false }, // Sunday
+];
+
 export async function POST(request: Request) {
   let createdClinicId: string | null = null;
   let createdAuthUserId: string | null = null;
+  let createdPractitionerAuthUserId: string | null = null;
 
   try {
-    const { clinic, admin, services } = await request.json();
+    const { clinic, practitioner, services } = await request.json();
 
     // --- Basic validations ---
-    if (!clinic.name || !clinic.email) {
+    if (!clinic.name || !clinic.email || !clinic.password) {
       return NextResponse.json(
-        { error: "Clinic name and email are required" },
+        { error: "Clinic name, email, and password are required" },
         { status: 400 }
       );
     }
 
-    if (!admin.name || !admin.email) {
+    if (!practitioner.name || !practitioner.email || !practitioner.specialization) {
       return NextResponse.json(
-        { error: "Admin name and email are required" },
+        { error: "Practitioner name, email, and specialization are required" },
         { status: 400 }
       );
     }
 
-    // --- Check if clinic email already exists ---
+    // --- Check if clinic/admin email already exists ---
     const { data: existingClinic } = await supabaseAdmin
       .from("clinics")
       .select("id")
@@ -37,16 +48,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // --- Check if admin email already exists in clinic_admins ---
     const { data: existingAdmin } = await supabaseAdmin
       .from("clinic_admins")
       .select("id")
-      .eq("email", admin.email)
+      .eq("email", clinic.email)
       .single();
 
     if (existingAdmin) {
       return NextResponse.json(
         { error: "An admin with this email already exists" },
+        { status: 400 }
+      );
+    }
+
+    // --- Check if practitioner email already exists in system ---
+    const { data: existingAuthUser } = await supabaseAdmin.auth.admin.listUsers();
+    const emailInUse = existingAuthUser?.users?.some(u => u.email?.toLowerCase() === practitioner.email.toLowerCase());
+    
+    if (emailInUse) {
+      return NextResponse.json(
+        { error: "This practitioner email is already registered in the system" },
         { status: 400 }
       );
     }
@@ -93,7 +114,7 @@ export async function POST(request: Request) {
         address: clinic.address || null,
         city: clinic.city || null,
         description: clinic.description || null,
-        slug: slug, // Add the generated slug
+        slug: slug,
         subscription_plan: clinic.subscription_plan || "starter",
         trial_start_date: trialStartDate.toISOString(),
         trial_end_date: trialEndDate.toISOString(),
@@ -113,24 +134,18 @@ export async function POST(request: Request) {
     // Create admin user in Supabase Auth with password
     const { data: authUser, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
-        email: admin.email,
-        password: admin.password,
-        email_confirm: true, // Auto-confirm email for clinic admins
+        email: clinic.email,
+        password: clinic.password,
+        email_confirm: true, // Auto-confirm email for clinic admin
         user_metadata: {
-          name: admin.name,
+          name: clinic.name + " Admin",
           role: "clinic_admin",
           clinic_id: newClinic.id,
         },
       });
 
     if (authError || !authUser.user) {
-      if (createdClinicId) {
-        await supabaseAdmin.from("clinics").delete().eq("id", createdClinicId);
-      }
-      return NextResponse.json(
-        { error: authError?.message || "Failed to create admin user" },
-        { status: 500 }
-      );
+      throw new Error(authError?.message || "Failed to create admin user");
     }
 
     createdAuthUserId = authUser.user.id;
@@ -138,8 +153,8 @@ export async function POST(request: Request) {
     // Insert admin record into clinic_admins table
     const baseAdminRecord = {
       clinic_id: newClinic.id,
-      email: admin.email,
-      name: admin.name,
+      email: clinic.email,
+      name: clinic.name + " Admin",
       role: "admin",
       auth_user_id: authUser.user.id,
     };
@@ -155,17 +170,85 @@ export async function POST(request: Request) {
     }
 
     if (adminInsertError) {
-      if (createdClinicId) {
-        await supabaseAdmin.from("clinics").delete().eq("id", createdClinicId);
-      }
-      if (createdAuthUserId) {
-        await supabaseAdmin.auth.admin.deleteUser(createdAuthUserId);
-      }
-      return NextResponse.json(
-        { error: adminInsertError.message },
-        { status: 500 }
-      );
+      throw new Error(adminInsertError.message);
     }
+
+    // --- Invite/Create Practitioner ---
+    const { data: invitedUser, error: inviteError } =
+      await supabaseAdmin.auth.admin.inviteUserByEmail(practitioner.email, {
+        data: {
+          name: practitioner.name,
+          specialization: practitioner.specialization,
+          role: 'clinic_practitioner',
+          clinic_id: newClinic.id,
+          clinic_name: newClinic.name,
+        },
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/practitioner/setup-account`,
+      });
+
+    if (inviteError || !invitedUser.user) {
+      throw new Error(inviteError?.message || "Failed to send invitation to practitioner");
+    }
+
+    createdPractitionerAuthUserId = invitedUser.user.id;
+
+    // Create practitioner record in database
+    const { data: newPractitioner, error: practitionerError } = await supabaseAdmin
+      .from('practitioners')
+      .insert({
+        auth_user_id: invitedUser.user.id,
+        clinic_id: newClinic.id,
+        name: practitioner.name,
+        email: practitioner.email,
+        specialization: practitioner.specialization,
+        is_active: false, // Will be activated after confirmation/setup
+      })
+      .select()
+      .single();
+
+    if (practitionerError) {
+      throw new Error(practitionerError.message || "Failed to create practitioner record");
+    }
+
+    // Get default branch created by DB trigger seed_default_branch
+    const { data: defaultBranch } = await supabaseAdmin
+      .from('branches')
+      .select('id')
+      .eq('clinic_id', newClinic.id)
+      .eq('is_default', true)
+      .single();
+
+    if (defaultBranch) {
+      // Assign practitioner to default branch
+      await supabaseAdmin
+        .from('practitioner_branches')
+        .insert({
+          practitioner_id: newPractitioner.id,
+          branch_id: defaultBranch.id,
+        });
+    }
+
+    // Update user metadata with practitioner_id
+    await supabaseAdmin.auth.admin.updateUserById(invitedUser.user.id, {
+      user_metadata: {
+        name: practitioner.name,
+        specialization: practitioner.specialization,
+        role: 'clinic_practitioner',
+        clinic_id: newClinic.id,
+        clinic_name: newClinic.name,
+        practitioner_id: newPractitioner.id,
+      },
+    });
+
+    // Create default working hours
+    const workingHoursData = DEFAULT_WORKING_HOURS.map(wh => ({
+      ...wh,
+      practitioner_id: newPractitioner.id,
+    }));
+
+    await supabaseAdmin
+      .from('practitioner_working_hours')
+      .insert(workingHoursData);
 
     // --- Insert services if provided ---
     if (services && services.length > 0) {
@@ -184,24 +267,14 @@ export async function POST(request: Request) {
         })
       );
 
-      const { error: servicesInsertError } = await supabaseAdmin
+      await supabaseAdmin
         .from("clinic_services")
         .insert(servicesToInsert);
-
-      if (servicesInsertError) {
-        throw new Error(`Failed to insert clinic services: ${servicesInsertError.message}`);
-      }
     }
 
-    // Note: AI features are populated automatically by the database trigger:
-    // trigger_populate_clinic_ai_features (AFTER INSERT ON public.clinics)
-    // There is no need to manually insert them in this route.
-
-    // --- Response ---
     return NextResponse.json(
       {
-        message:
-          "Clinic registered successfully. Admin invite has been sent via email.",
+        message: "Clinic registered successfully. Practitioner invite has been sent via email.",
         clinic: {
           ...newClinic,
           trial_end_date: trialEndDate.toISOString(),
@@ -212,12 +285,16 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Registration error:", error);
 
-    // Rollback any partially created resources to prevent locked states
-    if (createdClinicId) {
-      await supabaseAdmin.from("clinics").delete().eq("id", createdClinicId);
+    // Rollback
+    if (createdPractitionerAuthUserId) {
+      await supabaseAdmin.auth.admin.deleteUser(createdPractitionerAuthUserId);
     }
     if (createdAuthUserId) {
       await supabaseAdmin.auth.admin.deleteUser(createdAuthUserId);
+    }
+    if (createdClinicId) {
+      // Due to cascade constraints, deleting clinic deletes practitioner_branches, practitioner_working_hours, clinic_admins, clinic_services, branches
+      await supabaseAdmin.from("clinics").delete().eq("id", createdClinicId);
     }
 
     return NextResponse.json(

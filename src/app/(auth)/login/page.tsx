@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Activity, Eye, EyeOff, Shield, Lock, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
 
 function LoginContent() {
   const router = useRouter();
@@ -20,6 +21,7 @@ function LoginContent() {
     user,
     patient,
     practitioner,
+    signOut,
     isLoading: authLoading,
   } = useAuth();
 
@@ -27,6 +29,7 @@ function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<'patient' | 'doctor' | 'clinic'>('patient');
   const [error, setError] = useState<string | null>(null);
 
   const redirectUrl = searchParams.get("redirect") || "/patient";
@@ -63,11 +66,38 @@ function LoginContent() {
     if (result.error) {
       setError(result.error.message);
       setIsLoading(false);
-    } else {
-      // Prefer the redirect query param over the default role-based redirect
-      const hasCustomRedirect = searchParams.get("redirect");
-      router.push(hasCustomRedirect ? redirectUrl : (result.redirectTo || redirectUrl));
+      return;
     }
+
+    // Double check that the user's role matches the selected role
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (currentUser) {
+      const userRole = currentUser.user_metadata?.role || 'patient';
+      
+      let isMatch = false;
+      let roleLabel = '';
+      if (role === 'patient') {
+        isMatch = userRole === 'patient';
+        roleLabel = 'Patient';
+      } else if (role === 'doctor') {
+        isMatch = userRole === 'clinic_practitioner' || userRole === 'practitioner';
+        roleLabel = 'Doctor';
+      } else if (role === 'clinic') {
+        isMatch = userRole === 'clinic_admin';
+        roleLabel = 'Clinic';
+      }
+
+      if (!isMatch) {
+        await signOut();
+        setError(`This account is not registered as a ${roleLabel}. Please select the correct option.`);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // Prefer the redirect query param over the default role-based redirect
+    const hasCustomRedirect = searchParams.get("redirect");
+    router.push(hasCustomRedirect ? redirectUrl : (result.redirectTo || redirectUrl));
   };
 
   const handleGoogleSignIn = async () => {
@@ -102,13 +132,50 @@ function LoginContent() {
           </Link>
 
           {/* Header */}
-          <div className='mb-8'>
+          <div className='mb-6'>
             <h1 className='font-display text-3xl font-bold text-clinic-navy dark:text-white mb-2'>
               Welcome back
             </h1>
             <p className='text-clinic-text/60 dark:text-white/60'>
               Sign in to access your clinic dashboard
             </p>
+          </div>
+
+          {/* Role Selector */}
+          <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl mb-6">
+            <button
+              type="button"
+              onClick={() => setRole('patient')}
+              className={`py-2 px-3 text-sm font-semibold rounded-lg transition-all ${
+                role === 'patient'
+                  ? 'bg-white dark:bg-slate-700 text-clinic-navy dark:text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              Patient
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole('doctor')}
+              className={`py-2 px-3 text-sm font-semibold rounded-lg transition-all ${
+                role === 'doctor'
+                  ? 'bg-white dark:bg-slate-700 text-clinic-navy dark:text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              Doctor
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole('clinic')}
+              className={`py-2 px-3 text-sm font-semibold rounded-lg transition-all ${
+                role === 'clinic'
+                  ? 'bg-white dark:bg-slate-700 text-clinic-navy dark:text-white shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              }`}
+            >
+              Clinic
+            </button>
           </div>
 
           {/* Form */}

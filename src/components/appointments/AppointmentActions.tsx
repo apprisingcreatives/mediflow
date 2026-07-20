@@ -220,6 +220,43 @@ export function AppointmentActions({
     );
   }
 
+  const deleteBooking = async () => {
+    setLoading('deleted');
+    setError(null);
+    try {
+      const { error: deleteError } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', appointment.id);
+
+      if (deleteError) throw deleteError;
+
+      // Log activity
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('activity_logs').insert({
+          patient_id: appointment.patient_id,
+          clinic_id: appointment.clinic_id,
+          actor_id: user.id,
+          actor_role: viewerRole,
+          action_type: 'appointment_deleted',
+          entity_type: 'appointment',
+          entity_id: appointment.id,
+          metadata: { deleted_by: viewerRole },
+        }).then(({ error: logError }) => {
+          if (logError) console.error('Failed to log activity:', logError);
+        });
+      }
+
+      onStatusChange?.();
+    } catch (err: any) {
+      console.error('Failed to delete booking:', err);
+      setError('Failed to delete booking. Please try again.');
+    } finally {
+      setLoading(null);
+    }
+  };
+
   // --- CANCEL button ---
   if (
     viewerRole === 'patient' &&
@@ -260,6 +297,48 @@ export function AppointmentActions({
               onClick={() => updateStatus('cancelled')}
             >
               Cancel Appointment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
+  // --- DELETE booking button (Clinic Admin) ---
+  if (viewerRole === 'clinic_admin') {
+    buttons.push(
+      <AlertDialog key="delete">
+        <AlertDialogTrigger asChild>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20"
+            disabled={loading !== null}
+          >
+            {loading === 'deleted' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <XCircle className="w-4 h-4 mr-1" />
+                Delete Booking
+              </>
+            )}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Booking?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this booking? This will permanently remove the appointment record.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={deleteBooking}
+            >
+              Delete Booking
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

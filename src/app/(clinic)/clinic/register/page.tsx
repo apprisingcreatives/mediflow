@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { RegisterHeader } from '@/components/clinic/register/RegisterHeader';
 import { ClinicInfoStep } from '@/components/clinic/register/ClinicInfoStep';
-import { AdminAccountStep } from '@/components/clinic/register/AdminAccountStep';
+import { PractitionerStep } from '@/components/clinic/register/PractitionerStep';
 import { ServicesStep, Service } from '@/components/clinic/register/ServicesStep';
 import { SelectPlanStep } from '@/components/clinic/register/SelectPlanStep';
 import { SuccessStep } from '@/components/clinic/register/SuccessStep';
@@ -14,18 +14,19 @@ export default function ClinicRegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Clinic Info
+  // Clinic Info & Admin Password
   const [clinicName, setClinicName] = useState('');
   const [clinicEmail, setClinicEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [clinicPhone, setClinicPhone] = useState('');
   const [clinicAddress, setClinicAddress] = useState('');
   const [clinicCity, setClinicCity] = useState('');
   const [clinicDescription, setClinicDescription] = useState('');
 
-  // Admin Info
-  const [adminName, setAdminName] = useState('');
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
+  // Practitioner Info
+  const [practitionerName, setPractitionerName] = useState('');
+  const [practitionerEmail, setPractitionerEmail] = useState('');
+  const [practitionerSpecialization, setPractitionerSpecialization] = useState('');
 
   // Services
   const [services, setServices] = useState<Service[]>([
@@ -46,16 +47,17 @@ export default function ClinicRegisterPage() {
           clinic: {
             name: clinicName,
             email: clinicEmail,
+            password: adminPassword, // Admin password
             phone: clinicPhone,
             address: clinicAddress,
             city: clinicCity,
             description: clinicDescription,
             subscription_plan: selectedPlan,
           },
-          admin: {
-            name: adminName,
-            email: adminEmail,
-            password: adminPassword,
+          practitioner: {
+            name: practitionerName,
+            email: practitionerEmail,
+            specialization: practitionerSpecialization,
           },
           services: services.filter((s) => s.name && s.price),
         }),
@@ -89,6 +91,7 @@ export default function ClinicRegisterPage() {
             <ClinicInfoStep
               clinicName={clinicName} setClinicName={setClinicName}
               clinicEmail={clinicEmail} setClinicEmail={setClinicEmail}
+              adminPassword={adminPassword} setAdminPassword={setAdminPassword}
               clinicPhone={clinicPhone} setClinicPhone={setClinicPhone}
               clinicAddress={clinicAddress} setClinicAddress={setClinicAddress}
               clinicCity={clinicCity} setClinicCity={setClinicCity}
@@ -97,10 +100,10 @@ export default function ClinicRegisterPage() {
             />
           )}
           {step === 2 && (
-            <AdminAccountStep
-              adminName={adminName} setAdminName={setAdminName}
-              adminEmail={adminEmail} setAdminEmail={setAdminEmail}
-              adminPassword={adminPassword} setAdminPassword={setAdminPassword}
+            <PractitionerStep
+              practitionerName={practitionerName} setPractitionerName={setPractitionerName}
+              practitionerEmail={practitionerEmail} setPractitionerEmail={setPractitionerEmail}
+              practitionerSpecialization={practitionerSpecialization} setPractitionerSpecialization={setPractitionerSpecialization}
               onNext={() => setStep(3)} onBack={() => setStep(1)}
             />
           )}
