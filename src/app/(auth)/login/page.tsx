@@ -137,7 +137,9 @@ function LoginContent() {
               Welcome back
             </h1>
             <p className='text-clinic-text/60 dark:text-white/60'>
-              Sign in to access your clinic dashboard
+              {role === 'patient' && "Sign in to access your patient dashboard"}
+              {role === 'doctor' && "Sign in to access your practitioner dashboard"}
+              {role === 'clinic' && "Sign in to access your clinic dashboard"}
             </p>
           </div>
 
@@ -192,7 +194,13 @@ function LoginContent() {
               <Input
                 id='email'
                 type='email'
-                placeholder='you@clinic.com'
+                placeholder={
+                  role === 'patient'
+                    ? 'you@example.com'
+                    : role === 'doctor'
+                    ? 'doctor@clinic.com'
+                    : 'admin@clinic.com'
+                }
                 className='h-12'
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
