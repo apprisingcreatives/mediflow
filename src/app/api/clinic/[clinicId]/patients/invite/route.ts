@@ -241,7 +241,9 @@ export async function POST(
     if (patientClinicError) {
       // Rollback: delete patient and auth user if patient_clinics creation fails
       await supabaseAdmin.from('patients').delete().eq('id', newPatient.id);
-      await supabaseAdmin.auth.admin.deleteUser(invitedUser.user.id);
+      if (!inviteErrorObj && authUserId) {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      }
       console.error('Patient clinics creation error:', patientClinicError);
       return NextResponse.json(
         { error: 'Failed to create patient-clinic relationship' },

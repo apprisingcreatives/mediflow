@@ -57,6 +57,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const resolveUserRole = async (u: User): Promise<string> => {
+    let role = u.user_metadata?.role;
+    if (role) return role;
+
+    // Check if practitioner
+    const { data: prac } = await supabase
+      .from('practitioners')
+      .select('id')
+      .eq('email', u.email || '')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (prac) {
+      await supabase
+        .from('practitioners')
+        .update({ auth_user_id: u.id })
+        .eq('id', prac.id);
+
+      role = 'clinic_practitioner';
+      await supabase.auth.updateUser({ data: { role } });
+      return role;
+    }
+
+    // Check if clinic admin
+    const { data: admin } = await supabase
+      .from('clinic_admins')
+      .select('id')
+      .eq('email', u.email || '')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (admin) {
+      await supabase
+        .from('clinic_admins')
+        .update({ auth_user_id: u.id })
+        .eq('id', admin.id);
+
+      role = 'clinic_admin';
+      await supabase.auth.updateUser({ data: { role } });
+      return role;
+    }
+
+    role = 'patient';
+    await supabase.auth.updateUser({ data: { role } });
+    return role;
+  };
+
   const fetchPatient = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -64,6 +113,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select('*')
         .eq('auth_user_id', userId)
         .single();
+
+      if (error && error.code === 'PGRST116') {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const res = await fetch('/api/auth/activate', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          if (res.ok) {
+            const { data: newPatient } = await supabase
+              .from('patients')
+              .select('*')
+              .eq('auth_user_id', userId)
+              .single();
+            setPatient(newPatient);
+            return;
+          }
+        }
+      }
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching patient:', error);
@@ -120,10 +191,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          const role = session.user.user_metadata?.role;
-          if (!role || role === 'patient') {
+          const role = await resolveUserRole(session.user);
+          if (role === 'patient') {
             currentUserId = session.user.id;
             await fetchPatient(session.user.id);
+          } else if (role === 'clinic_practitioner' || role === 'practitioner') {
+            await fetchPractitioner(session.user.id);
           }
         }
       } catch (err) {
@@ -149,14 +222,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        const role = session.user.user_metadata?.role;
-        if (session.user.id !== currentUserId && (!role || role === 'patient')) {
-          currentUserId = session.user.id;
-          await fetchPatient(session.user.id);
+        const role = await resolveUserRole(session.user);
+        if (role === 'patient') {
+          if (session.user.id !== currentUserId) {
+            currentUserId = session.user.id;
+            await fetchPatient(session.user.id);
+          }
+        } else if (role === 'clinic_practitioner' || role === 'practitioner') {
+          await fetchPractitioner(session.user.id);
         }
       } else {
         currentUserId = null;
         setPatient(null);
+        setPractitioner(null);
       }
 
       setIsLoading(false);

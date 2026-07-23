@@ -42,6 +42,8 @@ export async function POST(request: Request) {
     }
 
     const metadata = user.user_metadata;
+    const first_name = metadata?.first_name || metadata?.given_name || metadata?.name?.split(' ')[0] || metadata?.full_name?.split(' ')[0] || '';
+    const last_name = metadata?.last_name || metadata?.family_name || metadata?.name?.split(' ').slice(1).join(' ') || metadata?.full_name?.split(' ').slice(1).join(' ') || '';
 
     // Create patient record using admin client (bypasses RLS)
     const { data: patient, error: patientError } = await supabaseAdmin
@@ -49,13 +51,19 @@ export async function POST(request: Request) {
       .insert({
         auth_user_id: user.id,
         email: user.email,
-        first_name: metadata?.first_name || '',
-        last_name: metadata?.last_name || '',
+        first_name,
+        last_name,
         onboarding_completed: false,
         is_active: true,
       })
       .select('id')
       .single();
+
+    if (!metadata?.role) {
+      await supabaseAdmin.auth.admin.updateUserById(user.id, {
+        user_metadata: { ...metadata, role: 'patient' }
+      });
+    }
 
     if (patientError || !patient) {
       console.error('Error creating patient record:', patientError);

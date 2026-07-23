@@ -47,7 +47,7 @@ interface Clinic {
 function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signUp, user, isLoading: authLoading } = useAuth();
+  const { signUp, signInWithGoogle, signInWithApple, user, isLoading: authLoading } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -120,6 +120,22 @@ function RegisterContent() {
     } else {
       setSuccess(true);
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    const { error } = await signInWithGoogle();
+    if (error) {
+      setError(error.message);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setError(null);
+    const { error } = await signInWithApple();
+    if (error) {
+      setError(error.message);
     }
   };
   return (
@@ -386,7 +402,12 @@ function RegisterContent() {
           </div>
 
           <div className='grid grid-cols-2 gap-4'>
-            <Button variant='outline' className='h-12'>
+            <Button
+              variant='outline'
+              className='h-12'
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+            >
               <svg className='w-5 h-5 mr-2' viewBox='0 0 24 24'>
                 <path
                   fill='currentColor'
@@ -407,7 +428,12 @@ function RegisterContent() {
               </svg>
               Google
             </Button>
-            <Button variant='outline' className='h-12'>
+            <Button
+              variant='outline'
+              className='h-12'
+              onClick={handleAppleSignIn}
+              disabled={isLoading}
+            >
               <svg
                 className='w-5 h-5 mr-2'
                 fill='currentColor'
