@@ -20,9 +20,15 @@ const useNotifications = () => {
     return { Authorization: `Bearer ${session.access_token}` };
   };
 
-  const fetchNotifications = useCallback(async () => {
+  const lastFetchRef = useRef(0);
+
+  const fetchNotifications = useCallback(async (silent = false) => {
+    const now = Date.now();
+    if (silent && now - lastFetchRef.current < 5_000) return;
+    lastFetchRef.current = now;
+
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError(null);
       const headers = await getAuthHeaders();
       const { data } = await axios.get('/api/notifications', {
@@ -33,9 +39,9 @@ const useNotifications = () => {
       setUnreadCount(data.unread_count ?? 0);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string } } };
-      setError(axiosErr.response?.data?.error ?? 'Failed to load notifications');
+      if (!silent) setError(axiosErr.response?.data?.error ?? 'Failed to load notifications');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -111,24 +117,23 @@ const useNotifications = () => {
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED' && mounted) {
-            fetchNotifications();
+            fetchNotifications(true);
           }
           if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && mounted) {
-            fetchNotifications();
+            fetchNotifications(true);
           }
         });
 
       channelRef.current = channel;
 
-      // Polling fallback in case Realtime misses events
       pollInterval = setInterval(() => {
-        if (mounted) fetchNotifications();
+        if (mounted) fetchNotifications(true);
       }, 30_000);
     };
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && userIdRef.current) {
-        fetchNotifications();
+        fetchNotifications(true);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);

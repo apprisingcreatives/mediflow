@@ -36,9 +36,10 @@ export async function sendSMS(
       messageId: msg.reference_id || '',
       status: msg.status || 'sent',
     };
-  } catch (error: any) {
-    const details = error.response?.data;
-    console.error('UniSMS API error:', JSON.stringify(details, null, 2));
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      console.error('UniSMS API error:', JSON.stringify(error.response?.data, null, 2));
+    }
     throw error;
   }
 }
