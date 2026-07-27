@@ -37,6 +37,12 @@ BEGIN
 END;
 $function$;
 
+-- Unschedule first in case it already exists (idempotent)
+SELECT cron.unschedule('process-appointment-notifications')
+WHERE EXISTS (
+  SELECT 1 FROM cron.job WHERE jobname = 'process-appointment-notifications'
+);
+
 SELECT cron.schedule(
   'process-appointment-notifications',
   '*/5 * * * *',

@@ -28,8 +28,10 @@ const useNotifications = () => {
     lastFetchRef.current = now;
 
     try {
-      if (!silent) setLoading(true);
-      setError(null);
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       const headers = await getAuthHeaders();
       const { data } = await axios.get('/api/notifications', {
         headers,

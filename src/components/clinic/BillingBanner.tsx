@@ -67,7 +67,9 @@ function useBannerState(): BannerState {
       color: 'orange',
       icon: AlertTriangle,
       title: `Your payment is ${overdueDays} day${overdueDays === 1 ? '' : 's'} overdue`,
-      description: `Pay within ${7 - overdueDays} day${7 - overdueDays === 1 ? '' : 's'} to avoid losing access.`,
+      description: 7 - overdueDays > 0
+        ? `Pay within ${7 - overdueDays} day${7 - overdueDays === 1 ? '' : 's'} to avoid losing access.`
+        : 'Your grace period has ended. Pay now to restore access.',
       actionLabel: 'Pay Now',
     };
   }
