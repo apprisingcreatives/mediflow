@@ -20,10 +20,18 @@ const useNotifications = () => {
     return { Authorization: `Bearer ${session.access_token}` };
   };
 
-  const fetchNotifications = useCallback(async () => {
+  const lastFetchRef = useRef(0);
+
+  const fetchNotifications = useCallback(async (silent = false) => {
+    const now = Date.now();
+    if (silent && now - lastFetchRef.current < 5_000) return;
+    lastFetchRef.current = now;
+
     try {
-      setLoading(true);
-      setError(null);
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       const headers = await getAuthHeaders();
       const { data } = await axios.get('/api/notifications', {
         headers,
@@ -33,9 +41,9 @@ const useNotifications = () => {
       setUnreadCount(data.unread_count ?? 0);
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { error?: string } } };
-      setError(axiosErr.response?.data?.error ?? 'Failed to load notifications');
+      if (!silent) setError(axiosErr.response?.data?.error ?? 'Failed to load notifications');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -65,6 +73,7 @@ const useNotifications = () => {
 
   useEffect(() => {
     let mounted = true;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
 
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -73,7 +82,6 @@ const useNotifications = () => {
       userIdRef.current = session.user.id;
       await fetchNotifications();
 
-      // Subscribe to Realtime for this user's notifications
       const channel = supabase
         .channel(`notifications:user:${session.user.id}`)
         .on(
@@ -111,18 +119,33 @@ const useNotifications = () => {
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED' && mounted) {
-            // Refetch to catch anything missed during subscription setup
-            fetchNotifications();
+            fetchNotifications(true);
+          }
+          if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && mounted) {
+            fetchNotifications(true);
           }
         });
 
       channelRef.current = channel;
+
+      pollInterval = setInterval(() => {
+        if (mounted) fetchNotifications(true);
+      }, 30_000);
     };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && userIdRef.current) {
+        fetchNotifications(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     init();
 
     return () => {
       mounted = false;
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (pollInterval) clearInterval(pollInterval);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;

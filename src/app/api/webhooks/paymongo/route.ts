@@ -6,8 +6,8 @@ export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.text();
 
-    const signature = request.headers.get('paymongo-signature') || '';
-    if (signature && !verifyWebhookSignature(rawBody, signature)) {
+    const signature = request.headers.get('paymongo-signature');
+    if (!signature || !verifyWebhookSignature(rawBody, signature)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
@@ -71,6 +71,9 @@ async function activateClinicSubscription(
       last_payment_date: new Date().toISOString(),
       next_billing_date: nextBillingDate.toISOString(),
       paymongo_checkout_session_id: checkoutSessionId,
+      pending_checkout_session_id: null,
+      reminder_count: 0,
+      last_reminder_sent_at: null,
     })
     .eq('id', clinic_id);
 

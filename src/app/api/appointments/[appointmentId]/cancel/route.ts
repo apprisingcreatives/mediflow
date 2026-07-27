@@ -152,7 +152,7 @@ export async function POST(
             type: 'appointment.cancelled',
             title: 'Appointment Cancelled',
             message: `${patientName} — ${cancelMsg}`,
-            actionUrl: `/clinic/${appointment.clinic_id}/appointments`,
+            actionUrl: `/practitioner/${appointment.practitioner_id}/clinic/${appointment.clinic_id}/appointments`,
           });
         }
       }

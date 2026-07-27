@@ -44,6 +44,10 @@ export interface Clinic {
   paymongo_merchant_id: string | null;
   paymongo_merchant_status: 'pending' | 'activated' | 'declined' | null;
 
+  pending_checkout_session_id: string | null;
+  last_reminder_sent_at: string | null;
+  reminder_count: number;
+
   slug: string | null;
 
   email_notifications_enabled: boolean;

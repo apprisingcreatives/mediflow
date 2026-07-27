@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { createClient } from '@supabase/supabase-js';
 import { createNotifications } from '@/lib/notifications';
-import { checkResourceLimit } from '@/lib/plan-gating';
+import { checkResourceLimit, requireActiveSubscription } from '@/lib/plan-gating';
 
 interface InvitePractitionerRequest {
   name: string;
@@ -29,6 +29,9 @@ export async function POST(
 ) {
   try {
     const { clinicId } = params;
+
+    const subCheck = await requireActiveSubscription(clinicId);
+    if (subCheck !== true) return subCheck;
 
     // Get authorization token
     const authHeader = request.headers.get('authorization');
