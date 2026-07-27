@@ -402,7 +402,7 @@ export async function POST(request: Request) {
             type: 'appointment.created',
             title: notifTitle,
             message: notifMessage,
-            actionUrl: `/clinic/${clinic_id}/appointments`,
+            actionUrl: `/practitioner/${practitioner_id}/clinic/${clinic_id}/appointments`,
           });
         }
       }

@@ -65,6 +65,7 @@ const useNotifications = () => {
 
   useEffect(() => {
     let mounted = true;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
 
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -73,7 +74,6 @@ const useNotifications = () => {
       userIdRef.current = session.user.id;
       await fetchNotifications();
 
-      // Subscribe to Realtime for this user's notifications
       const channel = supabase
         .channel(`notifications:user:${session.user.id}`)
         .on(
@@ -111,18 +111,34 @@ const useNotifications = () => {
         )
         .subscribe((status) => {
           if (status === 'SUBSCRIBED' && mounted) {
-            // Refetch to catch anything missed during subscription setup
+            fetchNotifications();
+          }
+          if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && mounted) {
             fetchNotifications();
           }
         });
 
       channelRef.current = channel;
+
+      // Polling fallback in case Realtime misses events
+      pollInterval = setInterval(() => {
+        if (mounted) fetchNotifications();
+      }, 30_000);
     };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && userIdRef.current) {
+        fetchNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
 
     init();
 
     return () => {
       mounted = false;
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (pollInterval) clearInterval(pollInterval);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
