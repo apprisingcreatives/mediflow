@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Activity, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { AppDownloadSection } from '@/components/auth/AppDownloadSection';
 
 export default function ClinicLoginPage() {
   const router = useRouter();
@@ -195,11 +196,14 @@ export default function ClinicLoginPage() {
           </Link>
         </p>
 
-        <p className='text-center mt-2 text-sm text-clinic-text/60 dark:text-white/60'>
+        <p className='text-center mt-2 text-sm text-clinic-text/60 dark:text-white/60 mb-6'>
           <Link href='/' className='text-clinic-teal hover:underline'>
             ← Back to Website
           </Link>
         </p>
+
+        {/* Download App Section */}
+        <AppDownloadSection className="mt-6" />
       </div>
     </div>
   );

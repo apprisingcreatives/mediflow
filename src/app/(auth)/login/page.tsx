@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Activity, Eye, EyeOff, Shield, Lock, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
+import { AppDownloadSection } from "@/components/auth/AppDownloadSection";
 
 function LoginContent() {
   const router = useRouter();
@@ -326,7 +327,7 @@ function LoginContent() {
           </div>
 
           {/* Sign Up Link */}
-          <p className='text-center text-sm text-clinic-text/60 dark:text-white/60 mt-8'>
+          <p className='text-center text-sm text-clinic-text/60 dark:text-white/60 mt-8 mb-6'>
             Don't have an account?{" "}
             <Link
               href='/register'
@@ -335,6 +336,9 @@ function LoginContent() {
               Register now
             </Link>
           </p>
+
+          {/* Download App Section */}
+          <AppDownloadSection className="mt-6" />
         </div>
       </div>
 
@@ -356,7 +360,7 @@ function LoginContent() {
             regulations.
           </p>
 
-          <div className='space-y-4'>
+          <div className='space-y-4 mb-8'>
             <div className='flex items-center gap-4 p-4 bg-white/5 rounded-xl'>
               <div className='w-10 h-10 rounded-full bg-clinic-teal/20 flex items-center justify-center'>
                 <Shield className='w-5 h-5 text-clinic-teal' />
@@ -380,6 +384,9 @@ function LoginContent() {
               </div>
             </div>
           </div>
+
+          {/* Download App Sidebar Card */}
+          <AppDownloadSection variant="sidebar" />
         </div>
       </div>
     </div>
