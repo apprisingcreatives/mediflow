@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, Smartphone, Laptop, Share, CheckCircle2, Sparkles, ArrowRight, X, Monitor, HelpCircle, ExternalLink } from 'lucide-react';
+import { Download, Smartphone, Laptop, Share, CheckCircle2, Sparkles, ArrowRight, X, Monitor, ShieldCheck, Apple } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -13,6 +13,43 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
+type OSName = 'windows' | 'mac' | 'android' | 'ios' | 'linux' | 'unknown';
+
+interface DeviceInfo {
+  os: OSName;
+  osName: string;
+  isMobile: boolean;
+  buttonText: string;
+  badgeText: string;
+}
+
+function detectDevice(): DeviceInfo {
+  if (typeof window === 'undefined') {
+    return { os: 'windows', osName: 'Windows PC', isMobile: false, buttonText: 'Download for Windows', badgeText: 'Windows' };
+  }
+
+  const ua = navigator.userAgent;
+  const platform = (navigator as any).userAgentData?.platform || navigator.platform || '';
+
+  if (/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
+    return { os: 'ios', osName: 'iOS Device', isMobile: true, buttonText: 'Install on iPhone / iPad', badgeText: 'iOS' };
+  }
+  if (/Android/.test(ua)) {
+    return { os: 'android', osName: 'Android Device', isMobile: true, buttonText: 'Install on Android', badgeText: 'Android' };
+  }
+  if (/Win/.test(platform) || /Windows/.test(ua)) {
+    return { os: 'windows', osName: 'Windows PC', isMobile: false, buttonText: 'Download for Windows', badgeText: 'Windows' };
+  }
+  if (/Mac/.test(platform) || /Macintosh/.test(ua)) {
+    return { os: 'mac', osName: 'Mac', isMobile: false, buttonText: 'Download for Mac', badgeText: 'macOS' };
+  }
+  if (/Linux/.test(platform) || /Linux/.test(ua)) {
+    return { os: 'linux', osName: 'Linux PC', isMobile: false, buttonText: 'Install for Linux', badgeText: 'Linux' };
+  }
+
+  return { os: 'unknown', osName: 'Desktop', isMobile: false, buttonText: 'Download App', badgeText: 'PWA App' };
+}
+
 interface AppDownloadSectionProps {
   variant?: 'card' | 'compact' | 'sidebar';
   className?: string;
@@ -20,12 +57,21 @@ interface AppDownloadSectionProps {
 
 export function AppDownloadSection({ variant = 'card', className = '' }: AppDownloadSectionProps) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [deviceType, setDeviceType] = useState<'ios' | 'android' | 'desktop'>('desktop');
+  const [device, setDevice] = useState<DeviceInfo>({
+    os: 'windows',
+    osName: 'Windows PC',
+    isMobile: false,
+    buttonText: 'Download for Windows',
+    badgeText: 'Windows',
+  });
   const [isInstalled, setIsInstalled] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
   useEffect(() => {
-    // Detect standalone mode (already installed)
+    // Detect OS dynamically on client
+    setDevice(detectDevice());
+
+    // Check standalone mode (already installed)
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true;
@@ -33,16 +79,6 @@ export function AppDownloadSection({ variant = 'card', className = '' }: AppDown
     if (isStandalone) {
       setIsInstalled(true);
       return;
-    }
-
-    // Detect Device Type
-    const ua = navigator.userAgent;
-    if (/iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream) {
-      setDeviceType('ios');
-    } else if (/Android/.test(ua)) {
-      setDeviceType('android');
-    } else {
-      setDeviceType('desktop');
     }
 
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -72,15 +108,14 @@ export function AppDownloadSection({ variant = 'card', className = '' }: AppDown
       }
     }
 
-    // Fallback if beforeinstallprompt is not triggered automatically
-    if (deviceType === 'desktop') {
-      // Download Desktop Shortcut as a direct fallback
-      downloadDesktopShortcut();
+    // Fallback based on device
+    if (device.os === 'windows') {
+      downloadWindowsShortcut();
     }
     setShowInstructions(true);
   };
 
-  const downloadDesktopShortcut = () => {
+  const downloadWindowsShortcut = () => {
     const appUrl = window.location.origin;
     const shortcutContent = `[InternetShortcut]\nURL=${appUrl}\nIDList=\nIconIndex=0\n[{000214A0-0000-0000-C000-000000000046}]\nProp3=19,2\n`;
     const blob = new Blob([shortcutContent], { type: 'application/x-ms-shortcut' });
@@ -94,12 +129,19 @@ export function AppDownloadSection({ variant = 'card', className = '' }: AppDown
     URL.revokeObjectURL(url);
   };
 
+  const renderOsIcon = () => {
+    if (device.os === 'ios' || device.os === 'android') {
+      return <Smartphone className="w-5 h-5" />;
+    }
+    return <Laptop className="w-5 h-5" />;
+  };
+
   if (isInstalled) {
     return (
       <div className={`p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 flex items-center gap-3 ${className}`}>
         <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
         <span className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
-          MediFlow App is installed on your device.
+          MediFlow App is installed on this {device.osName}.
         </span>
       </div>
     );
@@ -110,12 +152,12 @@ export function AppDownloadSection({ variant = 'card', className = '' }: AppDown
       <div className={`p-5 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/15 text-white ${className}`}>
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-xl bg-clinic-teal/20 border border-clinic-teal/30 flex items-center justify-center text-clinic-teal">
-            {deviceType === 'desktop' ? <Laptop className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}
+            {renderOsIcon()}
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-semibold uppercase tracking-wider text-clinic-teal">
-                MediFlow {deviceType === 'desktop' ? 'Desktop App' : 'Mobile App'}
+                Detected: {device.osName}
               </span>
               <Sparkles className="w-3 h-3 text-clinic-teal animate-pulse" />
             </div>
@@ -124,7 +166,7 @@ export function AppDownloadSection({ variant = 'card', className = '' }: AppDown
         </div>
 
         <p className="text-xs text-white/70 mb-4 leading-relaxed">
-          Install MediFlow on your desktop or mobile home screen for quick 1-click access and offline capability.
+          Install MediFlow on your {device.osName} for 1-click home screen access and real-time appointment alerts.
         </p>
 
         <Button
@@ -132,32 +174,31 @@ export function AppDownloadSection({ variant = 'card', className = '' }: AppDown
           className="w-full h-10 bg-clinic-teal hover:bg-clinic-teal/90 text-white text-xs font-medium gap-2 shadow-lg shadow-clinic-teal/20 transition-all hover:scale-[1.02]"
         >
           <Download className="w-4 h-4" />
-          {deferredPrompt ? 'Install App Now' : deviceType === 'desktop' ? 'Download Desktop App' : 'Install Mobile App'}
+          {deferredPrompt ? `Install for ${device.badgeText}` : device.buttonText}
         </Button>
 
         {showInstructions && (
           <div className="mt-3 p-3 rounded-xl bg-white/10 border border-white/10 text-[11px] text-white/80 space-y-1.5 animate-in fade-in">
             <div className="flex items-center justify-between font-medium text-white">
-              <span>{deviceType === 'desktop' ? 'Desktop App Installation:' : 'Mobile Installation:'}</span>
+              <span>{device.osName} Instructions:</span>
               <button onClick={() => setShowInstructions(false)}>
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-            {deviceType === 'desktop' ? (
+            {device.os === 'ios' ? (
               <ol className="list-decimal list-inside space-y-1 text-white/70">
-                <li>Look for the <span className="font-semibold text-clinic-teal font-mono">⊕</span> or <Monitor className="w-3 h-3 inline text-clinic-teal" /> icon in your browser's address bar.</li>
-                <li>Click <span className="font-semibold text-white">Install MediFlow</span>.</li>
-                <li>Or open your downloaded desktop shortcut to launch instantly.</li>
-              </ol>
-            ) : deviceType === 'ios' ? (
-              <ol className="list-decimal list-inside space-y-1 text-white/70">
-                <li>Tap the <Share className="w-3 h-3 inline text-clinic-teal" /> Share button in Safari</li>
+                <li>Tap <Share className="w-3 h-3 inline text-clinic-teal" /> Share in Safari</li>
                 <li>Tap <span className="font-semibold text-white">Add to Home Screen</span></li>
+              </ol>
+            ) : device.os === 'android' ? (
+              <ol className="list-decimal list-inside space-y-1 text-white/70">
+                <li>Tap Chrome Menu (⋮)</li>
+                <li>Select <span className="font-semibold text-white">Install App</span></li>
               </ol>
             ) : (
               <ol className="list-decimal list-inside space-y-1 text-white/70">
-                <li>Tap Chrome Menu (⋮)</li>
-                <li>Select <span className="font-semibold text-white">Install App / Add to Home Screen</span></li>
+                <li>Click <span className="font-semibold text-clinic-teal font-mono">⊕</span> or <Monitor className="w-3 h-3 inline text-clinic-teal" /> in your address bar.</li>
+                <li>Click <span className="font-semibold text-white">Install MediFlow</span>.</li>
               </ol>
             )}
           </div>
@@ -181,46 +222,49 @@ export function AppDownloadSection({ variant = 'card', className = '' }: AppDown
               <h3 className="font-display text-sm font-bold text-clinic-navy dark:text-white">
                 Download MediFlow App
               </h3>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-clinic-teal/10 text-clinic-teal dark:bg-clinic-teal/20 dark:text-clinic-teal">
-                Desktop & Mobile PWA
+              <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-clinic-teal/10 text-clinic-teal dark:bg-clinic-teal/20 dark:text-clinic-teal flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" /> Detected: {device.osName}
               </span>
             </div>
             <p className="text-xs text-clinic-text/70 dark:text-white/70 max-w-sm">
-              Install MediFlow directly on Windows, macOS, ChromeOS, iOS, or Android for desktop notifications and instant access.
+              Install MediFlow directly on your {device.osName} for fast one-tap access and notifications.
             </p>
 
-            {/* Supported platforms */}
-            <div className="flex items-center gap-3 mt-2 text-[11px] text-clinic-text/50 dark:text-white/50">
-              <span className="flex items-center gap-1 font-medium text-clinic-teal">
-                <Laptop className="w-3.5 h-3.5" /> Windows & macOS
+            {/* Supported platforms list with current detected OS highlighted */}
+            <div className="flex items-center gap-2 mt-2 text-[11px]">
+              <span className={`px-2 py-0.5 rounded-md font-medium transition-all ${device.os === 'windows' ? 'bg-clinic-teal text-white shadow-sm' : 'text-clinic-text/50 dark:text-white/50 bg-clinic-navy/5 dark:bg-white/5'}`}>
+                Windows
               </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <Smartphone className="w-3.5 h-3.5 text-clinic-teal" /> iOS & Android
+              <span className={`px-2 py-0.5 rounded-md font-medium transition-all ${device.os === 'mac' ? 'bg-clinic-teal text-white shadow-sm' : 'text-clinic-text/50 dark:text-white/50 bg-clinic-navy/5 dark:bg-white/5'}`}>
+                macOS
+              </span>
+              <span className={`px-2 py-0.5 rounded-md font-medium transition-all ${device.os === 'ios' ? 'bg-clinic-teal text-white shadow-sm' : 'text-clinic-text/50 dark:text-white/50 bg-clinic-navy/5 dark:bg-white/5'}`}>
+                iOS
+              </span>
+              <span className={`px-2 py-0.5 rounded-md font-medium transition-all ${device.os === 'android' ? 'bg-clinic-teal text-white shadow-sm' : 'text-clinic-text/50 dark:text-white/50 bg-clinic-navy/5 dark:bg-white/5'}`}>
+                Android
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button
-            onClick={handleInstallClick}
-            className="w-full sm:w-auto h-10 px-4 bg-clinic-teal hover:bg-clinic-teal/90 text-white text-xs font-semibold gap-2 shadow-md shadow-clinic-teal/20 flex-shrink-0 transition-all hover:scale-105"
-          >
-            <Download className="w-4 h-4" />
-            <span>{deferredPrompt ? 'Install App Now' : deviceType === 'desktop' ? 'Download Desktop App' : 'Install Mobile App'}</span>
-            <ArrowRight className="w-3.5 h-3.5 opacity-70" />
-          </Button>
-        </div>
+        <Button
+          onClick={handleInstallClick}
+          className="w-full sm:w-auto h-10 px-4 bg-clinic-teal hover:bg-clinic-teal/90 text-white text-xs font-semibold gap-2 shadow-md shadow-clinic-teal/20 flex-shrink-0 transition-all hover:scale-105"
+        >
+          <Download className="w-4 h-4" />
+          <span>{deferredPrompt ? `Install on ${device.osName}` : device.buttonText}</span>
+          <ArrowRight className="w-3.5 h-3.5 opacity-70" />
+        </Button>
       </div>
 
-      {/* Instructions Dropdown */}
+      {/* OS Instructions Dropdown */}
       {showInstructions && (
         <div className="mt-4 p-4 rounded-xl bg-white dark:bg-slate-900 border border-clinic-teal/30 text-xs text-clinic-text/80 dark:text-white/80 space-y-3 animate-in fade-in">
           <div className="flex items-center justify-between font-semibold text-clinic-navy dark:text-white">
             <span className="flex items-center gap-1.5">
               <Monitor className="w-4 h-4 text-clinic-teal" />
-              {deviceType === 'desktop' ? 'How to Install MediFlow App on Desktop:' : 'How to Install on Mobile:'}
+              Installation Guide for {device.osName}:
             </span>
             <button
               onClick={() => setShowInstructions(false)}
@@ -230,18 +274,20 @@ export function AppDownloadSection({ variant = 'card', className = '' }: AppDown
             </button>
           </div>
 
-          {deviceType === 'desktop' ? (
+          {device.os === 'windows' || device.os === 'mac' || device.os === 'linux' ? (
             <div className="space-y-2">
-              <p className="text-xs text-clinic-text/70 dark:text-white/70">
-                A desktop shortcut (<code className="bg-clinic-teal/10 px-1 py-0.5 rounded text-clinic-teal font-semibold">MediFlow App.url</code>) has been saved to your downloads. You can also install the full native web app directly in your browser:
-              </p>
+              {device.os === 'windows' && (
+                <p className="text-xs text-clinic-text/70 dark:text-white/70">
+                  A desktop shortcut (<code className="bg-clinic-teal/10 px-1 py-0.5 rounded text-clinic-teal font-semibold">MediFlow App.url</code>) has been downloaded. You can also install the full web application:
+                </p>
+              )}
               <ol className="list-decimal list-inside space-y-1.5 text-clinic-text/80 dark:text-white/80 pl-1">
                 <li>Look for the <span className="font-bold text-clinic-teal font-mono">⊕</span> or <span className="font-bold text-clinic-teal font-mono">🖥️ Install</span> icon in your browser address bar (top right).</li>
-                <li>Click <span className="font-bold text-clinic-navy dark:text-white">Install MediFlow</span> to add it as a standalone desktop app on your taskbar / launchpad.</li>
+                <li>Click <span className="font-bold text-clinic-navy dark:text-white">Install MediFlow</span> to add it to your desktop taskbar / launchpad.</li>
                 <li>In Chrome/Edge menu (⋮), go to <span className="font-bold text-clinic-navy dark:text-white">Save and share</span> → <span className="font-bold text-clinic-teal">Install page as app</span>.</li>
               </ol>
             </div>
-          ) : deviceType === 'ios' ? (
+          ) : device.os === 'ios' ? (
             <ol className="list-decimal list-inside space-y-1.5 text-clinic-text/80 dark:text-white/80 pl-1">
               <li>Open MediFlow in Safari on your iPhone / iPad.</li>
               <li>Tap the <Share className="w-3.5 h-3.5 inline text-clinic-teal" /> <span className="font-semibold text-clinic-teal">Share</span> button at the bottom.</li>
@@ -249,7 +295,7 @@ export function AppDownloadSection({ variant = 'card', className = '' }: AppDown
             </ol>
           ) : (
             <ol className="list-decimal list-inside space-y-1.5 text-clinic-text/80 dark:text-white/80 pl-1">
-              <li>Open Chrome / Edge on your Android phone.</li>
+              <li>Open Chrome on your Android device.</li>
               <li>Tap the Menu button (⋮) at top right.</li>
               <li>Select <span className="font-bold text-clinic-teal">Install App</span> or <span className="font-bold text-clinic-navy dark:text-white">Add to Home screen</span>.</li>
             </ol>
