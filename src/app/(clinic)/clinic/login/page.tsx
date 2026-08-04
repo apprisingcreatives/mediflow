@@ -202,8 +202,8 @@ export default function ClinicLoginPage() {
           </Link>
         </p>
 
-        {/* Download App Section */}
-        <AppDownloadSection className="mt-6" />
+        {/* Download App Section - Mobile Only */}
+        <AppDownloadSection className="mt-6 block md:hidden" />
       </div>
     </div>
   );

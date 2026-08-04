@@ -337,8 +337,8 @@ function LoginContent() {
             </Link>
           </p>
 
-          {/* Download App Section */}
-          <AppDownloadSection className="mt-6" />
+          {/* Download App Section - Mobile Only */}
+          <AppDownloadSection className="mt-6 block lg:hidden" />
         </div>
       </div>
 
@@ -384,9 +384,6 @@ function LoginContent() {
               </div>
             </div>
           </div>
-
-          {/* Download App Sidebar Card */}
-          <AppDownloadSection variant="sidebar" />
         </div>
       </div>
     </div>
