@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity } from 'lucide-react';
 import { SuperAdminSidebar } from '@/components/super-admin/SuperAdminSidebar';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import { requireSuperAdmin } from '@/lib/admin-auth';
 import { supabase } from '@/lib/supabase';
 import { SuperAdminContext, type SuperAdmin } from './super-admin-context';
@@ -60,6 +61,9 @@ export default function SuperAdminDashboardLayout({
                 <p className='text-sm text-clinic-text/60 dark:text-white/60'>
                   Welcome back, {admin?.name}
                 </p>
+              </div>
+              <div className='flex items-center gap-4'>
+                <NotificationBell />
               </div>
             </div>
           </header>

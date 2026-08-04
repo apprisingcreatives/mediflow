@@ -22,6 +22,15 @@ export interface TimeSlot {
   is_available: boolean;
 }
 
+export interface BookingBranch {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  is_active: boolean;
+  is_default: boolean;
+}
+
 export interface BookingData {
   clinicId: string;
   patientId: string;
@@ -38,16 +47,22 @@ const usePatientBooking = () => {
 
   // Selection state
   const [selectedClinicId, setSelectedClinicId] = useState('');
+  const [selectedBranchId, setSelectedBranchId] = useState('');
   const [selectedPractitionerId, setSelectedPractitionerId] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState('');
   const [notes, setNotes] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>('cash');
 
   // Data state
+  const [branches, setBranches] = useState<BookingBranch[]>([]);
   const [practitioners, setPractitioners] = useState<BookingPractitioner[]>([]);
   const [services, setServices] = useState<BookingService[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+
+  // Loading states for branches
+  const [loadingBranches, setLoadingBranches] = useState(false);
 
   // Loading states
   const [loadingPractitioners, setLoadingPractitioners] = useState(false);
@@ -61,20 +76,46 @@ const usePatientBooking = () => {
   // Created appointment (for post-booking redirect to intake)
   const [createdAppointment, setCreatedAppointment] = useState<Record<string, unknown> | null>(null);
 
-  // Fetch practitioners for a clinic
-  const fetchPractitioners = useCallback(async (clinicId: string) => {
+  // Fetch branches for a clinic (public endpoint)
+  const fetchBranches = useCallback(async (clinicId: string) => {
+    if (!clinicId) return;
+    try {
+      setLoadingBranches(true);
+      const res = await fetch(`/api/public/clinics/${clinicId}/branches`);
+      if (!res.ok) { setBranches([]); return; }
+      const data = await res.json();
+      const active: BookingBranch[] = (data.branches ?? []).filter((b: BookingBranch) => b.is_active);
+      setBranches(active);
+      if (active.length === 1) {
+        setSelectedBranchId(active[0].id);
+      }
+    } catch {
+      setBranches([]);
+    } finally {
+      setLoadingBranches(false);
+    }
+  }, []);
+
+  // Fetch practitioners for a clinic (public endpoint, optional branch filter)
+  const fetchPractitioners = useCallback(async (clinicId: string, branchId?: string) => {
     if (!clinicId) return;
 
     try {
       setLoadingPractitioners(true);
-      const { data, error: queryError } = await supabase
-        .from('practitioners')
-        .select('id, name, specialization')
-        .eq('clinic_id', clinicId)
-        .eq('is_active', true);
+      const url = new URL(`/api/public/clinics/${clinicId}/practitioners`, window.location.origin);
+      if (branchId) {
+        url.searchParams.set('branch_id', branchId);
+      }
 
-      if (queryError) throw queryError;
-      setPractitioners(data || []);
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        console.error('Failed to fetch practitioners:', res.statusText);
+        setPractitioners([]);
+        return;
+      }
+
+      const data = await res.json();
+      setPractitioners(data.practitioners ?? []);
     } catch (err) {
       console.error('Failed to fetch practitioners:', err);
       setPractitioners([]);
@@ -83,20 +124,26 @@ const usePatientBooking = () => {
     }
   }, []);
 
-  // Fetch services for a clinic
-  const fetchServices = useCallback(async (clinicId: string) => {
+  // Fetch services for a clinic (public endpoint, optional branch filter)
+  const fetchServices = useCallback(async (clinicId: string, branchId?: string) => {
     if (!clinicId) return;
 
     try {
       setLoadingServices(true);
-      const { data, error: queryError } = await supabase
-        .from('clinic_services')
-        .select('id, name, duration_minutes, price')
-        .eq('clinic_id', clinicId)
-        .eq('is_active', true);
+      const url = new URL(`/api/public/clinics/${clinicId}/services`, window.location.origin);
+      if (branchId) {
+        url.searchParams.set('branch_id', branchId);
+      }
 
-      if (queryError) throw queryError;
-      setServices(data || []);
+      const res = await fetch(url.toString());
+      if (!res.ok) {
+        console.error('Failed to fetch services:', res.statusText);
+        setServices([]);
+        return;
+      }
+
+      const data = await res.json();
+      setServices(data.services ?? []);
     } catch (err) {
       console.error('Failed to fetch services:', err);
       setServices([]);
@@ -105,7 +152,7 @@ const usePatientBooking = () => {
     }
   }, []);
 
-  // Fetch time slots
+  // Fetch time slots (RPC call — acceptable per project conventions)
   const fetchTimeSlots = useCallback(async () => {
     if (!selectedPractitionerId || !selectedDate || !selectedServiceId) {
       setTimeSlots([]);
@@ -144,14 +191,36 @@ const usePatientBooking = () => {
   const handleClinicChange = useCallback(
     (clinicId: string) => {
       setSelectedClinicId(clinicId);
+      setSelectedBranchId('');
       setSelectedPractitionerId('');
       setSelectedServiceId('');
       setSelectedTime('');
       setTimeSlots([]);
+      setBranches([]);
+      fetchBranches(clinicId);
+      // Fetch all practitioners and services for the clinic (no branch filter)
       fetchPractitioners(clinicId);
       fetchServices(clinicId);
     },
-    [fetchPractitioners, fetchServices]
+    [fetchBranches, fetchPractitioners, fetchServices]
+  );
+
+  // Handle branch selection
+  const handleBranchChange = useCallback(
+    (branchId: string) => {
+      setSelectedBranchId(branchId);
+      setSelectedPractitionerId('');
+      setSelectedServiceId('');
+      setSelectedDate(undefined);
+      setSelectedTime('');
+      setTimeSlots([]);
+      // Re-fetch practitioners and services filtered by branch
+      if (selectedClinicId) {
+        fetchPractitioners(selectedClinicId, branchId || undefined);
+        fetchServices(selectedClinicId, branchId || undefined);
+      }
+    },
+    [selectedClinicId, fetchPractitioners, fetchServices]
   );
 
   // Handle date selection
@@ -193,11 +262,13 @@ const usePatientBooking = () => {
           },
           body: JSON.stringify({
             clinic_id: selectedClinicId,
+            branch_id: selectedBranchId || null,
             practitioner_id: selectedPractitionerId,
             service_id: selectedServiceId,
             appointment_date: format(selectedDate, 'yyyy-MM-dd'),
             appointment_time: selectedTime,
             notes: notes || null,
+            payment_method: paymentMethod,
           }),
         });
 
@@ -208,6 +279,23 @@ const usePatientBooking = () => {
 
         const { appointment } = await res.json();
         setCreatedAppointment(appointment);
+
+        if (paymentMethod === 'online' && appointment?.id) {
+          const payRes = await fetch(`/api/appointments/${appointment.id}/pay`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
+          if (payRes.ok) {
+            const { checkout_url } = await payRes.json();
+            if (checkout_url) {
+              window.location.href = checkout_url;
+              return true;
+            }
+          }
+        }
 
         return true;
       } catch (err) {
@@ -220,11 +308,13 @@ const usePatientBooking = () => {
     },
     [
       selectedClinicId,
+      selectedBranchId,
       selectedPractitionerId,
       selectedServiceId,
       selectedDate,
       selectedTime,
       notes,
+      paymentMethod,
     ]
   );
 
@@ -236,14 +326,15 @@ const usePatientBooking = () => {
   // Close modal
   const closeModal = useCallback(() => {
     setIsOpen(false);
-    // Reset form when closing
     setSelectedClinicId('');
+    setSelectedBranchId('');
     setSelectedPractitionerId('');
     setSelectedServiceId('');
     setSelectedDate(undefined);
     setSelectedTime('');
     setNotes('');
     setTimeSlots([]);
+    setBranches([]);
     setPractitioners([]);
     setServices([]);
     setError(null);
@@ -253,12 +344,15 @@ const usePatientBooking = () => {
   // Reset form (without closing modal)
   const resetForm = useCallback(() => {
     setSelectedClinicId('');
+    setSelectedBranchId('');
     setSelectedPractitionerId('');
     setSelectedServiceId('');
     setSelectedDate(undefined);
     setSelectedTime('');
     setNotes('');
+    setPaymentMethod('cash');
     setTimeSlots([]);
+    setBranches([]);
     setPractitioners([]);
     setServices([]);
     setError(null);
@@ -280,6 +374,7 @@ const usePatientBooking = () => {
 
     // Selection state
     selectedClinicId,
+    selectedBranchId,
     selectedPractitionerId,
     selectedServiceId,
     selectedDate,
@@ -287,21 +382,27 @@ const usePatientBooking = () => {
     notes,
 
     // Setters
+    setSelectedBranchId,
     setSelectedPractitionerId,
     setSelectedServiceId,
     setSelectedTime,
     setNotes,
+    paymentMethod,
+    setPaymentMethod,
 
     // Handlers
     handleClinicChange,
+    handleBranchChange,
     handleDateChange,
 
     // Data
+    branches,
     practitioners,
     services,
     timeSlots,
 
     // Loading states
+    loadingBranches,
     loadingPractitioners,
     loadingServices,
     loadingTimeSlots,

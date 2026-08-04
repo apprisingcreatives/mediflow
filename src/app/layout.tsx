@@ -5,6 +5,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
 import { JsonLdSchema } from "@/components/seo/json-ld";
+import { PWARegister } from "@/components/pwa-register";
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -89,6 +91,16 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://mediflow.apprisingcreatives.com",
   },
+  themeColor: "#0d9488",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "MediFlow",
+  },
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -108,6 +120,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
+            <PWARegister />
+            <PWAInstallPrompt />
             {children}
             <Toaster richColors position="top-right" />
           </AuthProvider>

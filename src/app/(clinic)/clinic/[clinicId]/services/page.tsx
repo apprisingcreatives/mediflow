@@ -35,7 +35,7 @@ import { ServiceFormModal, ServiceFormData } from '@/components/clinic/services'
 export default function ServicesPage() {
   const params = useParams();
   const clinicId = params.clinicId as string;
-  const { isTrialExpired } = useClinicContext();
+  const { isTrialExpired, activeBranchId } = useClinicContext();
 
   // State
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,12 +56,12 @@ export default function ServicesPage() {
     clearError,
   } = useServiceMutations();
 
-  // Fetch services on mount
+  // Fetch services on mount and when branch changes
   useEffect(() => {
     if (clinicId) {
-      fetchServices({ clinicId, activeOnly: false });
+      fetchServices({ clinicId, branchId: activeBranchId, activeOnly: false });
     }
-  }, [clinicId, fetchServices]);
+  }, [clinicId, activeBranchId, fetchServices]);
 
   // Filter services based on search
   const filteredServices = services.filter(
@@ -99,7 +99,7 @@ export default function ServicesPage() {
         duration_minutes: data.duration_minutes,
         price: data.price,
         is_active: data.is_active,
-      });
+      }, clinicId);
       success = !!result;
     } else {
       // Create new service
@@ -110,6 +110,7 @@ export default function ServicesPage() {
         duration_minutes: data.duration_minutes,
         price: data.price,
         is_active: data.is_active,
+        branch_id: activeBranchId,
       });
       success = !!result;
     }
@@ -117,14 +118,14 @@ export default function ServicesPage() {
     if (success) {
       handleCloseModal();
       // Refresh services list
-      await fetchServices({ clinicId, activeOnly: false });
+      await fetchServices({ clinicId, branchId: activeBranchId, activeOnly: false });
     }
   };
 
   const handleToggleStatus = async (service: ClinicService) => {
-    const success = await toggleServiceStatus(service.id, !service.is_active);
+    const success = await toggleServiceStatus(service.id, !service.is_active, clinicId);
     if (success) {
-      await fetchServices({ clinicId, activeOnly: false });
+      await fetchServices({ clinicId, branchId: activeBranchId, activeOnly: false });
     }
   };
 
@@ -136,9 +137,9 @@ export default function ServicesPage() {
   const handleConfirmDelete = async () => {
     if (!serviceToDelete) return;
 
-    const success = await deleteService(serviceToDelete.id);
+    const success = await deleteService(serviceToDelete.id, clinicId);
     if (success) {
-      await fetchServices({ clinicId, activeOnly: false });
+      await fetchServices({ clinicId, branchId: activeBranchId, activeOnly: false });
     }
     setDeleteDialogOpen(false);
     setServiceToDelete(null);

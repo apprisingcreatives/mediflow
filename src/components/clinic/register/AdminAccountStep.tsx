@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, ArrowLeft, ArrowRight } from "lucide-react";
+import { User, ArrowLeft, ArrowRight, CheckCircle2, XCircle } from "lucide-react";
 
 interface AdminAccountStepProps {
   adminName: string;
@@ -16,6 +16,21 @@ interface AdminAccountStepProps {
   onBack: () => void;
 }
 
+function PasswordRequirement({ met, text }: { met: boolean; text: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {met ? (
+        <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+      ) : (
+        <XCircle className="w-3.5 h-3.5 text-clinic-text/30" />
+      )}
+      <span className={`text-xs ${met ? "text-green-600 font-medium" : "text-clinic-text/60"}`}>
+        {text}
+      </span>
+    </div>
+  );
+}
+
 export function AdminAccountStep({
   adminName,
   setAdminName,
@@ -26,6 +41,13 @@ export function AdminAccountStep({
   onNext,
   onBack,
 }: AdminAccountStepProps) {
+  const hasMinLength = adminPassword.length >= 8;
+  const hasUpperCase = /[A-Z]/.test(adminPassword);
+  const hasLowerCase = /[a-z]/.test(adminPassword);
+  const hasNumber = /[0-9]/.test(adminPassword);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(adminPassword);
+  const isPasswordValid = hasMinLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-4">
@@ -71,6 +93,15 @@ export function AdminAccountStep({
           onChange={(e) => setAdminPassword(e.target.value)}
           className="h-12"
         />
+        {adminPassword && (
+          <div className="grid grid-cols-2 gap-1.5 pt-1">
+            <PasswordRequirement met={hasMinLength} text="8+ characters" />
+            <PasswordRequirement met={hasUpperCase} text="Uppercase letter" />
+            <PasswordRequirement met={hasLowerCase} text="Lowercase letter" />
+            <PasswordRequirement met={hasNumber} text="Number" />
+            <PasswordRequirement met={hasSpecialChar} text="Special character" />
+          </div>
+        )}
       </div>
 
       <div className="flex gap-4">
@@ -84,7 +115,7 @@ export function AdminAccountStep({
         </Button>
         <Button
           onClick={onNext}
-          disabled={!adminName || !adminEmail || !adminPassword}
+          disabled={!adminName || !adminEmail || !isPasswordValid}
           className="flex-1 h-12 bg-clinic-teal hover:bg-clinic-teal/90 text-white"
         >
           Continue

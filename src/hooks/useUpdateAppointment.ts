@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import axios from 'axios';
 import { supabase } from '@/lib/supabase';
 import { Appointment, AppointmentStatus } from './useGetAppointments';
 
@@ -220,37 +221,39 @@ const useUpdateAppointment = () => {
     []
   );
 
-  // Cancel appointment
+  // Cancel appointment via API route (triggers waitlist auto-book + rebooking SMS)
   const cancelAppointment = useCallback(
-    async (appointmentId: string): Promise<boolean> => {
+    async (appointmentId: string, reason?: string): Promise<boolean> => {
       try {
         setLoading(true);
         setError(null);
 
-        const { error: updateError } = await supabase
-          .from('appointments')
-          .update({
-            status: 'cancelled',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', appointmentId);
-
-        if (updateError) {
-          throw updateError;
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          throw new Error('Not authenticated');
         }
 
+        await axios.post(
+          `/api/appointments/${appointmentId}/cancel`,
+          { reason, source: 'web' },
+          { headers: { Authorization: `Bearer ${session.access_token}` } },
+        );
+
         return true;
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to cancel appointment:', err);
         const errorMessage =
-          err instanceof Error ? err.message : 'Failed to cancel appointment';
+          err?.response?.data?.error ||
+          (err instanceof Error ? err.message : 'Failed to cancel appointment');
         setError(errorMessage);
         return false;
       } finally {
         setLoading(false);
       }
     },
-    []
+    [],
   );
 
   // Update appointment status

@@ -1,5 +1,9 @@
-<h2>You've been invited</h2>
+<h2>You've been invited to MediFlow</h2>
 
-<p>You have been invited to join MediFlow. Click the link below to set up your account:</p>
+<p>Hi {{ .Data.name }},</p>
+
+<p>You have been invited to join <strong>{{ .Data.clinic_name }}</strong> as a <strong>{{ .Data.staff_role }}</strong> on MediFlow.</p>
+
+<p>Click the link below to set up your account:</p>
 
 <p><a href="{{ .ConfirmationURL }}">Set Up Your Account</a></p>

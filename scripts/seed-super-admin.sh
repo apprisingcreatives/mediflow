@@ -16,14 +16,14 @@ USER_ID=$(curl -s -X POST "$API_URL/auth/v1/admin/users" \
 
 if [ "$USER_ID" = "EXISTS" ]; then
   echo "Auth user already exists, looking up ID..."
-  USER_ID=$(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -t -c \
+  USER_ID=$(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54328 -U postgres -d postgres -t -c \
     "SELECT id FROM auth.users WHERE email = 'admin@mediflow.com';" | tr -d ' ')
 fi
 
 echo "Auth user ID: $USER_ID"
 
 echo "Creating super_admins record..."
-PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c \
+PGPASSWORD=postgres psql -h 127.0.0.1 -p 54328 -U postgres -d postgres -c \
   "INSERT INTO public.super_admins (email, name, status, is_active, auth_user_id)
    VALUES ('admin@mediflow.com', 'Super Admin', 'active', true, '$USER_ID')
    ON CONFLICT (email) DO UPDATE SET is_active = true;"

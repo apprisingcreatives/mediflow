@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, Loader2, UserPlus, Search } from "lucide-react";
+import { toast } from "sonner";
+import { CalendarIcon, Clock, Loader2, UserPlus, Search, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,7 @@ import { Practitioner } from "@/hooks/useGetPractitioners";
 import { ClinicService } from "@/hooks/useGetServices";
 import { Patient } from "@/hooks/useGetPatients";
 import useGetTimeSlots from "@/hooks/useGetTimeSlots";
+import type { Branch } from "@/types/database";
 
 const MANILA_TZ = "Asia/Manila";
 
@@ -59,6 +61,9 @@ interface AppointmentFormModalProps {
   practitioners: Practitioner[];
   services: ClinicService[];
   patients: Patient[];
+  branches?: Branch[];
+  activeBranchId?: string | null;
+  onBranchChange?: (branchId: string | null) => void;
   getAvailableTimeSlots: (
     practitionerId: string,
     date: string,
@@ -99,12 +104,16 @@ export function AppointmentFormModal({
   practitioners,
   services,
   patients,
+  branches,
+  activeBranchId,
+  onBranchChange,
   getAvailableTimeSlots,
   onInvitePatient,
   initialDate,
   isLoading = false,
   error,
 }: AppointmentFormModalProps) {
+  const showBranchSelector = branches && branches.length > 1 && onBranchChange;
   const mode: FormMode = appointment ? "edit" : "create";
   const [patientMode, setPatientMode] = useState<PatientMode>("existing");
   const [patientSearch, setPatientSearch] = useState("");
@@ -147,6 +156,15 @@ export function AppointmentFormModal({
   // Inviting patient state
   const [invitingPatient, setInvitingPatient] = useState(false);
 
+  // Clear dependent selections when branch changes
+  useEffect(() => {
+    if (!appointment) {
+      setSelectedPractitionerId("");
+      setSelectedServiceId("");
+      setSelectedTime("");
+    }
+  }, [activeBranchId, appointment]);
+
   // Initialize form when editing
   useEffect(() => {
     if (appointment) {
@@ -186,40 +204,47 @@ export function AppointmentFormModal({
 
   // (Hook handles fetching time slots and clearing selected time if unavailable)
 
-  const handleInviteNewPatient = async () => {
-    if (
-      !newPatient.firstName ||
-      !newPatient.lastName ||
-      !newPatient.email ||
-      !newPatient.phone
-    ) {
-      return;
-    }
-
-    setInvitingPatient(true);
-    try {
-      const patient = await onInvitePatient(newPatient);
-      if (patient) {
-        setSelectedPatientId(patient.id);
-        setPatientMode("existing");
-        setNewPatient({ firstName: "", lastName: "", email: "", phone: "" });
-      }
-    } catch (err) {
-      console.error("Failed to invite patient:", err);
-    } finally {
-      setInvitingPatient(false);
-    }
-  };
 
   const handleSubmit = async () => {
+    let patientId = selectedPatientId;
+
     if (patientMode === "new") {
-      // First invite the patient
-      await handleInviteNewPatient();
-      return;
+      if (
+        !newPatient.firstName ||
+        !newPatient.lastName ||
+        !newPatient.email ||
+        !newPatient.phone
+      ) {
+        return;
+      }
+
+      // Verify email format
+      const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newPatient.email);
+      if (!isEmailValid) {
+        toast.error("Please enter a valid email address.");
+        return;
+      }
+
+      setInvitingPatient(true);
+      try {
+        const patient = await onInvitePatient(newPatient);
+        if (patient) {
+          patientId = patient.id;
+        } else {
+          setInvitingPatient(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to invite patient:", err);
+        setInvitingPatient(false);
+        return;
+      } finally {
+        setInvitingPatient(false);
+      }
     }
 
     if (
-      !selectedPatientId ||
+      !patientId ||
       !selectedPractitionerId ||
       !selectedServiceId ||
       !selectedDate ||
@@ -229,7 +254,7 @@ export function AppointmentFormModal({
     }
 
     await onSubmit({
-      patientId: selectedPatientId,
+      patientId: patientId,
       practitionerId: selectedPractitionerId,
       serviceId: selectedServiceId,
       appointmentDate: format(selectedDate, "yyyy-MM-dd"),
@@ -252,7 +277,11 @@ export function AppointmentFormModal({
         newPatient.firstName &&
         newPatient.lastName &&
         newPatient.email &&
-        newPatient.phone
+        newPatient.phone &&
+        selectedPractitionerId &&
+        selectedServiceId &&
+        selectedDate &&
+        selectedTime
       );
     }
     return (
@@ -290,6 +319,34 @@ export function AppointmentFormModal({
           {error && (
             <div className='p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400'>
               {error}
+            </div>
+          )}
+
+          {/* Branch Selection */}
+          {showBranchSelector && (
+            <div className='space-y-2'>
+              <Label className='text-sm font-medium text-clinic-navy dark:text-white'>
+                Branch / Location
+              </Label>
+              <Select
+                value={activeBranchId ?? 'all'}
+                onValueChange={(v) => onBranchChange(v === 'all' ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='Select a branch' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>All Branches</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      <span className='flex items-center gap-2'>
+                        <MapPin className='w-3.5 h-3.5 text-clinic-text/40 flex-shrink-0' />
+                        <span>{branch.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 

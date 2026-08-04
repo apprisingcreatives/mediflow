@@ -39,7 +39,7 @@ export default function ClinicLoginPage() {
       // Step 2: Verify clinic admin record exists and get clinic info
       const { data: admin, error: adminError } = await supabase
         .from('clinic_admins')
-        .select('id, email, name, clinic_id, is_active')
+        .select('id, email, name, clinic_id, is_active, created_at, updated_at')
         .eq('auth_user_id', authData.user.id)
         .single();
 
@@ -52,8 +52,13 @@ export default function ClinicLoginPage() {
 
       // Step 3: Check if account is active
       if (!admin.is_active) {
+        const neverActivated = admin.created_at === admin.updated_at;
+        if (neverActivated) {
+          router.push('/clinic/setup-account');
+          return;
+        }
         await supabase.auth.signOut();
-        setError('Your account has been deactivated. Contact support.');
+        setError('Your account has been deactivated. Contact your clinic administrator.');
         setIsLoading(false);
         return;
       }

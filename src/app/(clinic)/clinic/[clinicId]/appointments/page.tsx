@@ -54,7 +54,7 @@ type ViewMode = 'calendar' | 'list';
 export default function AppointmentsPage() {
   const params = useParams();
   const clinicId = params.clinicId as string;
-  const { clinic, isTrialExpired } = useClinicContext();
+  const { clinic, isTrialExpired, activeBranchId, branches } = useClinicContext();
 
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
@@ -112,14 +112,24 @@ export default function AppointmentsPage() {
     error: updateError,
   } = useUpdateAppointment();
 
-  // Fetch data on mount
+  // Branch used inside the appointment form modal (defaults to sidebar selection)
+  const [modalBranchId, setModalBranchId] = useState<string | null>(activeBranchId);
+
+  // Sync modal branch when sidebar branch changes
+  useEffect(() => {
+    setModalBranchId(activeBranchId);
+  }, [activeBranchId]);
+
+  // Fetch data on mount and when the effective branch changes
+  const effectiveBranchId = modalBranchId;
+
   useEffect(() => {
     if (clinicId) {
-      fetchPractitioners({ clinicId, includeWorkingHours: true });
-      fetchServices({ clinicId });
+      fetchPractitioners({ clinicId, branchId: effectiveBranchId, includeWorkingHours: true });
+      fetchServices({ clinicId, branchId: effectiveBranchId });
       fetchPatients({ clinicId });
     }
-  }, [clinicId, fetchPractitioners, fetchServices, fetchPatients]);
+  }, [clinicId, effectiveBranchId, fetchPractitioners, fetchServices, fetchPatients]);
 
   // Cleanup realtime subscription on unmount
   useEffect(() => {
@@ -136,6 +146,7 @@ export default function AppointmentsPage() {
 
       fetchAppointments({
         clinicId,
+        branchId: activeBranchId,
         startDate: format(monthStart, 'yyyy-MM-dd'),
         endDate: format(monthEnd, 'yyyy-MM-dd'),
         practitionerId:
@@ -145,6 +156,7 @@ export default function AppointmentsPage() {
     }
   }, [
     clinicId,
+    activeBranchId,
     currentMonth,
     practitionerFilter,
     statusFilter,
@@ -487,6 +499,9 @@ export default function AppointmentsPage() {
                   <th className='px-6 py-4 text-left text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase tracking-wider'>
                     Status
                   </th>
+                  <th className='px-6 py-4 text-left text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase tracking-wider'>
+                    Payment
+                  </th>
                   <th className='px-6 py-4 text-right text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase tracking-wider'>
                     Actions
                   </th>
@@ -495,7 +510,7 @@ export default function AppointmentsPage() {
               <tbody className='divide-y divide-clinic-navy/10 dark:divide-white/10'>
                 {filteredAppointments.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className='px-6 py-12 text-center'>
+                    <td colSpan={7} className='px-6 py-12 text-center'>
                       <Calendar className='w-12 h-12 text-clinic-navy/20 mx-auto mb-4' />
                       <p className='text-clinic-text/60 dark:text-white/60'>
                         No appointments found
@@ -553,6 +568,9 @@ export default function AppointmentsPage() {
                           {apt.status}
                         </span>
                       </td>
+                      <td className='px-6 py-4 whitespace-nowrap'>
+                        <PaymentBadge status={apt.payment_status} amount={apt.payment_amount} />
+                      </td>
                       <td className='px-6 py-4 whitespace-nowrap text-right'>
                         <Button
                           variant='ghost'
@@ -583,12 +601,41 @@ export default function AppointmentsPage() {
         practitioners={practitioners}
         services={services}
         patients={patients}
+        branches={branches}
+        activeBranchId={modalBranchId}
+        onBranchChange={setModalBranchId}
         getAvailableTimeSlots={getAvailableTimeSlots}
         onInvitePatient={handleInvitePatient}
         initialDate={selectedDate}
         isLoading={createLoading || updateLoading}
         error={formError || createError || updateError}
       />
+    </div>
+  );
+}
+
+const PAYMENT_BADGE_CONFIG: Record<string, { label: string; className: string }> = {
+  paid: { label: 'Paid', className: 'bg-emerald-100 text-emerald-700' },
+  pending: { label: 'Unpaid', className: 'bg-amber-100 text-amber-700' },
+  pay_at_clinic: { label: 'Pay at Clinic', className: 'bg-blue-100 text-blue-700' },
+  waived: { label: 'Waived', className: 'bg-gray-100 text-gray-600' },
+  refunded: { label: 'Refunded', className: 'bg-violet-100 text-violet-700' },
+  refund_pending: { label: 'Refund Pending', className: 'bg-orange-100 text-orange-700' },
+  refund_failed: { label: 'Refund Failed', className: 'bg-red-100 text-red-700' },
+};
+
+function PaymentBadge({ status, amount }: { status: string; amount: number | null }) {
+  const config = PAYMENT_BADGE_CONFIG[status] || { label: status, className: 'bg-gray-100 text-gray-600' };
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className={`text-xs px-2 py-0.5 rounded-full inline-block w-fit ${config.className}`}>
+        {config.label}
+      </span>
+      {amount != null && amount > 0 && (
+        <span className="text-xs text-clinic-text/50 dark:text-white/50">
+          {'₱'}{amount.toLocaleString()}
+        </span>
+      )}
     </div>
   );
 }

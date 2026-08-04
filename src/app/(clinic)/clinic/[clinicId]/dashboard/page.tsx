@@ -10,14 +10,34 @@ import {
   CheckCircle,
   AlertTriangle,
   Loader2,
+  UserX,
+  DollarSign,
+  Clock,
+  BarChart3,
+  Activity,
+  ArrowUpDown,
+  Crown,
+  Repeat,
 } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import { useClinicContext } from '../clinic-context';
 import { useGetAppointments } from '@/hooks';
+import useClinicAnalytics from '@/hooks/useClinicAnalytics';
 import { supabase } from '@/lib/supabase';
 import { formatTimeToAMPM } from '@/lib/utils';
 
 export default function ClinicDashboardPage() {
-  const { clinicFeatures, featuresLoading, isTrialExpired, clinic } =
+  const { clinicFeatures, featuresLoading, isTrialExpired, clinic, activeBranchId } =
     useClinicContext();
 
   const {
@@ -32,6 +52,12 @@ export default function ClinicDashboardPage() {
   const [monthlyRevenue, setMonthlyRevenue] = useState<number | null>(null);
   const [completedThisMonth, setCompletedThisMonth] = useState<number | null>(null);
 
+  const {
+    analytics,
+    loading: analyticsLoading,
+    fetchAnalytics,
+  } = useClinicAnalytics(clinic?.id || '', activeBranchId);
+
   useEffect(() => {
     if (!clinic?.id) return;
     // Get today's date in Manila (YYYY-MM-DD)
@@ -41,6 +67,7 @@ export default function ClinicDashboardPage() {
 
     fetchAppointments({
       clinicId: clinic.id,
+      branchId: activeBranchId,
       startDate: manilaToday,
       endDate: manilaToday,
     });
@@ -48,7 +75,7 @@ export default function ClinicDashboardPage() {
     return () => {
       unsubscribe();
     };
-  }, [clinic?.id, fetchAppointments, unsubscribe]);
+  }, [clinic?.id, activeBranchId, fetchAppointments, unsubscribe]);
 
   // Fetch patient count and monthly revenue
   useEffect(() => {
@@ -89,6 +116,10 @@ export default function ClinicDashboardPage() {
 
     fetchStats();
   }, [clinic?.id]);
+
+  useEffect(() => {
+    if (clinic?.id) fetchAnalytics('30d');
+  }, [clinic?.id, fetchAnalytics]);
 
   const enabledFeatures = clinicFeatures.filter((f) => f.is_enabled);
   const disabledFeatures = clinicFeatures.filter((f) => !f.is_enabled);
@@ -149,6 +180,282 @@ export default function ClinicDashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Revenue Protection Analytics */}
+      {!isTrialExpired && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-5 h-5 text-clinic-teal" />
+            <h2 className="font-display text-lg font-bold text-clinic-navy dark:text-white">
+              Revenue Protection (Last 30 Days)
+            </h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {[
+              {
+                label: 'No-Show Rate',
+                value: analyticsLoading ? null : `${analytics?.no_show_rate ?? 0}%`,
+                subtitle: `${analytics?.no_show_count ?? 0} of ${analytics?.total_appointments ?? 0}`,
+                icon: UserX,
+                iconBg: 'bg-red-500/10',
+                iconColor: 'text-red-500',
+              },
+              {
+                label: 'Revenue Lost',
+                value: analyticsLoading ? null : formatCurrency(analytics?.revenue_lost ?? 0),
+                subtitle: 'From no-shows',
+                icon: DollarSign,
+                iconBg: 'bg-orange-500/10',
+                iconColor: 'text-orange-500',
+              },
+              {
+                label: 'Confirmation Rate',
+                value: analyticsLoading ? null : `${analytics?.confirmation_rate ?? 0}%`,
+                subtitle: 'Confirmed or completed',
+                icon: CheckCircle,
+                iconBg: 'bg-green-500/10',
+                iconColor: 'text-green-500',
+              },
+              {
+                label: 'Peak Hour',
+                value: analyticsLoading
+                  ? null
+                  : analytics?.peak_hours && analytics.peak_hours.length > 0
+                    ? `${analytics.peak_hours.reduce((a, b) => (b.count > a.count ? b : a)).hour}:00`
+                    : 'N/A',
+                subtitle: 'Busiest time',
+                icon: Clock,
+                iconBg: 'bg-blue-500/10',
+                iconColor: 'text-blue-500',
+              },
+            ].map((stat) => (
+              <div key={stat.label} className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg ${stat.iconBg} flex items-center justify-center shrink-0`}>
+                    <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-clinic-text/60 dark:text-white/60">{stat.label}</p>
+                    <p className="text-lg font-bold text-clinic-navy dark:text-white">
+                      {stat.value === null ? <Loader2 className="w-4 h-4 animate-spin" /> : stat.value}
+                    </p>
+                    <p className="text-xs text-clinic-text/40 dark:text-white/40">{stat.subtitle}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {analytics && !analyticsLoading && (
+            <div className="grid lg:grid-cols-2 gap-4">
+              {/* Peak Hours Chart */}
+              {analytics.peak_hours.length > 0 && (
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-4">
+                  <h3 className="text-sm font-medium text-clinic-text/60 dark:text-white/60 mb-3">
+                    Appointments by Hour
+                  </h3>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <BarChart data={analytics.peak_hours}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                      <XAxis
+                        dataKey="hour"
+                        tickFormatter={(h) => `${h}:00`}
+                        fontSize={11}
+                        tick={{ fill: '#64748b' }}
+                      />
+                      <YAxis fontSize={11} tick={{ fill: '#64748b' }} />
+                      <Tooltip
+                        labelFormatter={(h) => `${h}:00`}
+                        formatter={(v: number) => [v, 'Appointments']}
+                      />
+                      <Bar dataKey="count" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* No-Show Trend */}
+              {analytics.trends.dates.length > 0 && (
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass p-4">
+                  <h3 className="text-sm font-medium text-clinic-text/60 dark:text-white/60 mb-3">
+                    No-Show Rate Trend
+                  </h3>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart
+                      data={analytics.trends.dates.map((date, i) => ({
+                        date: date.slice(5),
+                        rate: analytics.trends.no_show_rates[i],
+                        count: analytics.trends.appointment_counts[i],
+                      }))}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                      <XAxis dataKey="date" fontSize={11} tick={{ fill: '#64748b' }} />
+                      <YAxis
+                        fontSize={11}
+                        tick={{ fill: '#64748b' }}
+                        tickFormatter={(v) => `${v}%`}
+                      />
+                      <Tooltip formatter={(v: number, name: string) => [
+                        name === 'rate' ? `${v}%` : v,
+                        name === 'rate' ? 'No-Show Rate' : 'Appointments'
+                      ]} />
+                      <Line
+                        type="monotone"
+                        dataKey="rate"
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Business Intelligence */}
+      {!isTrialExpired && analytics && !analyticsLoading && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="w-5 h-5 text-clinic-teal" />
+            <h2 className="font-display text-lg font-bold text-clinic-navy dark:text-white">
+              Business Intelligence
+            </h2>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Total Revenue */}
+            <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <DollarSign className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-clinic-text/60 dark:text-white/60">Total Revenue</p>
+                  <p className="text-lg font-bold text-clinic-navy dark:text-white">
+                    {formatCurrency(analytics.total_revenue)}
+                  </p>
+                  <p className="text-xs text-clinic-text/40 dark:text-white/40">Last 30 days</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Doctor Utilization */}
+            {(() => {
+              const metrics = analytics.practitioner_metrics || [];
+              const avgUtil = metrics.length > 0
+                ? Math.round(metrics.reduce((s, m) => s + m.utilization_rate, 0) / metrics.length)
+                : 0;
+              const utilColor = avgUtil >= 80 ? 'text-green-500' : avgUtil >= 50 ? 'text-amber-500' : 'text-red-500';
+              const utilBg = avgUtil >= 80 ? 'bg-green-500/10' : avgUtil >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10';
+              return (
+                <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${utilBg} flex items-center justify-center shrink-0`}>
+                      <BarChart3 className={`w-5 h-5 ${utilColor}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-clinic-text/60 dark:text-white/60">Avg Utilization</p>
+                      <p className={`text-lg font-bold ${utilColor}`}>{avgUtil}%</p>
+                      <p className="text-xs text-clinic-text/40 dark:text-white/40">{metrics.length} practitioner{metrics.length !== 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Patient Return Rate */}
+            <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                  <Repeat className="w-5 h-5 text-violet-500" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-clinic-text/60 dark:text-white/60">Patient Return Rate</p>
+                  <p className="text-lg font-bold text-clinic-navy dark:text-white">{analytics.patient_return_rate}%</p>
+                  <p className="text-xs text-clinic-text/40 dark:text-white/40">Returning patients</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Top Performer */}
+            {(() => {
+              const metrics = analytics.practitioner_metrics || [];
+              const top = metrics.length > 0
+                ? metrics.reduce((a, b) => b.completed_count > a.completed_count ? b : a)
+                : null;
+              return (
+                <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-glass">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0">
+                      <Crown className="w-5 h-5 text-yellow-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-clinic-text/60 dark:text-white/60">Top Performer</p>
+                      <p className="text-sm font-bold text-clinic-navy dark:text-white truncate">
+                        {top ? top.practitioner_name : 'N/A'}
+                      </p>
+                      <p className="text-xs text-clinic-text/40 dark:text-white/40">
+                        {top ? `${top.completed_count} completed` : 'No data'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Practitioner Performance Table */}
+          {analytics.practitioner_metrics && analytics.practitioner_metrics.length > 0 && (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-glass overflow-hidden">
+              <div className="px-6 py-4 border-b border-clinic-navy/10 dark:border-white/10">
+                <h3 className="text-sm font-semibold text-clinic-navy dark:text-white flex items-center gap-2">
+                  <ArrowUpDown className="w-4 h-4" />
+                  Practitioner Performance
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-clinic-navy/5 dark:bg-white/5">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase">Doctor</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase">Appts</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase">Utilization</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase">Revenue</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-clinic-text/60 dark:text-white/60 uppercase">Cancel %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-clinic-navy/10 dark:divide-white/10">
+                    {analytics.practitioner_metrics.map((m) => (
+                      <tr key={m.practitioner_id} className="hover:bg-clinic-navy/5 dark:hover:bg-white/5">
+                        <td className="px-6 py-3 text-sm font-medium text-clinic-navy dark:text-white">{m.practitioner_name}</td>
+                        <td className="px-6 py-3 text-sm text-right text-clinic-navy dark:text-white">{m.appointment_count}</td>
+                        <td className="px-6 py-3 text-sm text-right">
+                          <span className={
+                            m.utilization_rate >= 80 ? 'text-green-600' :
+                            m.utilization_rate >= 50 ? 'text-amber-600' : 'text-red-600'
+                          }>
+                            {m.utilization_rate}%
+                          </span>
+                        </td>
+                        <td className="px-6 py-3 text-sm text-right text-clinic-navy dark:text-white">{formatCurrency(m.revenue)}</td>
+                        <td className="px-6 py-3 text-sm text-right">
+                          <span className={m.cancellation_rate > 20 ? 'text-red-600' : 'text-clinic-navy dark:text-white'}>
+                            {m.cancellation_rate}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className='grid lg:grid-cols-2 gap-8'>
         {/* AI Features Status */}

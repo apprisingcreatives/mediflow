@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -8,40 +8,85 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Sparkles, Building2, Rocket, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ElementType } from "react";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const plans = [
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface ApiPlan {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  currency: string;
+  billing_cycle: string;
+  description: string;
+  features: string[];
+  max_practitioners: number | null;
+  max_patients: number | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+interface DisplayPlan {
+  name: string;
+  description: string;
+  price: string;
+  period: string;
+  icon: ElementType;
+  features: string[];
+  cta: string;
+  href: string;
+  highlighted: boolean;
+  badge?: string;
+  isEnterprise: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const ICON_MAP: Record<string, ElementType> = {
+  starter: Rocket,
+  professional: Sparkles,
+  enterprise: Building2,
+};
+
+const FALLBACK_PLANS: DisplayPlan[] = [
   {
-    name: "Basic",
-    description: "Everything you need to run your clinic digitally.",
+    name: "Starter",
+    description: "Perfect for small clinics getting started.",
     price: "₱5,000",
     period: "/month",
     icon: Rocket,
     features: [
-      "Appointment Management",
+      "Up to 3 practitioners",
+      "Up to 500 patients",
+      "1 location",
+      "AI-powered intake forms",
+      "Basic appointment scheduling",
       "Patient Records (EMR)",
-      "Staff Management",
-      "Smart Scheduling & Calendar",
       "Reporting Dashboard",
-      "Mobile Access",
-      "Automated SMS Reminders",
-      "HIPAA-Compliant Security",
+      "Email support",
     ],
     cta: "Start Free Trial",
-    href: "/register",
+    href: "/clinic/register",
     highlighted: false,
+    isEnterprise: false,
   },
   {
-    name: "AI Professional",
-    description: "AI-powered productivity for growing practices.",
+    name: "Professional",
+    description: "For growing clinics with advanced AI features.",
     price: "₱10,000",
     period: "/month",
     icon: Sparkles,
     features: [
-      "Everything in Basic, plus:",
+      "Everything in Starter, plus:",
       "AI Consultation Summaries",
       "AI Medical Notes",
       "AI Patient Follow-Up Recommendations",
@@ -51,37 +96,124 @@ const plans = [
       "Priority Support",
     ],
     cta: "Start Free Trial",
-    href: "/register",
+    href: "/clinic/register",
     highlighted: true,
     badge: "Recommended",
+    isEnterprise: false,
   },
   {
     name: "Enterprise",
-    description: "For larger clinics and medical groups.",
-    price: "Custom",
-    period: "",
+    description: "For large clinics and multi-location practices.",
+    price: "₱25,000",
+    period: "/month",
     icon: Building2,
     features: [
-      "Everything in AI Professional, plus:",
-      "Multi-branch Management",
-      "Unlimited Practitioners",
-      "Dedicated Success Manager",
-      "Custom Integrations & API",
-      "SLA Guarantee (99.9%)",
-      "White-Label Option",
-      "24/7 Phone & Chat Support",
+      "Unlimited practitioners",
+      "Unlimited patients",
+      "Unlimited branches",
+      "Full AI suite",
+      "Custom integrations & API",
+      "Dedicated support",
+      "Advanced analytics",
+      "Multi-location management",
     ],
     cta: "Contact Sales",
     href: "tel:+639204786075",
     highlighted: false,
+    isEnterprise: true,
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function resolveIcon(slug: string): ElementType {
+  return ICON_MAP[slug] ?? Rocket;
+}
+
+function formatPrice(price: number, slug: string): string {
+  if (slug === "enterprise" && price === 0) return "Custom";
+  return `₱${price.toLocaleString()}`;
+}
+
+function mapApiPlans(apiPlans: ApiPlan[], cycle: "monthly" | "yearly"): DisplayPlan[] {
+  const filtered = apiPlans
+    .filter((p) => p.is_active && p.billing_cycle === cycle)
+    .sort((a, b) => a.sort_order - b.sort_order);
+
+  if (filtered.length === 0) return [];
+
+  // Determine which plan gets "highlighted". Prefer slug containing "professional",
+  // otherwise fall back to the middle plan by sort_order.
+  const professionalIdx = filtered.findIndex((p) => p.slug.includes("professional"));
+  const highlightedIdx = professionalIdx !== -1 ? professionalIdx : Math.floor(filtered.length / 2);
+
+  return filtered.map((plan, idx) => ({
+    name: plan.name,
+    description: plan.description,
+    price: formatPrice(plan.price, plan.slug),
+    period: plan.slug === "enterprise" && plan.price === 0 ? "" : `/${plan.billing_cycle}`,
+    icon: resolveIcon(plan.slug),
+    features: plan.features,
+    cta: plan.slug === "enterprise" ? "Contact Sales" : "Start Free Trial",
+    href: plan.slug === "enterprise" ? "tel:+639204786075" : "/clinic/register",
+    highlighted: idx === highlightedIdx,
+    badge: idx === highlightedIdx ? "Recommended" : undefined,
+    isEnterprise: plan.slug === "enterprise",
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function PricingSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
 
+  const [plans, setPlans] = useState<DisplayPlan[]>(FALLBACK_PLANS);
+  const [cycle, setCycle] = useState<"monthly" | "yearly">("monthly");
+  const [apiPlans, setApiPlans] = useState<ApiPlan[] | null>(null);
+  const [hasYearly, setHasYearly] = useState(false);
+
+  // Fetch once on mount; keep fallback until data arrives.
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/subscription-plans")
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<{ plans: ApiPlan[] }>;
+      })
+      .then(({ plans: raw }) => {
+        if (cancelled || !raw || raw.length === 0) return;
+        const yearly = raw.some((p) => p.is_active && p.billing_cycle === "yearly");
+        const monthly = mapApiPlans(raw, "monthly");
+        if (!cancelled) {
+          setApiPlans(raw);
+          setHasYearly(yearly);
+          if (monthly.length > 0) setPlans(monthly);
+        }
+      })
+      .catch(() => {
+        // Silently keep fallback plans — no error state needed on the landing page.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Re-derive display plans whenever the billing cycle toggle changes.
+  useEffect(() => {
+    if (!apiPlans) return;
+    const derived = mapApiPlans(apiPlans, cycle);
+    if (derived.length > 0) setPlans(derived);
+  }, [cycle, apiPlans]);
+
+  // GSAP animations — unchanged from original.
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
@@ -145,6 +277,37 @@ export function PricingSection() {
             No hidden fees. No long-term contracts. Start with a 14-day free
             trial and upgrade as your practice grows.
           </p>
+
+          {/* Monthly / Yearly toggle — only rendered when the API returns yearly plans */}
+          {hasYearly && (
+            <div className="inline-flex items-center gap-1 mt-8 p-1 bg-white dark:bg-slate-800 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+              <button
+                onClick={() => setCycle("monthly")}
+                className={cn(
+                  "px-5 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                  cycle === "monthly"
+                    ? "bg-clinic-navy text-white shadow-sm"
+                    : "text-clinic-text/70 dark:text-white/60 hover:text-clinic-navy dark:hover:text-white"
+                )}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setCycle("yearly")}
+                className={cn(
+                  "px-5 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                  cycle === "yearly"
+                    ? "bg-clinic-navy text-white shadow-sm"
+                    : "text-clinic-text/70 dark:text-white/60 hover:text-clinic-navy dark:hover:text-white"
+                )}
+              >
+                Yearly
+                <span className="ml-1.5 text-xs text-clinic-teal font-semibold">
+                  Save 20%
+                </span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Pricing Cards */}
@@ -266,7 +429,7 @@ export function PricingSection() {
                 )}
                 asChild
               >
-                {plan.name === "Enterprise" ? (
+                {plan.isEnterprise ? (
                   <a href={plan.href}>{plan.cta}</a>
                 ) : (
                   <Link href={plan.href}>

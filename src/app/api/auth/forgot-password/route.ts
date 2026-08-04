@@ -29,7 +29,14 @@ export async function POST(request: Request) {
       redirectTo?: string;
     };
 
+    console.log('[forgot-password] Request received:', {
+      email,
+      allowedRoles,
+      redirectTo,
+    });
+
     if (!email || typeof email !== 'string') {
+      console.log('[forgot-password] Rejected: email missing');
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
@@ -39,10 +46,12 @@ export async function POST(request: Request) {
       allowedRoles.length === 0 ||
       !allowedRoles.every((r) => VALID_ROLES.includes(r))
     ) {
+      console.log('[forgot-password] Rejected: invalid roles');
       return NextResponse.json({ error: 'Invalid roles' }, { status: 400 });
     }
 
     if (!redirectTo || typeof redirectTo !== 'string') {
+      console.log('[forgot-password] Rejected: redirectTo missing');
       return NextResponse.json(
         { error: 'Redirect URL is required' },
         { status: 400 },
@@ -53,18 +62,33 @@ export async function POST(request: Request) {
 
     // Check if the email belongs to any of the allowed roles
     const hasAllowedRole = await emailMatchesAnyRole(normalizedEmail, allowedRoles);
+    console.log('[forgot-password] Role check result:', {
+      email: normalizedEmail,
+      hasAllowedRole,
+      allowedRoles,
+    });
 
     // Only send the reset email if the email matches one of the allowed roles.
     // Otherwise silently succeed to prevent email enumeration and role probing.
     if (hasAllowedRole) {
-      const { error } = await supabaseAdmin.auth.resetPasswordForEmail(
+      console.log('[forgot-password] Calling resetPasswordForEmail with redirectTo:', redirectTo);
+
+      const { data, error } = await supabaseAdmin.auth.resetPasswordForEmail(
         normalizedEmail,
         { redirectTo },
       );
 
       if (error) {
-        console.error('[forgot-password] resetPasswordForEmail failed:', error);
+        console.error('[forgot-password] resetPasswordForEmail FAILED:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+        });
+      } else {
+        console.log('[forgot-password] resetPasswordForEmail SUCCESS:', data);
       }
+    } else {
+      console.log('[forgot-password] Skipping email send — no matching role found');
     }
 
     // Always return the same response to prevent role/email enumeration

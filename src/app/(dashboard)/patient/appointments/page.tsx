@@ -85,6 +85,12 @@ export default function PatientAppointmentsPage() {
     const success = await booking.bookAppointment(patient.id);
     if (success) {
       const apt = booking.createdAppointment;
+
+      if (booking.paymentMethod === 'online') {
+        toast.success('Redirecting to payment...');
+        return;
+      }
+
       booking.closeModal();
 
       if (apt && apt.intake_status === 'pending') {
@@ -168,20 +174,27 @@ export default function PatientAppointmentsPage() {
         onSubmit={handleBookAppointment}
         clinics={allClinics}
         selectedClinicId={booking.selectedClinicId}
+        selectedBranchId={booking.selectedBranchId}
         selectedPractitionerId={booking.selectedPractitionerId}
         selectedServiceId={booking.selectedServiceId}
         selectedDate={booking.selectedDate}
         selectedTime={booking.selectedTime}
         notes={booking.notes}
         onClinicChange={booking.handleClinicChange}
+        onBranchChange={booking.handleBranchChange}
         onPractitionerChange={booking.setSelectedPractitionerId}
         onServiceChange={booking.setSelectedServiceId}
         onDateChange={booking.handleDateChange}
         onTimeChange={booking.setSelectedTime}
         onNotesChange={booking.setNotes}
+        paymentMethod={booking.paymentMethod}
+        onPaymentMethodChange={booking.setPaymentMethod}
+        selectedServicePrice={booking.services.find(s => s.id === booking.selectedServiceId)?.price}
+        branches={booking.branches}
         practitioners={booking.practitioners}
         services={booking.services}
         timeSlots={booking.timeSlots}
+        loadingBranches={booking.loadingBranches}
         loadingPractitioners={booking.loadingPractitioners}
         loadingServices={booking.loadingServices}
         loadingTimeSlots={booking.loadingTimeSlots}

@@ -231,7 +231,7 @@ export type Database = {
           paid_at: string | null;
           payment_method: string | null;
           status: string | null;
-          stripe_payment_intent_id: string | null;
+          paymongo_checkout_id: string | null;
         };
         Insert: {
           amount: number;
@@ -243,7 +243,7 @@ export type Database = {
           paid_at?: string | null;
           payment_method?: string | null;
           status?: string | null;
-          stripe_payment_intent_id?: string | null;
+          paymongo_checkout_id?: string | null;
         };
         Update: {
           amount?: number;
@@ -255,7 +255,7 @@ export type Database = {
           paid_at?: string | null;
           payment_method?: string | null;
           status?: string | null;
-          stripe_payment_intent_id?: string | null;
+          paymongo_checkout_id?: string | null;
         };
         Relationships: [
           {
@@ -331,8 +331,10 @@ export type Database = {
           next_billing_date: string | null;
           payment_status: string | null;
           phone: string | null;
-          stripe_customer_id: string | null;
-          stripe_subscription_id: string | null;
+          paymongo_customer_id: string | null;
+          paymongo_checkout_session_id: string | null;
+          paymongo_merchant_id: string | null;
+          paymongo_merchant_status: string | null;
           subscription_plan: string | null;
           trial_end_date: string | null;
           trial_start_date: string | null;
@@ -354,8 +356,10 @@ export type Database = {
           next_billing_date?: string | null;
           payment_status?: string | null;
           phone?: string | null;
-          stripe_customer_id?: string | null;
-          stripe_subscription_id?: string | null;
+          paymongo_customer_id?: string | null;
+          paymongo_checkout_session_id?: string | null;
+          paymongo_merchant_id?: string | null;
+          paymongo_merchant_status?: string | null;
           subscription_plan?: string | null;
           trial_end_date?: string | null;
           trial_start_date?: string | null;
@@ -377,8 +381,10 @@ export type Database = {
           next_billing_date?: string | null;
           payment_status?: string | null;
           phone?: string | null;
-          stripe_customer_id?: string | null;
-          stripe_subscription_id?: string | null;
+          paymongo_customer_id?: string | null;
+          paymongo_checkout_session_id?: string | null;
+          paymongo_merchant_id?: string | null;
+          paymongo_merchant_status?: string | null;
           subscription_plan?: string | null;
           trial_end_date?: string | null;
           trial_start_date?: string | null;

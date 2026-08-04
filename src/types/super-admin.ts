@@ -70,6 +70,7 @@ export interface SubscriptionPlan {
   features: string[];
   max_practitioners: number | null;
   max_patients: number | null;
+  max_branches: number | null;
   is_active: boolean;
   sort_order: number;
   created_at: string;

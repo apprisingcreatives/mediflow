@@ -24,7 +24,7 @@ export interface Clinic {
   description: string | null;
 
   is_active: boolean;
-  subscription_plan: 'starter' | 'pro' | 'enterprise' | string;
+  subscription_plan: 'starter' | 'professional' | 'enterprise' | string;
 
   created_at: string; // ISO timestamp
   updated_at: string; // ISO timestamp
@@ -39,8 +39,14 @@ export interface Clinic {
   last_payment_date: string | null;
   next_billing_date: string | null;
 
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
+  paymongo_customer_id: string | null;
+  paymongo_checkout_session_id: string | null;
+  paymongo_merchant_id: string | null;
+  paymongo_merchant_status: 'pending' | 'activated' | 'declined' | null;
+
+  pending_checkout_session_id: string | null;
+  last_reminder_sent_at: string | null;
+  reminder_count: number;
 
   slug: string | null;
 
@@ -50,12 +56,15 @@ export interface Clinic {
 }
 
 
+export type StaffRole = 'owner' | 'admin' | 'receptionist' | 'viewer';
+
 export interface ClinicAdmin {
   id: string;
   clinic_id: string;
   email: string;
   name: string;
   role: string;
+  staff_role: StaffRole;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -105,6 +114,7 @@ export interface Practitioner {
   bio: string | null;
   image_url: string | null;
   is_active: boolean;
+  max_daily_appointments: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -143,6 +153,9 @@ export interface Patient {
   updated_at: string;
 }
 
+export type AppointmentPaymentStatus = 'pending' | 'paid' | 'pay_at_clinic' | 'waived' | 'refunded' | 'refund_pending' | 'refund_failed';
+export type AppointmentPaymentMethod = 'gcash' | 'grab_pay' | 'paymaya' | 'card' | 'cash' | null;
+
 export interface Appointment {
   id: string;
   patient_id: string | null;
@@ -156,6 +169,15 @@ export interface Appointment {
   ai_recommended: boolean;
   ai_recommendation_reason: string | null;
   intake_status: 'none' | 'pending' | 'completed';
+  payment_status: AppointmentPaymentStatus;
+  payment_method: AppointmentPaymentMethod;
+  payment_amount: number | null;
+  paymongo_checkout_id: string | null;
+  paid_at: string | null;
+  refund_scheduled_at: string | null;
+  refund_attempts: number;
+  refunded_at: string | null;
+  branch_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -249,4 +271,132 @@ export interface PatientOnboardingData {
   responses: PatientQuestionResponse[];
   uploadedDocuments: PatientDocument[];
   aiPrediction?: AITreatmentPrediction;
+}
+
+// Phase 3b: Multi-Branch
+export interface Branch {
+  id: string;
+  clinic_id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  phone: string | null;
+  is_active: boolean;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PractitionerBranch {
+  id: string;
+  practitioner_id: string;
+  branch_id: string;
+  created_at: string;
+}
+
+export interface BranchComparison {
+  branch_id: string;
+  branch_name: string;
+  appointment_count: number;
+  completed_count: number;
+  cancelled_count: number;
+  unique_patients: number;
+  revenue: number;
+  avg_daily_appointments: number;
+}
+
+// Phase 3: Staff Audit Log
+export interface StaffAuditLog {
+  id: string;
+  clinic_id: string;
+  actor_id: string;
+  actor_type: 'clinic_admin' | 'practitioner' | 'system';
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  metadata: Record<string, unknown>;
+  ip_address: string | null;
+  created_at: string;
+}
+
+// Phase 3: Analytics Response Types
+export interface PatientDemographic {
+  age_group: string;
+  gender: string;
+  city: string;
+  patient_count: number;
+}
+
+export interface ServicePopularity {
+  service_id: string;
+  service_name: string;
+  booking_count: number;
+  completed_count: number;
+  completion_rate: number;
+  revenue: number;
+}
+
+export interface RevenueForecastPoint {
+  month_label: string;
+  revenue: number;
+  is_forecast: boolean;
+}
+
+// Notifications
+export type NotificationType =
+  | 'appointment.created'
+  | 'appointment.cancelled'
+  | 'appointment.rescheduled'
+  | 'appointment.status_changed'
+  | 'staff.invited'
+  | 'staff.role_changed'
+  | 'practitioner.added'
+  | 'plan.changed'
+  | 'trial.expiring'
+  | 'payment.status_changed'
+  | 'report.submitted';
+
+export type RecipientType = 'super_admin' | 'clinic_admin' | 'practitioner' | 'patient';
+
+export interface Notification {
+  id: string;
+  recipient_id: string;
+  recipient_type: RecipientType;
+  clinic_id: string | null;
+  type: NotificationType;
+  title: string;
+  message: string;
+  action_url: string | null;
+  metadata: Record<string, unknown>;
+  is_read: boolean;
+  created_at: string;
+  expires_at: string;
+}
+
+// Plan Limits
+export interface LimitExceededError {
+  error: 'limit_exceeded';
+  message: string;
+  resource: 'practitioners' | 'branches';
+  current: number;
+  max: number;
+  plan: string;
+  upgradeTo?: string;
+}
+
+export interface ClinicUsage {
+  plan: string;
+  practitioners: {
+    current: number;
+    max: number | null;
+    byBranch: Record<string, number>;
+  };
+  branches: {
+    current: number;
+    max: number | null;
+  };
+  patients: {
+    current: number;
+    max: number | null;
+  };
 }

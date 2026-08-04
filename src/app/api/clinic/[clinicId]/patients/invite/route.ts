@@ -139,8 +139,11 @@ export async function POST(
     }
 
     // Send invitation via Supabase Auth
-    const { data: invitedUser, error: inviteError } =
-      await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+    let invitedUser;
+    let inviteErrorObj: any = null;
+
+    try {
+      const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
         data: {
           first_name: firstName,
           last_name: lastName,
@@ -151,18 +154,48 @@ export async function POST(
         },
         redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/patient/setup-account`,
       });
-
-    if (inviteError) {
-      console.error('Invitation error:', inviteError);
-      return NextResponse.json(
-        { error: inviteError.message || 'Failed to send invitation' },
-        { status: 500 }
-      );
+      invitedUser = data;
+      inviteErrorObj = error;
+    } catch (e: any) {
+      inviteErrorObj = e;
     }
 
-    if (!invitedUser.user) {
+    let authUserId: string | null = null;
+
+    if (inviteErrorObj) {
+      const isAlreadyRegistered = 
+        inviteErrorObj.status === 422 || 
+        inviteErrorObj.message?.includes('already') || 
+        inviteErrorObj.code === 'email_exists';
+
+      if (isAlreadyRegistered) {
+        // Find existing auth user
+        const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+        const existingAuthUser = userList?.users?.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase()
+        );
+        if (existingAuthUser) {
+          authUserId = existingAuthUser.id;
+        } else {
+          return NextResponse.json(
+            { error: 'Email exists in auth but could not retrieve user ID.' },
+            { status: 500 }
+          );
+        }
+      } else {
+        console.error('Invitation error:', inviteErrorObj);
+        return NextResponse.json(
+          { error: inviteErrorObj.message || 'Failed to send invitation' },
+          { status: 500 }
+        );
+      }
+    } else if (invitedUser?.user) {
+      authUserId = invitedUser.user.id;
+    }
+
+    if (!authUserId) {
       return NextResponse.json(
-        { error: 'Failed to create user account' },
+        { error: 'Failed to establish user account ID' },
         { status: 500 }
       );
     }
@@ -173,7 +206,7 @@ export async function POST(
     const { data: newPatient, error: patientError } = await supabaseAdmin
       .from('patients')
       .insert({
-        auth_user_id: invitedUser.user.id,
+        auth_user_id: authUserId,
         email,
         first_name: firstName,
         last_name: lastName,
@@ -185,8 +218,10 @@ export async function POST(
       .single();
 
     if (patientError) {
-      // Rollback: delete auth user if patient creation fails
-      await supabaseAdmin.auth.admin.deleteUser(invitedUser.user.id);
+      // Rollback: delete auth user if patient creation fails (only if it was newly created)
+      if (!inviteErrorObj && authUserId) {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      }
       console.error('Patient creation error:', patientError);
       return NextResponse.json(
         { error: 'Failed to create patient record' },
@@ -206,7 +241,9 @@ export async function POST(
     if (patientClinicError) {
       // Rollback: delete patient and auth user if patient_clinics creation fails
       await supabaseAdmin.from('patients').delete().eq('id', newPatient.id);
-      await supabaseAdmin.auth.admin.deleteUser(invitedUser.user.id);
+      if (!inviteErrorObj && authUserId) {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      }
       console.error('Patient clinics creation error:', patientClinicError);
       return NextResponse.json(
         { error: 'Failed to create patient-clinic relationship' },
