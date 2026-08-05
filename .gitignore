@@ -63,4 +63,5 @@ tatus.md
 .superpowers/*
 
 supabase/seed.sql
+supabase/config.toml    
 .env*
